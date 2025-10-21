@@ -27,6 +27,7 @@ pub(crate) fn floating_tool_window(model: &mut BAPViewModel, ctx: &egui::Context
             egui::Grid::new("SVGTOOLZ")
                 .spacing(vec2(0., 5.))
                 .show(ui, |ui| {
+                    ui.end_row();
                     if tool_button(
                         ui,
                         egui::include_image!("../../resources/images/paper_stack.png"),
@@ -82,6 +83,12 @@ pub(crate) fn floating_tool_window(model: &mut BAPViewModel, ctx: &egui::Context
                     );
                     ui.end_row();
                 });
+            ui.collapsing("Display Toggles", |ui| {
+                ui.checkbox(&mut model.show_paper, "Show paper");
+                ui.checkbox(&mut model.show_machine_limits, "Show limits");
+                ui.checkbox(&mut model.show_extents, "Show extents");
+                ui.checkbox(&mut model.show_rulers, "Show rulers");
+            });
         } else {
             egui::Grid::new("PLOT-TOOLZ")
                 .spacing(vec2(0., 5.))

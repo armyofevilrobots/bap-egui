@@ -36,12 +36,10 @@ fn main() -> eframe::Result<()> {
         Box::new(|ctx| {
             let ctx_app = ctx.egui_ctx.clone();
             let (mut application, cmd_out, state_in) = ApplicationCore::new(ctx_app);
-            let mut model = BAPViewModel {
-                state_in: Some(state_in),
-                cmd_out: Some(cmd_out),
-                origin: pos2(0., 279.),
-                ..BAPViewModel::default()
-            };
+            let mut model = BAPViewModel::default();
+            model.state_in = Some(state_in);
+            model.cmd_out = Some(cmd_out);
+            model.origin = pos2(0., 279.);
             let tmp_svg_image = ColorImage::filled([3, 3], Color32::TRANSPARENT);
             // let tmp_svg_image = ColorImage::example();
             // let bap_logo = include_image!("../resources/images/aoer_logo.png");
@@ -52,8 +50,9 @@ fn main() -> eframe::Result<()> {
                 tmp_svg_image,
                 egui::TextureOptions::NEAREST,
             );
-            model.svg_img_handle = Some(Box::new(tex));
-            model.svg_img_dims = Some(Rect::from_min_max(pos2(0., 0.), pos2(1., 1.)));
+            model.source_image_handle = Some(Box::new(tex));
+            // model.svg_img_dims = Some(Rect::from_min_max(pos2(0., 0.), pos2(1., 1.)));
+            model.source_image_extents = None;
 
             thread::spawn(move || application.run());
             egui_extras::install_image_loaders(&ctx.egui_ctx);

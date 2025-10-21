@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::process::exit;
 use std::sync::mpsc::{Receiver, Sender};
+use std::time::{Duration, Instant};
 
 use eframe::egui;
 use egui::{Color32, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
@@ -10,7 +11,7 @@ use crate::core::commands::{ApplicationStateChangeMsg, ViewCommand};
 use crate::core::project::{Orientation, PaperSize};
 use crate::machine::MachineConfig;
 
-pub const PIXELS_PER_MM: f32 = 10.0;
+pub const PIXELS_PER_MM: f32 = 4.;
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum BAPDisplayMode {
@@ -33,12 +34,15 @@ pub struct BAPViewModel {
     pub status_msg: Option<String>,
     pub progress: Option<(String, usize)>,
     pub svg_import_mpsc: Option<Receiver<PathBuf>>,
-    pub svg_img_handle: Option<Box<TextureHandle>>,
-    pub svg_img_dims: Option<Rect>, // How big is the svg it represents x/y mm
-    pub svg_img_zoom: Option<f64>, // How was this image zoomed when created? (for determining re-render requests)
-    pub look_at: Pos2,             // What coordinate is currently at the center of the screen
-    pub center_coords: Pos2,       // Where in the window (cursor) is the center of the view
-    pub view_zoom: f64,            // What is our coordinate/zoom multiplier
+    pub source_image_handle: Option<Box<TextureHandle>>,
+    pub source_image_extents: Option<Rect>, // Again, this is in mm, and needs conversion before display.
+    pub timeout_for_source_image: Option<Instant>,
+    dirty: bool, // If we request a new image while one is already rendering, we set this so that it retries right after.
+    pub look_at: Pos2, // What coordinate is currently at the center of the screen
+    pub center_coords: Pos2, // Where in the window (cursor) is the center of the view
+    view_zoom: f64, // What is our coordinate/zoom multiplier
+    ppp: f32,
+    /// Pixels per point.
     pub command_context: CommandContext,
     pub paper_orientation: Orientation,
     pub paper_size: PaperSize,
@@ -47,6 +51,10 @@ pub struct BAPViewModel {
     pub origin: Pos2,
     pub machine_config: MachineConfig,
     pub paper_color: Color32,
+    pub show_machine_limits: bool,
+    pub show_paper: bool,
+    pub show_rulers: bool,
+    pub show_extents: bool,
 }
 
 pub trait IsPos2Able {
@@ -69,10 +77,106 @@ impl BAPViewModel {
         "Bot-a-Plot"
     }
 
+    pub fn ppp(&self) -> f32 {
+        self.ppp
+    }
+
+    pub fn set_ppp(&mut self, ppp: f32) {
+        self.ppp = ppp;
+        // TODO: Reload the svg preview.
+    }
+
+    pub fn zoom(&self) -> f64 {
+        self.view_zoom
+    }
+
+    pub fn set_zoom(&mut self, zoom: f64) {
+        self.view_zoom = zoom;
+
+        if let Some(sender) = &self.cmd_out {
+            // sender.send(ViewCommand::ZoomView(self.view_zoom));
+            // We know the extents of the svg, so we just need to
+            // calculate a new image size for the current zoom level.
+        }
+    }
+
+    pub fn request_new_source_image(&mut self) {
+        self.dirty = true
+    }
+
+    pub fn check_for_new_source_image(&mut self) {
+        let MAX_SIZE = 2048;
+        if self.dirty && self.timeout_for_source_image.is_none() {
+            if let Some(extents) = self.source_image_extents {
+                let cmd_extents = (
+                    extents.left() as f64,
+                    extents.top() as f64,
+                    extents.width() as f64,
+                    extents.height() as f64,
+                );
+                if let Some(sender) = &self.cmd_out {
+                    // let scale = self.zoom() as f32 * 1. / self.ppp;
+                    // println!("Scale would be: {:?}, but might clamp to 16.", scale);
+                    // let scale = scale.max(16.);
+
+                    /*
+                    let resolution = (
+                        (extents.width() * scale) as usize,
+                        (extents.height() * scale) as usize,
+                    );*/
+                    let pixel_size_rect = self.mm_rect_to_screen_rect(extents);
+                    let ratio = pixel_size_rect.aspect_ratio();
+                    let mut resolution = (
+                        (self.ppp() * pixel_size_rect.width().ceil()) as usize,
+                        (self.ppp() * pixel_size_rect.height().ceil()) as usize,
+                    );
+                    if resolution.0 > MAX_SIZE && ratio >= 1. {
+                        resolution = (MAX_SIZE, (((MAX_SIZE as f32) / ratio) as usize));
+                    } else if resolution.0 > MAX_SIZE && ratio < 1. {
+                        resolution = ((((MAX_SIZE as f32) * ratio) as usize), MAX_SIZE);
+                    }
+
+                    // println!(
+                    //     "Requesting an image of {:?} for mm size {:?}",
+                    //     resolution,
+                    //     // self.zoom(),
+                    //     // scale,
+                    //     extents
+                    // );
+                    if let Some(handle) = &self.source_image_handle {
+                        let hs = handle.size();
+                        // println!("Self::hs {:?}", hs);
+                        if (hs[0] < MAX_SIZE && hs[1] < MAX_SIZE) {
+                            eprintln!("Smaller than max size. Requesting.");
+                            sender.send(ViewCommand::RequestSourceImage {
+                                extents: cmd_extents,
+                                resolution: resolution,
+                            });
+                            self.timeout_for_source_image =
+                                Some(Instant::now() + Duration::from_secs(3));
+                        } else if (hs[0] / 5 > resolution.0 / 4 || hs[1] / 5 > resolution.1 / 4) {
+                            eprintln!(
+                                "Requesting WAY smaller than current image to avoid jaggies."
+                            );
+                            sender.send(ViewCommand::RequestSourceImage {
+                                extents: cmd_extents,
+                                resolution: resolution,
+                            });
+                            self.timeout_for_source_image =
+                                Some(Instant::now() + Duration::from_secs(3));
+                        } else {
+                            eprintln!("Not updating image because it's already at max size.");
+                        }
+                    }
+                    self.dirty = false;
+                }
+            }
+        }
+    }
+
     /// Orients the rect for the paper to the origin, and
     /// the landscape/portrait config
     ///
-
     pub fn get_paper_rect(&self) -> Rect {
         self.calc_paper_rect(self.origin)
     }
@@ -112,11 +216,7 @@ impl BAPViewModel {
         };
     }
 
-    pub fn mm_to_frame_coords<T>(&self, mm: T) -> Pos2
-    where
-        T: IsPos2Able,
-    {
-        let mm = mm.into_pos2(); // First just a raw position
+    pub fn mm_to_frame_coords(&self, mm: Pos2) -> Pos2 {
         let tmp = mm - self.look_at.to_vec2(); // Then we push to where we're actually looking.
         let tmp = tmp / PIXELS_PER_MM; // Then we adjust for the native pixel/mm density
         let tmp = tmp * self.view_zoom as f32; // Then we do the zoom adjustment
@@ -126,13 +226,16 @@ impl BAPViewModel {
         tmp
     }
 
-    pub fn frame_coords_to_mm<T>(&self, frame_coords: T) -> Pos2
-    where
-        T: IsPos2Able,
-    {
-        (((frame_coords.into_pos2() - self.center_coords + self.look_at.to_vec2()) * PIXELS_PER_MM)
-            / self.view_zoom as f32)
-            .to_pos2()
+    pub fn frame_coords_to_mm(&self, frame_coords: Pos2) -> Pos2 {
+        // (((frame_coords - self.center_coords + self.look_at.to_vec2()) * PIXELS_PER_MM)
+        //     / self.view_zoom as f32)
+        //     .to_pos2();
+
+        let tmp = frame_coords - self.center_coords.into_pos2();
+        let tmp = tmp / self.view_zoom as f32;
+        let tmp = tmp * PIXELS_PER_MM;
+        let tmp = tmp + self.look_at.to_vec2();
+        tmp.to_pos2()
     }
 
     pub fn scale_mm_to_screen(&self, mm: Vec2) -> Vec2 {
@@ -153,8 +256,9 @@ impl Default for BAPViewModel {
             status_msg: None,
             progress: None,
             svg_import_mpsc: None,
-            svg_img_handle: None,
-            svg_img_dims: None,
+            source_image_handle: None,
+            source_image_extents: None,
+            timeout_for_source_image: None,
             look_at: Pos2 { x: 0., y: 0. },
             view_zoom: 4.,
 
@@ -166,8 +270,13 @@ impl Default for BAPViewModel {
             origin: pos2(0., 0.),
             paper_color: Color32::WHITE,
             center_coords: pos2(0., 0.),
-            svg_img_zoom: None,
-            machine_config: MachineConfig::default(), //Just a default
+            machine_config: MachineConfig::default(),
+            show_machine_limits: true,
+            show_paper: true,
+            show_rulers: true,
+            show_extents: true,
+            ppp: 1.5,
+            dirty: false, //Just a default
         }
     }
 }
@@ -206,22 +315,35 @@ impl eframe::App for BAPViewModel {
             ApplicationStateChangeMsg::Pong => {}
             ApplicationStateChangeMsg::None => {}
             ApplicationStateChangeMsg::ResetDisplay => todo!(),
-            ApplicationStateChangeMsg::UpdateSVGImage {
-                image,
-                min: (left, top),
-                size: (width, height),
-                zoom,
+            ApplicationStateChangeMsg::UpdateSourceImage {
+                image: image,
+                extents: (x, y, width, height),
             } => {
-                if let Some(handle) = &mut self.svg_img_handle {
+                if let Some(handle) = &mut self.source_image_handle {
                     handle.set(image, egui::TextureOptions::NEAREST);
-                    self.svg_img_dims = Some(Rect::from_min_size(
-                        pos2(left as f32, top as f32),
+                    self.source_image_extents = Some(Rect::from_min_size(
+                        pos2(x as f32, y as f32),
                         vec2(width as f32, height as f32),
                     ));
-                    self.svg_img_zoom = Some(zoom);
                 }
+                // self.dirty = false;
+                self.timeout_for_source_image = None;
             }
             ApplicationStateChangeMsg::UpdateMachineConfig(machine_config) => todo!(),
+            ApplicationStateChangeMsg::ProgressMessage {
+                message,
+                percentage,
+            } => {
+                self.progress = Some((message, percentage));
+            }
+            ApplicationStateChangeMsg::SourceChanged { extents } => {
+                // self.waiting_for_source_image=true;
+                self.source_image_extents = Some(Rect::from_min_size(
+                    pos2(extents.0 as f32, extents.1 as f32),
+                    vec2(extents.2 as f32, extents.3 as f32),
+                ));
+                self.dirty = true;
+            }
         }
 
         crate::ui::update_ui(self, ctx, frame);

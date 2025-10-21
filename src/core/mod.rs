@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::Duration;
 
@@ -8,6 +9,7 @@ pub(crate) mod project;
 pub(crate) mod render;
 use commands::{ApplicationStateChangeMsg, ViewCommand};
 use egui_extras::Size;
+use geo::{Coord, Rect};
 use tiny_skia::{LineCap, PathBuilder, Pixmap, Stroke, StrokeDash, Transform};
 use usvg::{Options, Tree};
 
@@ -66,26 +68,57 @@ impl ApplicationCore {
                             .unwrap_or_else(|_op| self.shutdown = true);
                         self.ctx.request_repaint();
                     }
-                    ViewCommand::ZoomView(_) => todo!(),
-                    ViewCommand::ImportSVG(path_buf) => {
-                        // println!("Received import SVG command for path: {:?}", &path_buf);
-                        //
-
-                        self.project.import_svg(&path_buf, true);
-
+                    ViewCommand::RequestSourceImage {
+                        extents,
+                        resolution,
+                    } => {
                         let cimg = match render::render_svg_preview(
-                            &Tree::from_str("<svg/>", &Options::default()).unwrap(),
+                            &self.project,
+                            extents,
+                            resolution,
+                            &self.state_change_out,
                         ) {
                             Ok(cimg) => cimg,
                             Err(_) => ColorImage::example(),
                         };
 
                         self.state_change_out
-                            .send(ApplicationStateChangeMsg::UpdateSVGImage {
+                            .send(ApplicationStateChangeMsg::UpdateSourceImage {
                                 image: cimg,
-                                min: (0., 0.),
-                                size: (200., 200.),
-                                zoom: 1.,
+                                extents,
+                            })
+                            .unwrap_or_else(|_err| {
+                                self.shutdown = true;
+                                eprintln!("Failed to send message from bap core. Shutting down.");
+                            });
+                    }
+                    ViewCommand::ImportSVG(path_buf) => {
+                        self.project.import_svg(&path_buf, true);
+
+                        // let (cimg, extents) =
+                        //     match render::render_svg_preview(&self.project, self.zoom as f32) {
+                        //         Ok((cimg, extents)) => (cimg, extents),
+                        //         Err(_) => (
+                        //             ColorImage::example(),
+                        //             Rect::new(Coord { x: 0., y: 0. }, Coord { x: 50., y: 50. }),
+                        //         ),
+                        //     };
+
+                        // self.state_change_out
+                        //     .send(ApplicationStateChangeMsg::UpdateSourceImage { image: (), extents: () } {
+                        //         size: (extents.width(), extents.height()), //(cimg.width() as f64, cimg.height() as f64),
+                        //         image: cimg,
+                        //         min: (extents.min().x, extents.min().y),
+                        //         zoom: self.zoom,
+                        //     })
+                        self.state_change_out
+                            .send(ApplicationStateChangeMsg::SourceChanged {
+                                extents: (
+                                    self.project.extents().min().x,
+                                    self.project.extents().min().y,
+                                    self.project.extents().width(),
+                                    self.project.extents().height(),
+                                ),
                             })
                             .unwrap_or_else(|_err| {
                                 self.shutdown = true;
@@ -115,5 +148,30 @@ impl ApplicationCore {
         self.state_change_out
             .send(ApplicationStateChangeMsg::Dead)
             .expect("Failed to send shutdown status back to viewmodel.");
+    }
+
+    pub fn import_svg(&mut self, path: &PathBuf, keepdown: bool) {
+        self.state_change_out
+            .send(ApplicationStateChangeMsg::ProgressMessage {
+                message: format!(
+                    "Loading SVG from {}",
+                    path.as_os_str()
+                        .to_str()
+                        .expect("Can't convert path to str")
+                ),
+                percentage: 0,
+            });
+        // sleep(Duration::from_millis(5000 as u64));
+        self.project.import_svg(path, keepdown);
+        self.state_change_out
+            .send(ApplicationStateChangeMsg::ProgressMessage {
+                message: format!(
+                    "Loaded SVG from {}",
+                    path.as_os_str()
+                        .to_str()
+                        .expect("Can't convert path to str")
+                ),
+                percentage: 100,
+            });
     }
 }

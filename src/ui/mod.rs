@@ -5,7 +5,7 @@ use crate::ui::pen_crib::pen_crib_window;
 use crate::view_model::{BAPViewModel, CommandContext, PIXELS_PER_MM};
 use eframe::egui;
 use egui::{
-    Color32, Pos2, Rect, Stroke, StrokeKind, Vec2, pos2, vec2, was_tooltip_open_last_frame,
+    Color32, Key, Pos2, Rect, Stroke, StrokeKind, Vec2, pos2, vec2, was_tooltip_open_last_frame,
 };
 
 pub(crate) mod tool_window;
@@ -18,17 +18,19 @@ pub(crate) mod scene_toggle;
 pub(crate) mod themes;
 pub(crate) mod tool_button;
 
-pub(crate) fn native_to_mm(native: Pos2, zoom: f32) -> Pos2 {
-    (PIXELS_PER_MM * native) / zoom
-}
+// pub(crate) fn native_to_mm(native: Pos2, zoom: f32) -> Pos2 {
+//     (PIXELS_PER_MM * native) / zoom
+// }
 
-pub(crate) fn mm_to_native(mm: Pos2, zoom: f32) -> Pos2 {
-    (mm * zoom) / PIXELS_PER_MM
-}
+// pub(crate) fn mm_to_native(mm: Pos2, zoom: f32) -> Pos2 {
+//     (mm * zoom) / PIXELS_PER_MM
+// }
 
 pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &mut eframe::Frame) {
     // Looks better on 4k montior
-    ctx.set_pixels_per_point(1.5);
+    ctx.set_pixels_per_point(model.ppp());
+
+    model.check_for_new_source_image();
 
     let tbp = main_menu(model, ctx);
     scene_toggle::scene_toggle(model, ctx);
@@ -55,36 +57,39 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
         // println!("Center coords: {:?}", model.center_coords);
 
         // // Draw the paper
-        let paper_rect = model.mm_rect_to_screen_rect(model.get_paper_rect());
-        painter.rect(
-            paper_rect,
-            0.,
-            model.paper_color,
-            Stroke::NONE,
-            egui::StrokeKind::Outside,
-        );
-
-        if let Some(imghandle) = &model.svg_img_handle {
+        if model.show_paper {
+            let paper_rect = model.mm_rect_to_screen_rect(model.get_paper_rect());
+            painter.rect(
+                paper_rect,
+                0.,
+                model.paper_color,
+                Stroke::NONE,
+                egui::StrokeKind::Outside,
+            );
+        }
+        if let Some(imghandle) = &model.source_image_handle {
             // let size_raw = imghandle.size_vec2();
             // let size = size_raw * model.view_zoom as f32 / PIXELS_PER_MM;
             // let center = mm_to_native(mm, zoom)
-            let svgrect = model.svg_img_dims.expect(
-                "Somehow we have an image handle with no dims.
-                    This should be impossible. Dying.",
-            );
-
-            let rect = Rect::from_min_size(
-                model.mm_to_frame_coords(svgrect.min),
-                model.scale_mm_to_screen(svgrect.size()),
-            );
-            // println!("Rect for svg image {:?} is {:?}", svgrect, rect);
-            painter.image(
-                imghandle.id(),
-                rect,
-                // Rect::from_center_size(center, size),
-                Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
-                Color32::WHITE,
-            );
+            // let svgrect = model.svg_img_dims.expect(
+            //     "Somehow we have an image handle with no dims.
+            //         This should be impossible. Dying.",
+            // );
+            if let Some(svgrect) = model.source_image_extents {
+                let rect = Rect::from_min_size(
+                    model.mm_to_frame_coords(svgrect.min),
+                    model.scale_mm_to_screen(svgrect.size()),
+                );
+                // println!("Rect for svg image {:?} is {:?}", svgrect, rect);
+                // println!("Should be...ish");
+                painter.image(
+                    imghandle.id(),
+                    rect,
+                    // Rect::from_center_size(center, size),
+                    Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+                    Color32::WHITE,
+                );
+            }
         }
 
         // Draw these lines _last_ so they overlap the drawing itself.
@@ -107,13 +112,15 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                 let paper_tmp_rect =
                     model.mm_rect_to_screen_rect(model.calc_paper_rect(tmp_origin));
 
-                painter.rect(
-                    paper_tmp_rect,
-                    0.,
-                    model.paper_color.gamma_multiply(0.5),
-                    Stroke::new(2., Color32::from_gray(128)),
-                    StrokeKind::Middle,
-                );
+                if model.show_paper {
+                    painter.rect(
+                        paper_tmp_rect,
+                        0.,
+                        model.paper_color.gamma_multiply(0.5),
+                        Stroke::new(2., Color32::from_gray(128)),
+                        StrokeKind::Middle,
+                    );
+                }
 
                 // Also a temporary machine bounds to make that more obvious...
                 let machine_rect = model.mm_rect_to_screen_rect(Rect::from_min_max(
@@ -126,13 +133,15 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                         tmp_origin.y,
                     ),
                 ));
-                painter.rect(
-                    machine_rect,
-                    0.,
-                    Color32::TRANSPARENT,
-                    Stroke::new(1., Color32::YELLOW),
-                    StrokeKind::Outside,
-                );
+                if model.show_machine_limits {
+                    painter.rect(
+                        machine_rect,
+                        0.,
+                        Color32::TRANSPARENT,
+                        Stroke::new(1., Color32::YELLOW),
+                        StrokeKind::Outside,
+                    );
+                }
             };
         }
 
@@ -147,13 +156,53 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     model.origin.y,
                 ),
             ));
-            painter.rect(
-                machine_rect,
-                0.,
-                Color32::TRANSPARENT,
-                Stroke::new(1., Color32::YELLOW),
-                StrokeKind::Outside,
-            );
+            if model.show_machine_limits {
+                painter.rect(
+                    machine_rect,
+                    0.,
+                    Color32::TRANSPARENT,
+                    Stroke::new(1., Color32::YELLOW),
+                    StrokeKind::Outside,
+                );
+            }
+            if model.show_extents {
+                if let Some(extents) = model.source_image_extents {
+                    let extents_rect = model.mm_rect_to_screen_rect(extents);
+                    if model.show_extents {
+                        painter.rect(
+                            extents_rect,
+                            0.,
+                            Color32::TRANSPARENT,
+                            Stroke::new(1., Color32::BLUE),
+                            StrokeKind::Outside,
+                        );
+                    }
+                }
+            }
+
+            // This is the ruler display
+            if model.show_rulers {
+                let p1 = painter_resp.rect.min;
+                let p2 = painter_resp.rect.max;
+                let p3 = pos2(p2.x, p1.y + 16.);
+                let p4 = pos2(p1.x, p1.y + 16.);
+                let p5 = pos2(p1.x + 16., p2.y);
+                let color = ui.visuals().faint_bg_color.clone();
+                painter.rect(
+                    Rect::from_min_max(p1, p3),
+                    0.,
+                    color,
+                    Stroke::NONE,
+                    StrokeKind::Outside,
+                );
+                painter.rect(
+                    Rect::from_min_max(p4, p5),
+                    0.,
+                    color,
+                    Stroke::NONE,
+                    StrokeKind::Outside,
+                );
+            }
         }
 
         if painter_resp.clicked() {
@@ -176,26 +225,53 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
         }
 
         if painter_resp.contains_pointer() {
-            let delta = ui.input(|i| {
-                i.events.iter().find_map(|e| match e {
+            // let delta =
+            ui.input(|i| {
+                i.events.iter().for_each(|e| match e {
                     egui::Event::MouseWheel {
                         unit: _,
                         delta,
+                        modifiers: _modifiers,
+                    } => {
+                        // Some(*delta)
+                        if delta.y > 0. {
+                            // println!("Zoom +");
+                            model.set_zoom(model.zoom() * 1.1 * delta.y.abs() as f64);
+                        } else {
+                            // println!("Zoom -");
+                            model.set_zoom(model.zoom() * (1.0 / 1.1) * delta.y.abs() as f64);
+                        }
+                        model.request_new_source_image();
+                    }
+                    egui::Event::Key {
+                        key,
+                        physical_key,
+                        pressed,
+                        repeat,
                         modifiers,
-                    } => Some(*delta),
-                    _ => None,
-                })
+                    } => {
+                        if let Some(pkey) = physical_key {
+                            if *pkey == Key::Escape {
+                                model.command_context = CommandContext::None;
+                            }
+                        };
+                        // None
+                    }
+                    _ => (),
+                });
             });
-            if let Some(delta) = delta {
-                if delta.y > 0. {
-                    // println!("Zoom +");
-                    model.view_zoom = model.view_zoom * 1.1 * delta.y.abs() as f64;
-                } else {
-                    // println!("Zoom -");
-                    model.view_zoom = model.view_zoom * (1.0 / 1.1) * delta.y.abs() as f64;
-                }
-                // println!("New view zoom: {}", model.view_zoom);
-            }
+
+            // if let Some(delta) = delta {
+            //     if delta.y > 0. {
+            //         // println!("Zoom +");
+            //         model.set_zoom(model.zoom() * 1.1 * delta.y.abs() as f64);
+            //     } else {
+            //         // println!("Zoom -");
+            //         model.set_zoom(model.zoom() * (1.0 / 1.1) * delta.y.abs() as f64);
+            //     }
+            //     model.request_new_source_image();
+            //     // println!("New view zoom: {}", model.view_zoom);
+            // }
         }
 
         bottom_panel::bottom_panel(model, ctx);

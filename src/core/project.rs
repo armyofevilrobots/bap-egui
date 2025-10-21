@@ -432,8 +432,10 @@ impl Project {
         opt.dpi = 96.;
         let path = std::fs::canonicalize(path)?;
         let svg_data = std::fs::read(path)?;
-        let mut scale_x: f64 = 25.4 / 96.;
-        let mut scale_y: f64 = 25.4 / 96.;
+        // let mut scale_x: f64 = 25.4 / 96.;
+        // let mut scale_y: f64 = 25.4 / 96.;
+        let mut scale_x = 1.;
+        let mut scale_y = 1.;
         // We parse it twice. Inefficient AF, but an easy way to get the BBox
         if let Ok(xmltree) = usvg::roxmltree::Document::parse(
             String::from_utf8(svg_data.clone())
@@ -450,11 +452,11 @@ impl Project {
                 .filter(|item| item.has_tag_name("svg"))
             {
                 if let Some(width) = child.attribute("width") {
-                    // println!("WIDTH IS: {:?}", width);
+                    println!("WIDTH IS: {:?} and rsize is {:?}", width, rsize);
                     if let Some((value, units)) = Self::dims_from_dimattr(width) {
-                        // println!("Values, Units: {},{}", &value, &units);
+                        println!("Values, Units: {},{}", &value, &units);
                         scale_x = (value / rsize.width() as f64) * Self::scale_native_units(units);
-                        // println!("ScaleX is now: {}", scale_x);
+                        println!("ScaleX is now: {}", scale_x);
                     }
                 }
                 if let Some(height) = child.attribute("height") {
@@ -466,7 +468,8 @@ impl Project {
                 }
                 // println!("Child: {:?}", child)
             }
-            Ok((rtree, scale_x, scale_y))
+            // Ok((rtree, scale_x, scale_y))
+            Ok((rtree, 1., 1.))
         } else {
             Err(anyhow!("No SVG parsed."))
         }

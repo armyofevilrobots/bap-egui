@@ -8,7 +8,11 @@ use serde::{Deserialize, Serialize};
 pub enum ViewCommand {
     #[default]
     Ping,
-    ZoomView(f64), // Measured in pixels per mm. The view will calculate exactly how big.
+    // ZoomView(f64), // Measured in pixels per mm. The view will calculate exactly how big.
+    RequestSourceImage {
+        extents: (f64, f64, f64, f64),
+        resolution: (usize, usize),
+    },
     ImportSVG(PathBuf),
     SetOrigin(f64, f64),
     UpdateMachineConfig(MachineConfig),
@@ -32,14 +36,19 @@ pub enum ViewCommand {
 pub enum ApplicationStateChangeMsg {
     #[default]
     Pong,
-    UpdateSVGImage {
-        image: ColorImage, // The image to draw.
-        min: (f64, f64),   // How big it is
-        size: (f64, f64),
-        zoom: f64, // What zoom level we drew this for
+    UpdateSourceImage {
+        image: ColorImage,             // The image to draw.
+        extents: (f64, f64, f64, f64), //Min.x, Min.y, width, height
+    },
+    SourceChanged {
+        extents: (f64, f64, f64, f64),
     },
     UpdateMachineConfig(MachineConfig),
     ResetDisplay,
     Dead,
+    ProgressMessage {
+        message: String,
+        percentage: usize,
+    },
     None,
 }
