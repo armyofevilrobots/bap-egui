@@ -55,6 +55,9 @@ pub struct BAPViewModel {
     pub show_paper: bool,
     pub show_rulers: bool,
     pub show_extents: bool,
+    pub show_center_tools: bool,
+    pub edit_cmd: String,
+    pub container_rect: Option<Rect>,
 }
 
 pub trait IsPos2Able {
@@ -84,6 +87,34 @@ impl BAPViewModel {
     pub fn set_ppp(&mut self, ppp: f32) {
         self.ppp = ppp;
         // TODO: Reload the svg preview.
+    }
+
+    pub fn center_paper(&mut self, ppp: f32) {
+        // self.set_origin
+        // let top = self.get_paper_rect()
+    }
+
+    /// This one will figure out the center of the paper, center of
+    /// the machine, and try and arrange things to give us the nicest
+    /// compromise based on the paper being _somewhere_ north-east of
+    /// the machine origin.
+    pub fn center_smart(&mut self) {}
+
+    pub fn zoom_fit(&mut self) {
+        let rect = if let Some(rect) = self.source_image_extents {
+            rect
+        } else {
+            self.get_paper_rect()
+        };
+        self.look_at = rect.center();
+        if let Some(container_rect) = self.container_rect
+            && let Some(extents) = self.source_image_extents
+        {
+            let zoom_height = (container_rect.height() - 64.) / extents.height();
+            let zoom_width = (container_rect.width() - 64.) / extents.width();
+            let zoom_final = (PIXELS_PER_MM * zoom_height.min(zoom_width)) as f64;
+            self.set_zoom(zoom_final);
+        }
     }
 
     pub fn zoom(&self) -> f64 {
@@ -276,7 +307,10 @@ impl Default for BAPViewModel {
             show_rulers: true,
             show_extents: true,
             ppp: 1.5,
-            dirty: false, //Just a default
+            dirty: false,
+            show_center_tools: false,
+            container_rect: None,
+            edit_cmd: String::new(), //Just a default
         }
     }
 }

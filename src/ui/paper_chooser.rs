@@ -11,6 +11,7 @@ pub(crate) fn paper_chooser_window(
 {
     egui::Modal::new(Id::new("Paper Chooser")).show(ctx, |ui| {
         ui.set_width(400.);
+        ui.heading("Paper Selection");
         let (painter_resp, painter) = ui.allocate_painter(vec2(400., 420.), egui::Sense::all());
         let cur = ui.cursor().min;
         let prect = painter_resp.rect;

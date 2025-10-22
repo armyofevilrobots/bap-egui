@@ -14,7 +14,6 @@ pub(crate) fn tool_button<'a>(
     }
     let button = egui::Button::image(img)
         .min_size(Vec2::new(32., 32.))
-        // .small()
         .corner_radius(5.);
 
     let response = ui.add(button);

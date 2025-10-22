@@ -51,6 +51,8 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
         // let painter = ui.painter();
         let (painter_resp, painter) = ui.allocate_painter(ui.available_size(), egui::Sense::all());
 
+        model.container_rect = Some(painter_resp.rect.clone());
+
         // println!("Painter rect: {:?}", painter_resp.rect);
         let (min, max) = (painter_resp.rect.min, painter_resp.rect.max);
         model.center_coords = pos2((min.x + max.x) / 2.0_f32, (min.y + max.y) / 2.0_f32);

@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use crate::core::project::Orientation;
 use crate::view_model::{BAPDisplayMode, BAPViewModel, CommandContext};
 use eframe::egui;
-use egui::{Image, ImageButton, Vec2, vec2};
+use egui::{AtomExt, ComboBox, FontSelection, Image, ImageButton, Separator, TextEdit, Vec2, vec2};
 
 use super::tool_button::tool_button;
 
@@ -24,10 +26,11 @@ pub(crate) fn floating_tool_window(model: &mut BAPViewModel, ctx: &egui::Context
         });
         // ui.separator();
         if model.display_mode == BAPDisplayMode::SVG {
+            ui.add_space(8.);
             egui::Grid::new("SVGTOOLZ")
                 .spacing(vec2(0., 5.))
                 .show(ui, |ui| {
-                    ui.end_row();
+                    // ui.end_row();
                     if tool_button(
                         ui,
                         egui::include_image!("../../resources/images/paper_stack.png"),
@@ -45,7 +48,7 @@ pub(crate) fn floating_tool_window(model: &mut BAPViewModel, ctx: &egui::Context
                     )
                     .clicked()
                     {
-                        println!("Switching to origin context.");
+                        // println!("Switching to origin context.");
                         model.command_context = CommandContext::Origin;
                     };
                     let portrait_landscape_button = match model.paper_orientation {
@@ -76,40 +79,151 @@ pub(crate) fn floating_tool_window(model: &mut BAPViewModel, ctx: &egui::Context
                     {
                         model.pen_crib_open = true;
                     };
-                    tool_button(
+                    if tool_button(
                         ui,
-                        egui::include_image!("../../resources/images/aoer_logo.png"),
-                        Some("About...".into()),
-                    );
+                        egui::include_image!("../../resources/images/print.png"),
+                        Some("Post to plot engine.".into()),
+                    )
+                    .clicked()
+                    {};
+                    if tool_button(
+                        ui,
+                        egui::include_image!("../../resources/images/zoom_fit.png"),
+                        Some("Zoom to fit all on screen.".into()),
+                    )
+                    .clicked()
+                    {
+                        model.zoom_fit();
+                    };
                     ui.end_row();
                 });
-            ui.collapsing("Display Toggles", |ui| {
-                ui.checkbox(&mut model.show_paper, "Show paper");
-                ui.checkbox(&mut model.show_machine_limits, "Show limits");
-                ui.checkbox(&mut model.show_extents, "Show extents");
-                ui.checkbox(&mut model.show_rulers, "Show rulers");
+
+            // ui.collapsing("Alignment", |ui| {
+            ui.add_space(8.);
+            ui.label("Alignment");
+            egui::Grid::new("AlignmentToolz")
+                .spacing(vec2(0., 5.))
+                .show(ui, |ui| {
+                    if tool_button(
+                        ui,
+                        egui::include_image!("../../resources/images/align_center_paper.png"),
+                        Some("Center to paper".into()),
+                    )
+                    .clicked()
+                    {
+                        println!("CENTER!!");
+                    }
+                    if tool_button(
+                        ui,
+                        egui::include_image!("../../resources/images/align_center_limits.png"),
+                        Some("Center to machine limits".into()),
+                    )
+                    .clicked()
+                    {
+                        println!("CENTER!!");
+                    }
+                    if tool_button(
+                        ui,
+                        egui::include_image!("../../resources/images/smart_center.png"),
+                        Some("Optimal center for paper size and machine limits".into()),
+                    )
+                    .clicked()
+                    {};
+                    ui.end_row();
+                    ui.end_row();
+                });
+            // });
+            ui.add_space(8.);
+            ui.label("Display...");
+            ui.checkbox(&mut model.show_paper, "Show paper");
+            ui.checkbox(&mut model.show_machine_limits, "Show limits");
+            ui.checkbox(&mut model.show_extents, "Show extents");
+            ui.checkbox(&mut model.show_rulers, "Show rulers");
+        } else
+        /* if tool mode is plot mode */
+        {
+            ui.add_space(8.);
+            // The 'serial' connection selector.
+            let mut plotter = "/dev/acm0";
+            let plotters = vec!["/dev/acm0", "magic-phaery-dust"];
+            ui.horizontal(|ui| {
+                ComboBox::from_id_salt("Plotter Connection")
+                    .selected_text(format!("{}", plotter))
+                    .show_ui(ui, |ui| {
+                        for plt in plotters.iter() {
+                            ui.selectable_value(&mut plotter, plt.clone(), format!("{}", plt));
+                        }
+                    });
+                ui.button(egui::include_image!(
+                    "../../resources/images/plotter_connect.png"
+                ));
             });
-        } else {
+            ui.add_space(8.);
+
             egui::Grid::new("PLOT-TOOLZ")
                 .spacing(vec2(0., 5.))
                 .show(ui, |ui| {
                     tool_button(
                         ui,
-                        egui::include_image!("../../resources/images/aoer_logo.png"),
-                        Some("Set origin".into()),
+                        egui::include_image!("../../resources/images/pen_up.png"),
+                        Some("Pen Up (from paper)".into()),
                     );
                     tool_button(
                         ui,
-                        egui::include_image!("../../resources/images/aoer_logo.png"),
-                        Some("Set origin".into()),
+                        egui::include_image!("../../resources/images/move_arrow_up.png"),
+                        Some("Move pen up (Y+)".into()),
                     );
                     tool_button(
                         ui,
-                        egui::include_image!("../../resources/images/origin_icon.png"),
-                        Some("Set origin".into()),
+                        egui::include_image!("../../resources/images/cancel.png"),
+                        Some("Cancel".into()),
+                    );
+
+                    ui.end_row();
+
+                    tool_button(
+                        ui,
+                        egui::include_image!("../../resources/images/move_arrow_left.png"),
+                        Some("Move pen left (X-)".into()),
+                    );
+                    tool_button(
+                        ui,
+                        egui::include_image!("../../resources/images/home.png"),
+                        Some("Go Home (G28 X0 Y0)".into()),
+                    );
+                    tool_button(
+                        ui,
+                        egui::include_image!("../../resources/images/move_arrow_right.png"),
+                        Some("Move pen right (X+)".into()),
+                    );
+                    ui.end_row();
+
+                    tool_button(
+                        ui,
+                        egui::include_image!("../../resources/images/pen_down.png"),
+                        Some("Pen down (on paper)".into()),
+                    );
+                    tool_button(
+                        ui,
+                        egui::include_image!("../../resources/images/move_arrow_down.png"),
+                        Some("Move pen down (Y-)".into()),
+                    );
+                    tool_button(
+                        ui,
+                        egui::include_image!("../../resources/images/play_circle.png"),
+                        Some("Start/Resume plotting".into()),
                     );
                     ui.end_row();
                 });
+            ui.add_space(8.);
+            ui.horizontal(|ui| {
+                ui.add(
+                    TextEdit::singleline(&mut model.edit_cmd)
+                        .min_size(vec2(72., 16.))
+                        .desired_width(72.),
+                );
+                ui.button(egui::include_image!("../../resources/images/send_cmd.png"));
+            });
         };
     });
 }
