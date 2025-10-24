@@ -8,15 +8,19 @@ anyhow = "1.0.100"
 aoer-plotty-rs = {path="../aoer-plotty-rs"}
 eframe = "0.33.0"
 egui = { version = "0.33.0", features=["default"]}
+egui-toast = { path="deps/egui-toast"}
 egui_extras = { version = "0.33.0", features = ["svg", "image", "gif", "file", "all_loaders"] }
 geo = "0.30.0"
+glob = "0.3.3"
 nalgebra = "0.34.1"
 regex = "1.12.2"
 rfd = "0.15.4"
 ron = "0.8.0"
 serde = "1.0.228"
+serialport = "4.8.1"
 svg2polylines = { version = "0.8.1", features = ["serde"] }
 tera = "1.20.0"
 tiny-skia = {version="0.11.4", features=["simd", "png-format"]}
+url = "2.5.7"
 usvg = "0.45.1"
 uuid = { version="1.18.1", features=["v4"] }

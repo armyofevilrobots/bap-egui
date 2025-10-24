@@ -1,17 +1,20 @@
 use std::path::PathBuf;
 use std::process::exit;
 use std::sync::mpsc::{Receiver, Sender};
+use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use eframe::egui;
 use egui::{Color32, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
+use egui_toast::Toasts;
 
 use crate::core::commands::{ApplicationStateChangeMsg, ViewCommand};
 
 use crate::core::project::{Orientation, PaperSize};
 use crate::machine::MachineConfig;
+use crate::sender::PlotterState;
 
-pub const PIXELS_PER_MM: f32 = 4.;
+pub const PIXELS_PER_MM: f32 = 4.; // This is also scaled by the PPP value, but whatever.
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum BAPDisplayMode {
@@ -58,6 +61,12 @@ pub struct BAPViewModel {
     pub show_center_tools: bool,
     pub edit_cmd: String,
     pub container_rect: Option<Rect>,
+    pub serial_ports: Vec<String>,
+    pub current_port: String,
+    pub move_increment: f32,
+    join_handle: Option<JoinHandle<()>>,
+    pub plotter_state: PlotterState,
+    pub toasts: Option<Toasts>,
 }
 
 pub trait IsPos2Able {
@@ -80,8 +89,43 @@ impl BAPViewModel {
         "Bot-a-Plot"
     }
 
+    pub fn set_join_handle(&mut self, handle: JoinHandle<()>) {
+        self.join_handle = Some(handle);
+    }
+
     pub fn ppp(&self) -> f32 {
         self.ppp
+    }
+
+    pub fn request_relative_move(&self, distance: Vec2) {
+        // TODO: Don't send moves if we're currently running.
+        let cmd = format!("G91 G0 X{} Y{}", distance.x, distance.y);
+        self.send_command(&cmd);
+    }
+
+    pub fn close_serial(&self) {
+        if let Some(cmd_out) = &self.cmd_out {
+            cmd_out
+                .send(ViewCommand::DisconnectPlotter)
+                .expect("Failed to send port disconnect due to dead app-socket.")
+        }
+    }
+
+    pub fn set_serial(&self, port: &String) {
+        println!("Connecting port: {:?}", port);
+        if let Some(cmd_out) = &self.cmd_out {
+            cmd_out
+                .send(ViewCommand::ConnectPlotter(port.clone()))
+                .expect("Failed to send port selection due to dead app-socket.")
+        }
+    }
+
+    pub fn send_command(&self, cmd: &String) {
+        if let Some(cmd_out) = &self.cmd_out {
+            cmd_out
+                .send(ViewCommand::SendCommand(cmd.clone()))
+                .expect("Failed to send port selection due to dead app-socket.")
+        }
     }
 
     pub fn set_ppp(&mut self, ppp: f32) {
@@ -124,10 +168,10 @@ impl BAPViewModel {
     pub fn set_zoom(&mut self, zoom: f64) {
         self.view_zoom = zoom;
 
-        if let Some(sender) = &self.cmd_out {
-            // sender.send(ViewCommand::ZoomView(self.view_zoom));
+        if let Some(_sender) = &self.cmd_out {
             // We know the extents of the svg, so we just need to
             // calculate a new image size for the current zoom level.
+            self.request_new_source_image();
         }
     }
 
@@ -146,15 +190,6 @@ impl BAPViewModel {
                     extents.height() as f64,
                 );
                 if let Some(sender) = &self.cmd_out {
-                    // let scale = self.zoom() as f32 * 1. / self.ppp;
-                    // println!("Scale would be: {:?}, but might clamp to 16.", scale);
-                    // let scale = scale.max(16.);
-
-                    /*
-                    let resolution = (
-                        (extents.width() * scale) as usize,
-                        (extents.height() * scale) as usize,
-                    );*/
                     let pixel_size_rect = self.mm_rect_to_screen_rect(extents);
                     let ratio = pixel_size_rect.aspect_ratio();
                     let mut resolution = (
@@ -167,32 +202,35 @@ impl BAPViewModel {
                         resolution = ((((MAX_SIZE as f32) * ratio) as usize), MAX_SIZE);
                     }
 
-                    // println!(
-                    //     "Requesting an image of {:?} for mm size {:?}",
-                    //     resolution,
-                    //     // self.zoom(),
-                    //     // scale,
-                    //     extents
-                    // );
                     if let Some(handle) = &self.source_image_handle {
                         let hs = handle.size();
                         // println!("Self::hs {:?}", hs);
                         if (hs[0] < MAX_SIZE && hs[1] < MAX_SIZE) {
                             eprintln!("Smaller than max size. Requesting.");
-                            sender.send(ViewCommand::RequestSourceImage {
-                                extents: cmd_extents,
-                                resolution: resolution,
-                            });
+                            sender
+                                .send(ViewCommand::RequestSourceImage {
+                                    extents: cmd_extents,
+                                    resolution: resolution,
+                                })
+                                .unwrap_or_else(|err| {
+                                    eprintln!("Failed to send request for updated image to core.");
+                                    eprintln!("ERR: {:?}", err);
+                                });
                             self.timeout_for_source_image =
                                 Some(Instant::now() + Duration::from_secs(3));
                         } else if (hs[0] / 5 > resolution.0 / 4 || hs[1] / 5 > resolution.1 / 4) {
                             eprintln!(
                                 "Requesting WAY smaller than current image to avoid jaggies."
                             );
-                            sender.send(ViewCommand::RequestSourceImage {
-                                extents: cmd_extents,
-                                resolution: resolution,
-                            });
+                            sender
+                                .send(ViewCommand::RequestSourceImage {
+                                    extents: cmd_extents,
+                                    resolution: resolution,
+                                })
+                                .unwrap_or_else(|err| {
+                                    eprintln!("Failed to send request for updated image to core.");
+                                    eprintln!("ERR: {:?}", err);
+                                });
                             self.timeout_for_source_image =
                                 Some(Instant::now() + Duration::from_secs(3));
                         } else {
@@ -243,7 +281,10 @@ impl BAPViewModel {
     // Send a quit request to the application core.
     pub fn request_quit(&self) {
         if let Some(cmd_out) = &self.cmd_out {
-            cmd_out.send(ViewCommand::Quit);
+            cmd_out.send(ViewCommand::Quit).unwrap_or_else(|err| {
+                eprintln!("Failed to send request for updated image to core.");
+                eprintln!("ERR: {:?}", err);
+            });
         };
     }
 
@@ -310,7 +351,13 @@ impl Default for BAPViewModel {
             dirty: false,
             show_center_tools: false,
             container_rect: None,
-            edit_cmd: String::new(), //Just a default
+            edit_cmd: String::new(),
+            serial_ports: Vec::new(), //Just a default
+            current_port: "".to_string(),
+            join_handle: None,
+            move_increment: 5.,
+            plotter_state: PlotterState::Disconnected,
+            toasts: None,
         }
     }
 }
@@ -378,6 +425,10 @@ impl eframe::App for BAPViewModel {
                 ));
                 self.dirty = true;
             }
+            ApplicationStateChangeMsg::PlotterState(plotter_state) => {
+                self.plotter_state = plotter_state
+            }
+            ApplicationStateChangeMsg::FoundPorts(items) => self.serial_ports = items,
         }
 
         crate::ui::update_ui(self, ctx, frame);

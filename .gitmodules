@@ -1,0 +1,3 @@
+[submodule "deps/egui-toast"]
+	path = deps/egui-toast
+	url = git@github.com:LazerSharkk/egui-toast.git

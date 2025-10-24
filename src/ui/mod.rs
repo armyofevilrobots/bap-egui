@@ -4,11 +4,14 @@ use crate::ui::paper_chooser::paper_chooser_window;
 use crate::ui::pen_crib::pen_crib_window;
 use crate::view_model::{BAPViewModel, CommandContext, PIXELS_PER_MM};
 use eframe::egui;
+use egui::Direction::BottomUp;
 use egui::{
-    Color32, Key, Pos2, Rect, Stroke, StrokeKind, Vec2, pos2, vec2, was_tooltip_open_last_frame,
+    Align2, Color32, Key, Pos2, Rect, Stroke, StrokeKind, Vec2, pos2, vec2,
+    was_tooltip_open_last_frame,
 };
 
 pub(crate) mod tool_window;
+use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 use tool_window::floating_tool_window;
 pub(crate) mod bottom_panel;
 pub(crate) mod menu;
@@ -16,6 +19,7 @@ pub(crate) mod paper_chooser;
 pub(crate) mod pen_crib;
 pub(crate) mod scene_toggle;
 pub(crate) mod themes;
+pub(crate) mod toast;
 pub(crate) mod tool_button;
 
 // pub(crate) fn native_to_mm(native: Pos2, zoom: f32) -> Pos2 {
@@ -34,9 +38,12 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
 
     let tbp = main_menu(model, ctx);
     scene_toggle::scene_toggle(model, ctx);
+    let mut toasts = Toasts::new()
+        .anchor(Align2::RIGHT_BOTTOM, (-10.0, -25.0)) // 10 units from the bottom right corner
+        .direction(BottomUp);
 
     let wtop = tbp.top();
-    floating_tool_window(model, ctx, wtop);
+    floating_tool_window(model, ctx, wtop, &mut toasts);
     if model.paper_modal_open {
         paper_chooser_window(model, ctx);
     }
@@ -53,10 +60,8 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
 
         model.container_rect = Some(painter_resp.rect.clone());
 
-        // println!("Painter rect: {:?}", painter_resp.rect);
         let (min, max) = (painter_resp.rect.min, painter_resp.rect.max);
         model.center_coords = pos2((min.x + max.x) / 2.0_f32, (min.y + max.y) / 2.0_f32);
-        // println!("Center coords: {:?}", model.center_coords);
 
         // // Draw the paper
         if model.show_paper {
@@ -82,8 +87,6 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     model.mm_to_frame_coords(svgrect.min),
                     model.scale_mm_to_screen(svgrect.size()),
                 );
-                // println!("Rect for svg image {:?} is {:?}", svgrect, rect);
-                // println!("Should be...ish");
                 painter.image(
                     imghandle.id(),
                     rect,
@@ -96,10 +99,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
 
         // Draw these lines _last_ so they overlap the drawing itself.
         if model.command_context == CommandContext::Origin {
-            // println!("Drawing origin lines.");
-
             if let Some(pos) = ctx.pointer_latest_pos() {
-                // println!("Got pointer pos: {:?}", &pos);
                 let p1 = painter_resp.rect.min.clone();
                 let p2 = painter_resp.rect.max.clone();
                 painter.line(
@@ -228,6 +228,11 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
 
         if painter_resp.contains_pointer() {
             // let delta =
+            let mouse_pos_screen = if let Some(pos) = ctx.pointer_interact_pos() {
+                Some(pos /*  - model.center_coords.to_vec2()*/)
+            } else {
+                None
+            };
             ui.input(|i| {
                 i.events.iter().for_each(|e| match e {
                     egui::Event::MouseWheel {
@@ -236,14 +241,18 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                         modifiers: _modifiers,
                     } => {
                         // Some(*delta)
-                        if delta.y > 0. {
-                            // println!("Zoom +");
-                            model.set_zoom(model.zoom() * 1.1 * delta.y.abs() as f64);
-                        } else {
-                            // println!("Zoom -");
-                            model.set_zoom(model.zoom() * (1.0 / 1.1) * delta.y.abs() as f64);
+                        if let Some(mouse_pos) = mouse_pos_screen {
+                            let mouse_pos_pre_mm = model.frame_coords_to_mm(mouse_pos.clone());
+                            if delta.y > 0. {
+                                model.set_zoom(model.zoom() * 1.1 * delta.y.abs() as f64);
+                            } else {
+                                model.set_zoom(model.zoom() * (1.0 / 1.1) * delta.y.abs() as f64);
+                            }
+                            let mouse_pos_post_mm = model.frame_coords_to_mm(mouse_pos.clone());
+                            let delta = mouse_pos_pre_mm - mouse_pos_post_mm;
+                            // let drag = model.scale_mm_to_screen(delta);
+                            model.look_at = model.look_at + delta;
                         }
-                        model.request_new_source_image();
                     }
                     egui::Event::Key {
                         key,
@@ -254,7 +263,21 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     } => {
                         if let Some(pkey) = physical_key {
                             if *pkey == Key::Escape {
-                                model.command_context = CommandContext::None;
+                                if model.command_context != CommandContext::None {
+                                    toasts.add(Toast {
+                                        kind: ToastKind::Info,
+                                        text: format!(
+                                            "Exited command context {:?}",
+                                            model.command_context
+                                        )
+                                        .into(),
+                                        options: ToastOptions::default()
+                                            .duration_in_seconds(5.0)
+                                            .show_progress(true),
+                                        ..Default::default()
+                                    });
+                                    model.command_context = CommandContext::None;
+                                }
                             }
                         };
                         // None
@@ -262,22 +285,10 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     _ => (),
                 });
             });
-
-            // if let Some(delta) = delta {
-            //     if delta.y > 0. {
-            //         // println!("Zoom +");
-            //         model.set_zoom(model.zoom() * 1.1 * delta.y.abs() as f64);
-            //     } else {
-            //         // println!("Zoom -");
-            //         model.set_zoom(model.zoom() * (1.0 / 1.1) * delta.y.abs() as f64);
-            //     }
-            //     model.request_new_source_image();
-            //     // println!("New view zoom: {}", model.view_zoom);
-            // }
         }
 
         bottom_panel::bottom_panel(model, ctx);
-
+        toasts.show(ctx);
         (precursor, ui.cursor())
     });
 }

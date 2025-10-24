@@ -1,12 +1,13 @@
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use egui::{ColorImage, Context};
 
 pub(crate) mod commands;
 pub(crate) mod project;
 pub(crate) mod render;
+pub(crate) mod serial;
 use commands::{ApplicationStateChangeMsg, ViewCommand};
 use egui_extras::Size;
 use geo::{Coord, Rect};
@@ -15,6 +16,7 @@ use usvg::{Options, Tree};
 
 use crate::core::project::Project;
 use crate::machine::MachineConfig;
+use crate::sender::{PlotterCommand, PlotterConnection, PlotterResponse};
 
 /// The actual application core that does shit.
 ///
@@ -28,6 +30,9 @@ pub struct ApplicationCore {
     project: Project,
     machine: MachineConfig,
     ctx: Context, // Just a repaint context, not used for ANYTHING else.
+    plot_sender: Sender<PlotterCommand>,
+    plot_receiver: Receiver<PlotterResponse>,
+    last_serial_scan: Instant,
 }
 
 impl ApplicationCore {
@@ -40,13 +45,21 @@ impl ApplicationCore {
     ) {
         let (vm_to_app, app_from_vm) = mpsc::channel::<ViewCommand>();
         let (app_to_vm, vm_from_app) = mpsc::channel::<ApplicationStateChangeMsg>();
+        // let (app_to_plotter, plotter_from_app) = mpsc::channel::<PlotterCommand>();
+        // let (plotter_to_app, app_from_plotter) = mpsc::channel::<PlotterResponse>();
+        let (app_to_plotter, plotter_to_app) =
+            PlotterConnection::spawn().expect("Failed to create PlotterConnection worker.");
+        app_to_vm.send(ApplicationStateChangeMsg::FoundPorts(serial::scan_ports()));
         let new = ApplicationCore {
             view_command_in: app_from_vm,
             state_change_out: app_to_vm,
             shutdown: false,
             project: Project::new(),
             machine: MachineConfig::default(),
+            plot_receiver: plotter_to_app,
+            plot_sender: app_to_plotter,
             ctx,
+            last_serial_scan: Instant::now(),
         };
         (new, vm_to_app, vm_from_app)
     }
@@ -62,78 +75,62 @@ impl ApplicationCore {
                 Err(_err) => (),
                 Ok(msg) => match msg {
                     ViewCommand::Ping => {
-                        println!("PING!");
-                        self.state_change_out
-                            .send(ApplicationStateChangeMsg::Pong)
-                            .unwrap_or_else(|_op| self.shutdown = true);
-                        self.ctx.request_repaint();
-                    }
+                                        println!("PING!");
+                                        self.state_change_out
+                                            .send(ApplicationStateChangeMsg::Pong)
+                                            .unwrap_or_else(|_op| self.shutdown = true);
+                                        self.ctx.request_repaint();
+                                    }
                     ViewCommand::RequestSourceImage {
-                        extents,
-                        resolution,
-                    } => {
-                        let cimg = match render::render_svg_preview(
-                            &self.project,
-                            extents,
-                            resolution,
-                            &self.state_change_out,
-                        ) {
-                            Ok(cimg) => cimg,
-                            Err(_) => ColorImage::example(),
-                        };
+                                        extents,
+                                        resolution,
+                                    } => {
+                                        let cimg = match render::render_svg_preview(
+                                            &self.project,
+                                            extents,
+                                            resolution,
+                                            &self.state_change_out,
+                                        ) {
+                                            Ok(cimg) => cimg,
+                                            Err(_) => ColorImage::example(),
+                                        };
 
-                        self.state_change_out
-                            .send(ApplicationStateChangeMsg::UpdateSourceImage {
-                                image: cimg,
-                                extents,
-                            })
-                            .unwrap_or_else(|_err| {
-                                self.shutdown = true;
-                                eprintln!("Failed to send message from bap core. Shutting down.");
-                            });
-                    }
+                                        self.state_change_out
+                                            .send(ApplicationStateChangeMsg::UpdateSourceImage {
+                                                image: cimg,
+                                                extents,
+                                            })
+                                            .unwrap_or_else(|_err| {
+                                                self.shutdown = true;
+                                                eprintln!("Failed to send message from bap core. Shutting down.");
+                                            });
+                                    }
                     ViewCommand::ImportSVG(path_buf) => {
-                        self.project.import_svg(&path_buf, true);
+                                        self.project.import_svg(&path_buf, true);
 
-                        // let (cimg, extents) =
-                        //     match render::render_svg_preview(&self.project, self.zoom as f32) {
-                        //         Ok((cimg, extents)) => (cimg, extents),
-                        //         Err(_) => (
-                        //             ColorImage::example(),
-                        //             Rect::new(Coord { x: 0., y: 0. }, Coord { x: 50., y: 50. }),
-                        //         ),
-                        //     };
-
-                        // self.state_change_out
-                        //     .send(ApplicationStateChangeMsg::UpdateSourceImage { image: (), extents: () } {
-                        //         size: (extents.width(), extents.height()), //(cimg.width() as f64, cimg.height() as f64),
-                        //         image: cimg,
-                        //         min: (extents.min().x, extents.min().y),
-                        //         zoom: self.zoom,
-                        //     })
-                        self.state_change_out
-                            .send(ApplicationStateChangeMsg::SourceChanged {
-                                extents: (
-                                    self.project.extents().min().x,
-                                    self.project.extents().min().y,
-                                    self.project.extents().width(),
-                                    self.project.extents().height(),
-                                ),
-                            })
-                            .unwrap_or_else(|_err| {
-                                self.shutdown = true;
-                                eprintln!("Failed to send message from bap core. Shutting down.");
-                            });
-                    }
+                                        self.state_change_out
+                                            .send(ApplicationStateChangeMsg::SourceChanged {
+                                                extents: (
+                                                    self.project.extents().min().x,
+                                                    self.project.extents().min().y,
+                                                    self.project.extents().width(),
+                                                    self.project.extents().height(),
+                                                ),
+                                            })
+                                            .unwrap_or_else(|_err| {
+                                                self.shutdown = true;
+                                                eprintln!("Failed to send message from bap core. Shutting down.");
+                                            });
+                                    }
                     ViewCommand::SetOrigin(_, _) => todo!(),
                     ViewCommand::SetClipBoundary {
-                        min: _min,
-                        max: _max,
-                    } => todo!(),
+                                        min: _min,
+                                        max: _max,
+                                    } => todo!(),
                     ViewCommand::RotateSource {
-                        center: _center,
-                        theta: _theta,
-                    } => todo!(),
+                                        center: _center,
+                                        theta: _theta,
+                                    } => todo!(),
                     ViewCommand::Post => todo!(),
                     ViewCommand::StartPlot => todo!(),
                     ViewCommand::PausePlot => todo!(),
@@ -141,7 +138,56 @@ impl ApplicationCore {
                     ViewCommand::None => todo!(),
                     ViewCommand::Quit => self.shutdown = true,
                     ViewCommand::UpdateMachineConfig(machine_config) => todo!(),
-                },
+                    ViewCommand::SendCommand(cmd)=>{
+                                        self.plot_sender
+                                            .send(PlotterCommand::Command(cmd))
+                                            .unwrap_or_else(|err|{
+                                                self.shutdown = true;
+                                                eprintln!("Plot sender is dead and I cannot connect. Dying: {:?}", err);
+                                                self.state_change_out.send(ApplicationStateChangeMsg::Dead)
+                                                    .expect("Can't even notify ViewModel I'm dead?! YOLO and apparently not for very long.");
+                                            });
+                                    }
+                    ViewCommand::ConnectPlotter(port_path) => self
+                                        .plot_sender
+                                        .send(PlotterCommand::Connect(port_path))
+                                        .unwrap_or_else(|err| {
+                                            self.shutdown = true;
+                                            eprintln!("Plot sender is dead and I cannot connect. Dying: {:?}", err);
+                                            self.state_change_out.send(ApplicationStateChangeMsg::Dead)
+                                                .expect("Can't even notify ViewModel I'm dead?! YOLO and apparently not for very long.");
+                                        }),
+                    ViewCommand::DisconnectPlotter => self
+                        .plot_sender
+                        .send(PlotterCommand::Disconnect)
+                        .unwrap_or_else(|err| {
+                            self.shutdown = true;
+                            eprintln!("Plot sender is dead and I cannot connect. Dying: {:?}", err);
+                            self.state_change_out.send(ApplicationStateChangeMsg::Dead)
+                                .expect("Can't even notify ViewModel I'm dead?! YOLO and apparently not for very long.");
+                        }),                },
+            }
+
+            // Also, we need to check for plotter responses...
+
+            if let Ok(response) = self.plot_receiver.recv_timeout(Duration::from_millis(100)) {
+                match response {
+                    PlotterResponse::Ok(plotter_command, _) => {}
+                    PlotterResponse::Loaded(_) => {}
+                    PlotterResponse::Err(plotter_command, _) => {}
+                    PlotterResponse::State(plotter_state) => self
+                        .state_change_out
+                        .send(ApplicationStateChangeMsg::PlotterState(plotter_state))
+                        .expect("Failed to send to ViewModel. Dead conn?"),
+                }
+            }
+
+            // Housekeeping stuffs.
+            if self.last_serial_scan + Duration::from_secs(10) < Instant::now() {
+                self.state_change_out
+                    .send(ApplicationStateChangeMsg::FoundPorts(serial::scan_ports()))
+                    .expect("Failed to send serial port update. Dead ViewModel?");
+                self.last_serial_scan = Instant::now();
             }
         }
 

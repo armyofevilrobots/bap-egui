@@ -8,6 +8,7 @@ use egui::{Color32, ColorImage, Rect, Vec2, include_image, pos2, vec2};
 pub(crate) mod core;
 pub(crate) mod machine;
 //pub(crate) mod post;
+pub(crate) mod sender;
 pub(crate) mod ui;
 pub(crate) mod view_model;
 
@@ -40,21 +41,19 @@ fn main() -> eframe::Result<()> {
             model.state_in = Some(state_in);
             model.cmd_out = Some(cmd_out);
             model.origin = pos2(0., 279.);
-            let tmp_svg_image = ColorImage::filled([3, 3], Color32::TRANSPARENT);
-            // let tmp_svg_image = ColorImage::example();
-            // let bap_logo = include_image!("../resources/images/aoer_logo.png");
-            // let bap_logo = ;
 
+            // We need some kind of placeholder due to the API. How bout a secret pixel?
+            let tmp_svg_image = ColorImage::filled([3, 3], Color32::TRANSPARENT);
             let tex = ctx.egui_ctx.load_texture(
                 format!("{}", Uuid::new_v4().as_u128()),
                 tmp_svg_image,
                 egui::TextureOptions::NEAREST,
             );
             model.source_image_handle = Some(Box::new(tex));
-            // model.svg_img_dims = Some(Rect::from_min_max(pos2(0., 0.), pos2(1., 1.)));
             model.source_image_extents = None;
 
-            thread::spawn(move || application.run());
+            let handle = thread::spawn(move || application.run());
+            model.set_join_handle(handle);
             egui_extras::install_image_loaders(&ctx.egui_ctx);
             Ok(Box::new(model))
         }),

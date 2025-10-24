@@ -1,13 +1,22 @@
 use std::collections::HashMap;
 
 use crate::core::project::Orientation;
+use crate::sender::PlotterState;
 use crate::view_model::{BAPDisplayMode, BAPViewModel, CommandContext};
 use eframe::egui;
-use egui::{AtomExt, ComboBox, FontSelection, Image, ImageButton, Separator, TextEdit, Vec2, vec2};
+use egui::{
+    AtomExt, ComboBox, FontSelection, Image, ImageButton, Separator, Slider, TextEdit, Vec2, vec2,
+};
+use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 
 use super::tool_button::tool_button;
 
-pub(crate) fn floating_tool_window(model: &mut BAPViewModel, ctx: &egui::Context, wtop: f32) {
+pub(crate) fn floating_tool_window(
+    model: &mut BAPViewModel,
+    ctx: &egui::Context,
+    wtop: f32,
+    toasts: &mut Toasts,
+) {
     let win = egui::Window::new("")
         // .auto_sized()
         .default_pos((40., 40.))
@@ -35,6 +44,7 @@ pub(crate) fn floating_tool_window(model: &mut BAPViewModel, ctx: &egui::Context
                         ui,
                         egui::include_image!("../../resources/images/paper_stack.png"),
                         Some("Choose Paper Size".to_string()),
+                        true,
                     )
                     .clicked()
                     {
@@ -45,6 +55,7 @@ pub(crate) fn floating_tool_window(model: &mut BAPViewModel, ctx: &egui::Context
                         ui,
                         egui::include_image!("../../resources/images/origin_icon.png"),
                         Some("Set origin".into()),
+                        true,
                     )
                     .clicked()
                     {
@@ -56,11 +67,13 @@ pub(crate) fn floating_tool_window(model: &mut BAPViewModel, ctx: &egui::Context
                             ui,
                             egui::include_image!("../../resources/images/portrait.png"),
                             Some("Change to portrait orientation".into()),
+                            true,
                         ),
                         Orientation::Portrait => tool_button(
                             ui,
                             egui::include_image!("../../resources/images/landscape.png"),
                             Some("Change to landscape orientation".into()),
+                            true,
                         ),
                     };
                     if portrait_landscape_button.clicked() {
@@ -74,6 +87,7 @@ pub(crate) fn floating_tool_window(model: &mut BAPViewModel, ctx: &egui::Context
                         ui,
                         egui::include_image!("../../resources/images/pen_crib.png"),
                         Some("Pen Management".into()),
+                        true,
                     )
                     .clicked()
                     {
@@ -83,6 +97,10 @@ pub(crate) fn floating_tool_window(model: &mut BAPViewModel, ctx: &egui::Context
                         ui,
                         egui::include_image!("../../resources/images/print.png"),
                         Some("Post to plot engine.".into()),
+                        match model.plotter_state {
+                            PlotterState::Running(_, _, _) => false,
+                            _ => true,
+                        },
                     )
                     .clicked()
                     {};
@@ -90,6 +108,7 @@ pub(crate) fn floating_tool_window(model: &mut BAPViewModel, ctx: &egui::Context
                         ui,
                         egui::include_image!("../../resources/images/zoom_fit.png"),
                         Some("Zoom to fit all on screen.".into()),
+                        true,
                     )
                     .clicked()
                     {
@@ -108,6 +127,7 @@ pub(crate) fn floating_tool_window(model: &mut BAPViewModel, ctx: &egui::Context
                         ui,
                         egui::include_image!("../../resources/images/align_center_paper.png"),
                         Some("Center to paper".into()),
+                        true,
                     )
                     .clicked()
                     {
@@ -117,6 +137,7 @@ pub(crate) fn floating_tool_window(model: &mut BAPViewModel, ctx: &egui::Context
                         ui,
                         egui::include_image!("../../resources/images/align_center_limits.png"),
                         Some("Center to machine limits".into()),
+                        true,
                     )
                     .clicked()
                     {
@@ -126,6 +147,7 @@ pub(crate) fn floating_tool_window(model: &mut BAPViewModel, ctx: &egui::Context
                         ui,
                         egui::include_image!("../../resources/images/smart_center.png"),
                         Some("Optimal center for paper size and machine limits".into()),
+                        true,
                     )
                     .clicked()
                     {};
@@ -144,19 +166,82 @@ pub(crate) fn floating_tool_window(model: &mut BAPViewModel, ctx: &egui::Context
         {
             ui.add_space(8.);
             // The 'serial' connection selector.
-            let mut plotter = "/dev/acm0";
-            let plotters = vec!["/dev/acm0", "magic-phaery-dust"];
+            // let mut plotter = "/dev/acm0";
+            // let plotters = vec!["/dev/acm0", "magic-phaery-dust"];
+            let last_port = model.current_port.clone();
             ui.horizontal(|ui| {
-                ComboBox::from_id_salt("Plotter Connection")
-                    .selected_text(format!("{}", plotter))
+                let cb_resp = ComboBox::from_id_salt("Plotter Connection")
+                    .selected_text(format!(
+                        "{}",
+                        model.current_port.replace("serial:///dev/", "")
+                    ))
+                    .width(72.)
+                    .truncate()
                     .show_ui(ui, |ui| {
-                        for plt in plotters.iter() {
-                            ui.selectable_value(&mut plotter, plt.clone(), format!("{}", plt));
+                        for plt in model.serial_ports.iter() {
+                            if ui
+                                .selectable_value(
+                                    &mut model.current_port,
+                                    plt.clone(),
+                                    format!("{}", plt.replace("serial:///dev/", "")),
+                                )
+                                .clicked()
+                            {
+                                match model.plotter_state {
+                                    PlotterState::Disconnected => (),
+                                    _ => {
+                                        model.current_port = last_port.clone();
+                                        toasts.add(Toast {
+                                            kind: ToastKind::Error,
+                                            text: format!(
+                                                "Cannot change port while plotter is connected."
+                                            )
+                                            .into(),
+                                            options: ToastOptions::default(),
+                                            ..Default::default()
+                                        });
+                                    }
+                                }
+                            };
                         }
                     });
-                ui.button(egui::include_image!(
-                    "../../resources/images/plotter_connect.png"
-                ));
+                if cb_resp.response.changed() {
+                    println!("Got a change on serial selector.");
+                    match model.plotter_state {
+                        PlotterState::Disconnected => model.current_port = last_port.clone(),
+                        _ => (),
+                    }
+                }
+                if ui
+                    .button(match model.plotter_state {
+                        PlotterState::Disconnected => {
+                            egui::include_image!("../../resources/images/plotter_connect.png")
+                        }
+                        PlotterState::Failed(_) => {
+                            egui::include_image!("../../resources/images/plotter_connect.png")
+                        }
+                        _ => egui::include_image!("../../resources/images/plotter_disconnect.png"),
+                    })
+                    .clicked()
+                {
+                    match model.plotter_state {
+                        PlotterState::Disconnected => model.set_serial(&model.current_port),
+                        PlotterState::Dead => model.set_serial(&model.current_port),
+                        PlotterState::Running(_, _, _) => {
+                            toasts.add(Toast {
+                                kind: ToastKind::Error,
+                                text: format!("Cannot close connection while plotter is running.")
+                                    .into(),
+                                options: ToastOptions::default(),
+                                ..Default::default()
+                            });
+                        }
+                        _ => {
+                            model.close_serial();
+                            // model.current_port = last_port.clone();
+                        }
+                    }
+                }
             });
             ui.add_space(8.);
 
@@ -167,62 +252,167 @@ pub(crate) fn floating_tool_window(model: &mut BAPViewModel, ctx: &egui::Context
                         ui,
                         egui::include_image!("../../resources/images/pen_up.png"),
                         Some("Pen Up (from paper)".into()),
+                        match model.plotter_state {
+                            PlotterState::Ready => true,
+                            PlotterState::Paused(_, _, _) => true,
+                            _ => false,
+                        },
                     );
-                    tool_button(
+                    if tool_button(
                         ui,
                         egui::include_image!("../../resources/images/move_arrow_up.png"),
                         Some("Move pen up (Y+)".into()),
-                    );
+                        match model.plotter_state {
+                            PlotterState::Ready => true,
+                            PlotterState::Paused(_, _, _) => true,
+                            _ => false,
+                        },
+                    )
+                    .clicked()
+                    {
+                        model.request_relative_move(vec2(0., model.move_increment));
+                    };
                     tool_button(
                         ui,
                         egui::include_image!("../../resources/images/cancel.png"),
                         Some("Cancel".into()),
+                        true,
                     );
 
                     ui.end_row();
 
-                    tool_button(
+                    if tool_button(
                         ui,
                         egui::include_image!("../../resources/images/move_arrow_left.png"),
                         Some("Move pen left (X-)".into()),
-                    );
-                    tool_button(
+                        match model.plotter_state {
+                            PlotterState::Ready => true,
+                            PlotterState::Paused(_, _, _) => true,
+                            _ => false,
+                        },
+                    )
+                    .clicked()
+                    {
+                        model.request_relative_move(vec2(-model.move_increment, 0.));
+                    };
+
+                    if tool_button(
                         ui,
                         egui::include_image!("../../resources/images/home.png"),
                         Some("Go Home (G28 X0 Y0)".into()),
-                    );
-                    tool_button(
+                        match model.plotter_state {
+                            PlotterState::Ready => true,
+                            _ => false,
+                        },
+                    )
+                    .clicked()
+                    {
+                        model.send_command(&"G28 X0 Y0".to_string());
+                    }
+                    if tool_button(
                         ui,
                         egui::include_image!("../../resources/images/move_arrow_right.png"),
                         Some("Move pen right (X+)".into()),
-                    );
+                        match model.plotter_state {
+                            PlotterState::Ready => true,
+                            PlotterState::Paused(_, _, _) => true,
+                            _ => false,
+                        },
+                    )
+                    .clicked()
+                    {
+                        model.request_relative_move(vec2(model.move_increment, 0.));
+                    }
                     ui.end_row();
 
                     tool_button(
                         ui,
                         egui::include_image!("../../resources/images/pen_down.png"),
                         Some("Pen down (on paper)".into()),
+                        match model.plotter_state {
+                            PlotterState::Ready => true,
+                            PlotterState::Paused(_, _, _) => true,
+                            _ => false,
+                        },
                     );
-                    tool_button(
+                    if tool_button(
                         ui,
                         egui::include_image!("../../resources/images/move_arrow_down.png"),
                         Some("Move pen down (Y-)".into()),
-                    );
+                        match model.plotter_state {
+                            PlotterState::Ready => true,
+                            PlotterState::Paused(_, _, _) => true,
+                            _ => false,
+                        },
+                    )
+                    .clicked()
+                    {
+                        model.request_relative_move(vec2(0., -model.move_increment));
+                    }
+
                     tool_button(
                         ui,
                         egui::include_image!("../../resources/images/play_circle.png"),
                         Some("Start/Resume plotting".into()),
+                        match model.plotter_state {
+                            PlotterState::Ready => true,
+                            PlotterState::Paused(_, _, _) => true,
+                            PlotterState::Running(_, _, _) => true,
+                            PlotterState::Failed(_) => true,
+                            _ => false,
+                        },
                     );
                     ui.end_row();
                 });
             ui.add_space(8.);
             ui.horizontal(|ui| {
+                ui.style_mut().spacing.slider_width = 48.;
                 ui.add(
+                    Slider::new(&mut model.move_increment, 0.1..=100.0)
+                        .suffix("mm")
+                        .logarithmic(true)
+                        .fixed_decimals(1),
+                );
+            });
+            ui.add_space(8.);
+            ui.horizontal(|ui| {
+                let cmd_response = ui.add_enabled(
+                    match model.plotter_state {
+                        PlotterState::Ready => true,
+                        PlotterState::Paused(_, _, _) => true,
+                        _ => false,
+                    },
                     TextEdit::singleline(&mut model.edit_cmd)
                         .min_size(vec2(72., 16.))
                         .desired_width(72.),
                 );
-                ui.button(egui::include_image!("../../resources/images/send_cmd.png"));
+                let mut viz_cue = false;
+                if cmd_response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                    model.send_command(&model.edit_cmd);
+                    viz_cue = true;
+                }
+                let mut but_resp =
+                    ui.button(egui::include_image!("../../resources/images/send_cmd.png"));
+                if viz_cue {
+                    but_resp = but_resp.highlight();
+                }
+
+                if but_resp.clicked() {
+                    match model.plotter_state {
+                        PlotterState::Ready => model.send_command(&model.edit_cmd),
+                        PlotterState::Paused(_, _, _) => model.send_command(&model.edit_cmd),
+                        _ => {
+                            toasts.add(Toast {
+                                kind: ToastKind::Warning,
+                                text: "Cannot send plotter command right now.".into(),
+                                options: ToastOptions::default()
+                                    .duration_in_seconds(5.0)
+                                    .show_progress(true),
+                                ..Default::default()
+                            });
+                        }
+                    };
+                };
             });
         };
     });
