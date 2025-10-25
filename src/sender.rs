@@ -10,7 +10,6 @@ use std::ops::DerefMut;
 use std::sync::mpsc::{self, TryRecvError};
 use std::time::Duration;
 const DEFAULT_TIMEOUT: u64 = 30000;
-const HOMING_TIMEOUT: u64 = 60000;
 
 #[derive(Debug)]
 pub enum PlotterConnectionError {

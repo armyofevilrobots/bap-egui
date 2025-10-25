@@ -9,7 +9,7 @@ use nalgebra::{Affine2, Point2};
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 use std::ffi::OsString;
-use std::fmt::{Display, Write};
+use std::fmt::Display;
 use std::io::BufWriter;
 use std::str::FromStr;
 use std::{collections::HashMap, path::PathBuf};
@@ -67,6 +67,7 @@ impl Display for Orientation {
     }
 }
 
+#[allow(non_camel_case_types)]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum PaperSize {
     Letter,
@@ -433,8 +434,8 @@ impl Project {
         let svg_data = std::fs::read(path)?;
         // let mut scale_x: f64 = 25.4 / 96.;
         // let mut scale_y: f64 = 25.4 / 96.;
-        let mut scale_x = 1.;
-        let mut scale_y = 1.;
+        // let mut scale_x = 1.;
+        // let mut scale_y = 1.;
         // We parse it twice. Inefficient AF, but an easy way to get the BBox
         if let Ok(xmltree) = usvg::roxmltree::Document::parse(
             String::from_utf8(svg_data.clone())
@@ -454,17 +455,17 @@ impl Project {
                     println!("WIDTH IS: {:?} and rsize is {:?}", width, rsize);
                     if let Some((value, units)) = Self::dims_from_dimattr(width) {
                         println!("Values, Units: {},{}", &value, &units);
-                        scale_x = (value / rsize.width() as f64) * Self::scale_native_units(units);
-                        println!("ScaleX is now: {}", scale_x);
+                        // scale_x = (value / rsize.width() as f64) * Self::scale_native_units(units);
+                        // println!("ScaleX is now: {}", scale_x);
                     }
                 }
-                if let Some(height) = child.attribute("height") {
-                    if let Some((value, units)) = Self::dims_from_dimattr(height) {
-                        // println!("Values, Units: {},{}", &value, &units);
-                        scale_y = (value / rsize.height() as f64) * Self::scale_native_units(units);
-                        // println!("ScaleY is now: {}", scale_y);
-                    }
-                }
+                // if let Some(height) = child.attribute("height") {
+                //     // if let Some((value, units)) = Self::dims_from_dimattr(height) {
+                //     // println!("Values, Units: {},{}", &value, &units);
+                //     // scale_y = (value / rsize.height() as f64) * Self::scale_native_units(units);
+                //     // println!("ScaleY is now: {}", scale_y);
+                //     // }
+                // }
                 // println!("Child: {:?}", child)
             }
             // Ok((rtree, scale_x, scale_y))

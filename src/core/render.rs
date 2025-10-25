@@ -55,10 +55,12 @@ pub(crate) fn render_svg_preview(
     stroke.width = 0.1; // * scale;
     for pg in &project.geometry {
         i += 1;
-        state_change_out.send(ApplicationStateChangeMsg::ProgressMessage {
-            message: "Scaling preview...".to_string(),
-            percentage: (20 * i) / line_count,
-        });
+        state_change_out
+            .send(ApplicationStateChangeMsg::ProgressMessage {
+                message: "Scaling preview...".to_string(),
+                percentage: (20 * i) / line_count,
+            })
+            .expect("Failed to send back to core. Dead core?");
         if let Geometry::MultiLineString(mls) = &pg.geometry {
             for line in &mls.0 {
                 // let mut pb = PathBuilder::new();

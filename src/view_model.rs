@@ -60,7 +60,6 @@ pub struct BAPViewModel {
     pub show_paper: bool,
     pub show_rulers: bool,
     pub show_extents: bool,
-    pub show_center_tools: bool,
     pub edit_cmd: String,
     pub container_rect: Option<Rect>,
     pub serial_ports: Vec<String>,
@@ -69,7 +68,6 @@ pub struct BAPViewModel {
     join_handle: Option<JoinHandle<()>>,
     pub plotter_state: PlotterState,
     pub queued_toasts: VecDeque<Toast>,
-    pub request_redraw: bool,
 }
 
 pub trait IsPos2Able {
@@ -467,7 +465,6 @@ impl Default for BAPViewModel {
             show_extents: true,
             ppp: 1.5,
             dirty: false,
-            show_center_tools: false,
             container_rect: None,
             edit_cmd: String::new(),
             serial_ports: Vec::new(), //Just a default
@@ -476,7 +473,6 @@ impl Default for BAPViewModel {
             move_increment: 5.,
             plotter_state: PlotterState::Disconnected,
             queued_toasts: VecDeque::new(),
-            request_redraw: false,
         }
     }
 }

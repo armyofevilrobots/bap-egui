@@ -32,7 +32,6 @@ pub struct ApplicationCore {
     plot_sender: Sender<PlotterCommand>,
     plot_receiver: Receiver<PlotterResponse>,
     last_serial_scan: Instant,
-    found_ports: Vec<String>,
     program: Option<Vec<String>>,
 }
 
@@ -50,7 +49,9 @@ impl ApplicationCore {
         // let (plotter_to_app, app_from_plotter) = mpsc::channel::<PlotterResponse>();
         let (app_to_plotter, plotter_to_app) =
             PlotterConnection::spawn().expect("Failed to create PlotterConnection worker.");
-        app_to_vm.send(ApplicationStateChangeMsg::FoundPorts(serial::scan_ports()));
+        app_to_vm
+            .send(ApplicationStateChangeMsg::FoundPorts(serial::scan_ports()))
+            .expect("Failed to send serial port list up to view.");
         let new = ApplicationCore {
             view_command_in: app_from_vm,
             state_change_out: app_to_vm,
@@ -61,7 +62,6 @@ impl ApplicationCore {
             plot_sender: app_to_plotter,
             ctx,
             last_serial_scan: Instant::now(),
-            found_ports: Vec::new(),
             program: None,
         };
         (new, vm_to_app, vm_from_app)
@@ -174,7 +174,10 @@ impl ApplicationCore {
                         let prep_sender = match post::post(&self.project){
                             Ok(program) => {
                                 self.program = Some(program);
-                                self.state_change_out.send(ApplicationStateChangeMsg::PostComplete(self.program.as_ref().unwrap().len()));
+                                self.state_change_out
+                                    .send(ApplicationStateChangeMsg::PostComplete(
+                                        self.program.as_ref().unwrap().len()))
+                                    .expect("Failed to send state change up to VM. Dead view?");
                                 self.ctx.request_repaint();
                                 true
                             },
@@ -293,6 +296,7 @@ impl ApplicationCore {
             .expect("Failed to send shutdown status back to viewmodel.");
     }
 
+    /*
     pub fn import_svg(&mut self, path: &PathBuf, keepdown: bool) {
         self.state_change_out
             .send(ApplicationStateChangeMsg::ProgressMessage {
@@ -320,5 +324,5 @@ impl ApplicationCore {
             })
             .expect("Dead VM right after getting command? PANIC!");
         self.ctx.request_repaint();
-    }
+    }*/
 }
