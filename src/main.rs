@@ -1,9 +1,8 @@
 use std::sync::Arc;
 use std::thread;
-use std::thread::spawn;
 
 use eframe::egui;
-use egui::{Color32, ColorImage, Rect, Vec2, include_image, pos2, vec2};
+use egui::{Color32, ColorImage, Vec2, pos2};
 
 pub(crate) mod core;
 pub(crate) mod machine;

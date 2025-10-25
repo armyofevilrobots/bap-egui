@@ -2,13 +2,10 @@
 use crate::ui::menu::main_menu;
 use crate::ui::paper_chooser::paper_chooser_window;
 use crate::ui::pen_crib::pen_crib_window;
-use crate::view_model::{BAPViewModel, CommandContext, PIXELS_PER_MM};
+use crate::view_model::{BAPViewModel, CommandContext};
 use eframe::egui;
 use egui::Direction::BottomUp;
-use egui::{
-    Align2, Color32, Key, Pos2, Rect, Stroke, StrokeKind, Vec2, pos2, vec2,
-    was_tooltip_open_last_frame,
-};
+use egui::{Align2, Color32, Key, Rect, Stroke, StrokeKind, pos2};
 
 pub(crate) mod tool_window;
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
@@ -50,7 +47,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
         pen_crib_window(model, ctx);
     }
 
-    let cp = egui::CentralPanel::default().show(ctx, |ui| {
+    let _cp = egui::CentralPanel::default().show(ctx, |ui| {
         // ui.visuals_mut().widgets.inactive.weak_bg_fill = Color32::TRANSPARENT;
 
         let precursor = ui.cursor();
@@ -215,7 +212,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     }
                 }
                 CommandContext::None => (),
-                CommandContext::Clip(pos2, pos3) => todo!(),
+                CommandContext::Clip(_pos2, _pos3) => todo!(),
             }
             model.command_context = CommandContext::None;
         }
@@ -255,11 +252,11 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                         }
                     }
                     egui::Event::Key {
-                        key,
+                        key: _,
                         physical_key,
-                        pressed,
-                        repeat,
-                        modifiers,
+                        pressed: _,
+                        repeat: _,
+                        modifiers: _,
                     } => {
                         if let Some(pkey) = physical_key {
                             if *pkey == Key::Escape {

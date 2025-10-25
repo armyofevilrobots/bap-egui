@@ -1,7 +1,6 @@
 use crate::machine::MachineConfig;
 use anyhow::{Result, anyhow};
 use aoer_plotty_rs::context::operation::OPLayer;
-use aoer_plotty_rs::prelude::HatchPattern;
 // use aoer_plotty_rs::geo_types::hatch::Hatches;
 use geo::algorithm::bounding_rect::BoundingRect;
 use geo::prelude::MapCoords;
@@ -13,9 +12,8 @@ use std::ffi::OsString;
 use std::fmt::{Display, Write};
 use std::io::BufWriter;
 use std::str::FromStr;
-use std::sync::Arc;
 use std::{collections::HashMap, path::PathBuf};
-use usvg::{Options, Tree, WriteOptions};
+use usvg::{Tree, WriteOptions};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub enum KeepdownStrategy {
@@ -237,7 +235,7 @@ pub struct Project {
     svg: Option<String>,
     pub geometry: Vec<PlotGeometry>,
     pub layers: HashMap<String, OPLayer>,
-    pub pens: Vec<(PenDetail)>,
+    pub pens: Vec<PenDetail>,
     pub paper: Paper,
     pub dirty: bool,
     pub origin: Option<(f64, f64)>, // Target/center of the viewport
@@ -294,7 +292,7 @@ impl Project {
 
         // Write the file
         {
-            let mut writer = std::fs::File::create(&path)?;
+            let writer = std::fs::File::create(&path)?;
             let writer = Box::new(BufWriter::new(writer));
             // println!("Writer...");
             ron::ser::to_writer_pretty(writer, self, PrettyConfig::default())?;

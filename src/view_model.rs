@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use eframe::egui;
 use egui::{Color32, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
-use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
+use egui_toast::{Toast, ToastKind, ToastOptions};
 
 use crate::core::commands::{ApplicationStateChangeMsg, ViewCommand};
 
@@ -16,6 +16,7 @@ use crate::machine::MachineConfig;
 use crate::sender::{PlotterResponse, PlotterState};
 
 pub const PIXELS_PER_MM: f32 = 4.; // This is also scaled by the PPP value, but whatever.
+pub const MAX_SIZE: usize = 2048;
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum BAPDisplayMode {
@@ -192,7 +193,7 @@ impl BAPViewModel {
         // TODO: Reload the svg preview.
     }
 
-    pub fn center_paper(&mut self, ppp: f32) {
+    pub fn center_paper(&mut self, _ppp: f32) {
         // self.set_origin
         // let top = self.get_paper_rect()
     }
@@ -239,7 +240,6 @@ impl BAPViewModel {
     }
 
     pub fn check_for_new_source_image(&mut self) {
-        let MAX_SIZE = 2048;
         if self.dirty && self.timeout_for_source_image.is_none() {
             if let Some(extents) = self.source_image_extents {
                 let cmd_extents = (
@@ -264,7 +264,7 @@ impl BAPViewModel {
                     if let Some(handle) = &self.source_image_handle {
                         let hs = handle.size();
                         // println!("Self::hs {:?}", hs);
-                        if (hs[0] < MAX_SIZE && hs[1] < MAX_SIZE) {
+                        if hs[0] < MAX_SIZE && hs[1] < MAX_SIZE {
                             eprintln!("Smaller than max size. Requesting.");
                             sender
                                 .send(ViewCommand::RequestSourceImage {
@@ -277,7 +277,7 @@ impl BAPViewModel {
                                 });
                             self.timeout_for_source_image =
                                 Some(Instant::now() + Duration::from_secs(3));
-                        } else if (hs[0] / 5 > resolution.0 / 4 || hs[1] / 5 > resolution.1 / 4) {
+                        } else if hs[0] / 5 > resolution.0 / 4 || hs[1] / 5 > resolution.1 / 4 {
                             eprintln!(
                                 "Requesting WAY smaller than current image to avoid jaggies."
                             );
@@ -397,8 +397,8 @@ impl BAPViewModel {
 
     pub fn handle_plotter_response(&mut self, plotter_response: PlotterResponse) {
         match plotter_response {
-            crate::sender::PlotterResponse::Ok(plotter_command, _) => (),
-            crate::sender::PlotterResponse::Loaded(msg) => self.queued_toasts.push_back(Toast {
+            crate::sender::PlotterResponse::Ok(_plotter_command, _) => (),
+            crate::sender::PlotterResponse::Loaded(_msg) => self.queued_toasts.push_back(Toast {
                 kind: ToastKind::Success,
                 text: "GCODE ready to run.".into(),
                 options: ToastOptions::default().duration_in_seconds(15.),
@@ -520,7 +520,7 @@ impl eframe::App for BAPViewModel {
                 ApplicationStateChangeMsg::None => {}
                 ApplicationStateChangeMsg::ResetDisplay => todo!(),
                 ApplicationStateChangeMsg::UpdateSourceImage {
-                    image: image,
+                    image,
                     extents: (x, y, width, height),
                 } => {
                     if let Some(handle) = &mut self.source_image_handle {
@@ -533,7 +533,7 @@ impl eframe::App for BAPViewModel {
                     // self.dirty = false;
                     self.timeout_for_source_image = None;
                 }
-                ApplicationStateChangeMsg::UpdateMachineConfig(machine_config) => todo!(),
+                ApplicationStateChangeMsg::UpdateMachineConfig(_machine_config) => todo!(),
                 ApplicationStateChangeMsg::ProgressMessage {
                     message,
                     percentage,

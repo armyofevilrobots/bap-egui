@@ -1,4 +1,4 @@
-use egui::{ColorImage, Vec2};
+use egui::ColorImage;
 use std::path::PathBuf;
 
 use crate::{

@@ -1,10 +1,8 @@
-use egui::{ColorImage, Context};
-use egui_extras::Size;
-use geo::{BoundingRect, Coord, Geometry, GeometryCollection, Point, Rect, Scale, Translate};
-use std::sync::mpsc::{self, Receiver, Sender};
-use std::time::Duration;
-use tiny_skia::{LineCap, Path, PathBuilder, Pixmap, Stroke, StrokeDash, Transform};
-use usvg::{Options, Tree};
+use egui::ColorImage;
+use geo::{Coord, Geometry, Rect};
+use std::sync::mpsc::Sender;
+use tiny_skia::{LineCap, PathBuilder, Pixmap, Stroke, StrokeDash, Transform};
+use usvg::Tree;
 
 use crate::core::commands::ApplicationStateChangeMsg;
 use crate::core::project::Project;
@@ -34,9 +32,9 @@ pub(crate) fn render_svg_preview(
     let mut pixmap =
         Pixmap::new(resolution.0 as u32, resolution.1 as u32).expect("Failed to create pixmap!");
     let (xofs, yofs) = extents.min().x_y();
-    let (xofs, yofs) = (xofs as f32, yofs as f32); // In case it's negative, which happens sometimes.
+    let (_xofs, _yofs) = (xofs as f32, yofs as f32); // In case it's negative, which happens sometimes.
 
-    let stroke_width = (resolution.0 as f32 / extents.width() as f32) * 2.5;
+    let _stroke_width = (resolution.0 as f32 / extents.width() as f32) * 2.5;
     let sx = resolution.0 as f32 / extents.width() as f32;
     let sy = resolution.1 as f32 / extents.height() as f32;
 
@@ -109,7 +107,7 @@ pub(crate) fn render_svg_preview(
     Ok(cimg)
 }
 
-pub(crate) fn _render_svg_preview(tree: &Tree) -> Result<ColorImage, anyhow::Error> {
+pub(crate) fn _render_svg_preview(_tree: &Tree) -> Result<ColorImage, anyhow::Error> {
     let mut paint = tiny_skia::Paint::default();
     paint.set_color_rgba8(128, 32, 32, 255);
     paint.anti_alias = true;

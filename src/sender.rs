@@ -221,8 +221,8 @@ impl PlotterConnection {
                     .expect("Cannot send OK response to parent thread");
             }
             PlotterCommand::Run => match &self.state {
-                PlotterState::Running(line, lines, oks) => {}
-                PlotterState::Paused(line, lines, oks) => {
+                PlotterState::Running(_line, _lines, _oks) => {}
+                PlotterState::Paused(line, lines, _oks) => {
                     self.set_state(PlotterState::Running(*line, *lines, self.oks as u32))
                         .expect("Couldn't set resume running state after pause.");
                     self.send

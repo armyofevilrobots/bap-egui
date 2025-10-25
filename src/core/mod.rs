@@ -11,11 +11,7 @@ pub(crate) mod render;
 pub(crate) mod serial;
 
 use commands::{ApplicationStateChangeMsg, ViewCommand};
-use egui_extras::Size;
-use geo::{Coord, Rect};
 use tera::Context as TeraContext;
-use tiny_skia::{LineCap, PathBuilder, Pixmap, Stroke, StrokeDash, Transform};
-use usvg::{Options, Tree};
 
 use crate::core::project::Project;
 use crate::machine::MachineConfig;
@@ -74,7 +70,7 @@ impl ApplicationCore {
     pub fn set_pen_position(&mut self, down: bool) {
         match self.machine.post_template() {
             Ok(tpl) => {
-                let mut context = TeraContext::new();
+                let context = TeraContext::new();
                 match tpl.render(if down { "pendown" } else { "penup" }, &context) {
                     Ok(cmd) => {
                         self.plot_sender
@@ -192,7 +188,7 @@ impl ApplicationCore {
                             }
                         };
                         if prep_sender{
-                            let resp = self.plot_sender.send(PlotterCommand::Program(Box::new(self.program.as_ref().unwrap().clone())));
+                            let _resp = self.plot_sender.send(PlotterCommand::Program(Box::new(self.program.as_ref().unwrap().clone())));
                         }
                     },
                     ViewCommand::StartPlot => {
@@ -209,7 +205,7 @@ impl ApplicationCore {
                         self.shutdown = true;
                         self.plot_sender.send(PlotterCommand::Shutdown).expect("Failed to shut down plotter worker.");
                     },
-                    ViewCommand::UpdateMachineConfig(machine_config) => todo!(),
+                    ViewCommand::UpdateMachineConfig(_machine_config) => todo!(),
                     ViewCommand::SendCommand(cmd)=>{
                         self.plot_sender
                             .send(PlotterCommand::Command(cmd))
