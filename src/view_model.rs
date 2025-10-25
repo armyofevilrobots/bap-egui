@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::process::exit;
 use std::sync::mpsc::{Receiver, Sender};
@@ -6,13 +7,13 @@ use std::time::{Duration, Instant};
 
 use eframe::egui;
 use egui::{Color32, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
-use egui_toast::Toasts;
+use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 
 use crate::core::commands::{ApplicationStateChangeMsg, ViewCommand};
 
 use crate::core::project::{Orientation, PaperSize};
 use crate::machine::MachineConfig;
-use crate::sender::PlotterState;
+use crate::sender::{PlotterResponse, PlotterState};
 
 pub const PIXELS_PER_MM: f32 = 4.; // This is also scaled by the PPP value, but whatever.
 
@@ -66,7 +67,8 @@ pub struct BAPViewModel {
     pub move_increment: f32,
     join_handle: Option<JoinHandle<()>>,
     pub plotter_state: PlotterState,
-    pub toasts: Option<Toasts>,
+    pub queued_toasts: VecDeque<Toast>,
+    pub request_redraw: bool,
 }
 
 pub trait IsPos2Able {
@@ -89,12 +91,69 @@ impl BAPViewModel {
         "Bot-a-Plot"
     }
 
+    pub fn set_origin(&mut self, origin: Pos2) {
+        if let Some(cmd_out) = &self.cmd_out {
+            self.origin = origin;
+            cmd_out
+                .send(ViewCommand::SetOrigin(origin.x as f64, origin.y as f64))
+                .expect("Failed to send ORIGIN command?");
+        }
+    }
+
     pub fn set_join_handle(&mut self, handle: JoinHandle<()>) {
         self.join_handle = Some(handle);
     }
 
     pub fn ppp(&self) -> f32 {
         self.ppp
+    }
+
+    pub fn request_post(&self) {
+        if let Some(cmd_out) = &self.cmd_out {
+            cmd_out
+                .send(ViewCommand::Post)
+                .expect("Failed to send POST command?");
+        }
+    }
+
+    pub fn pen_up(&self) {
+        if let Some(cmd_out) = &self.cmd_out {
+            cmd_out
+                .send(ViewCommand::PenUp)
+                .expect("Failed to send Pen Up command?");
+        }
+    }
+
+    pub fn pen_down(&self) {
+        if let Some(cmd_out) = &self.cmd_out {
+            cmd_out
+                .send(ViewCommand::PenDown)
+                .expect("Failed to send Pen Up command?");
+        }
+    }
+
+    pub fn plot_start(&self) {
+        if let Some(cmd_out) = &self.cmd_out {
+            cmd_out
+                .send(ViewCommand::StartPlot)
+                .expect("Failed to send Pen Up command?");
+        }
+    }
+
+    pub fn plot_pause(&self) {
+        if let Some(cmd_out) = &self.cmd_out {
+            cmd_out
+                .send(ViewCommand::PausePlot)
+                .expect("Failed to send Pen Up command?");
+        }
+    }
+
+    pub fn plot_cancel(&self) {
+        if let Some(cmd_out) = &self.cmd_out {
+            cmd_out
+                .send(ViewCommand::CancelPlot)
+                .expect("Failed to send Pen Up command?");
+        }
     }
 
     pub fn request_relative_move(&self, distance: Vec2) {
@@ -316,6 +375,65 @@ impl BAPViewModel {
     pub fn scale_screen_to_mm(&self, pt: Vec2) -> Vec2 {
         pt * PIXELS_PER_MM / self.view_zoom as f32
     }
+
+    /// Sends a quick info message.
+    pub fn toast_info(&mut self, message: String) {
+        self.queued_toasts.push_back(Toast {
+            kind: ToastKind::Info,
+            text: message.into(),
+            options: ToastOptions::default().duration_in_seconds(15.),
+            ..Default::default()
+        })
+    }
+    /// Sends a quick info message.
+    pub fn toast_error(&mut self, message: String) {
+        self.queued_toasts.push_back(Toast {
+            kind: ToastKind::Error,
+            text: message.into(),
+            options: ToastOptions::default().duration_in_seconds(15.),
+            ..Default::default()
+        })
+    }
+
+    pub fn handle_plotter_response(&mut self, plotter_response: PlotterResponse) {
+        match plotter_response {
+            crate::sender::PlotterResponse::Ok(plotter_command, _) => (),
+            crate::sender::PlotterResponse::Loaded(msg) => self.queued_toasts.push_back(Toast {
+                kind: ToastKind::Success,
+                text: "GCODE ready to run.".into(),
+                options: ToastOptions::default().duration_in_seconds(15.),
+                ..Default::default()
+            }),
+            crate::sender::PlotterResponse::Err(plotter_command, msg) => {
+                self.toast_error(format!("{:?} : {}", plotter_command, msg).to_string())
+            }
+            crate::sender::PlotterResponse::State(plotter_state) => {
+                self.plotter_state = plotter_state.clone();
+                match &plotter_state {
+                    PlotterState::Running(lines, oflines, _) => {
+                        self.progress = Some((
+                            format!("Plotting: {}/{} GCODE commands", lines, oflines).to_string(),
+                            ((lines * 100) / oflines) as usize,
+                        ));
+                    }
+                    PlotterState::Disconnected => {
+                        self.toast_error("Plotter disconnected.".to_string())
+                    }
+                    PlotterState::Connecting(_) => (),
+                    PlotterState::Ready => self.toast_info("Plotter ready.".to_string()),
+                    PlotterState::Paused(line, oflines, _) => self.toast_info(
+                        format!("Plotter paused at line {}/{}", line, oflines).to_string(),
+                    ),
+                    PlotterState::Busy => (),
+                    PlotterState::Failed(msg) => {
+                        self.toast_error(format!("Plotter failed: {}", msg).to_string())
+                    }
+                    PlotterState::Terminating => (),
+                    PlotterState::Dead => self.toast_error("Plotter is dead.".to_string()),
+                }
+            }
+        }
+    }
 }
 
 impl Default for BAPViewModel {
@@ -357,7 +475,8 @@ impl Default for BAPViewModel {
             join_handle: None,
             move_increment: 5.,
             plotter_state: PlotterState::Disconnected,
-            toasts: None,
+            queued_toasts: VecDeque::new(),
+            request_redraw: false,
         }
     }
 }
@@ -378,57 +497,109 @@ impl eframe::App for BAPViewModel {
             }
         }
 
-        let received = if let Some(msg_in) = &self.state_in {
-            match msg_in.try_recv() {
-                Ok(msg) => msg,
-                Err(_nomsg) => ApplicationStateChangeMsg::None,
-            }
-        } else {
-            ApplicationStateChangeMsg::None
-        };
-        if received != ApplicationStateChangeMsg::None {
-            println!("Received: {:?}", received);
-        };
-        match received {
-            ApplicationStateChangeMsg::Dead => {
-                exit(0);
-            }
-            ApplicationStateChangeMsg::Pong => {}
-            ApplicationStateChangeMsg::None => {}
-            ApplicationStateChangeMsg::ResetDisplay => todo!(),
-            ApplicationStateChangeMsg::UpdateSourceImage {
-                image: image,
-                extents: (x, y, width, height),
-            } => {
-                if let Some(handle) = &mut self.source_image_handle {
-                    handle.set(image, egui::TextureOptions::NEAREST);
-                    self.source_image_extents = Some(Rect::from_min_size(
-                        pos2(x as f32, y as f32),
-                        vec2(width as f32, height as f32),
-                    ));
+        loop {
+            let received = if let Some(msg_in) = &self.state_in {
+                match msg_in.try_recv() {
+                    Ok(msg) => msg,
+                    Err(_nomsg) => ApplicationStateChangeMsg::None,
                 }
-                // self.dirty = false;
-                self.timeout_for_source_image = None;
+            } else {
+                ApplicationStateChangeMsg::None
+            };
+            if received == ApplicationStateChangeMsg::None {
+                break;
             }
-            ApplicationStateChangeMsg::UpdateMachineConfig(machine_config) => todo!(),
-            ApplicationStateChangeMsg::ProgressMessage {
-                message,
-                percentage,
-            } => {
-                self.progress = Some((message, percentage));
+            if received != ApplicationStateChangeMsg::None {
+                println!("Received: {:?}", received);
+            };
+            match received {
+                ApplicationStateChangeMsg::Dead => {
+                    exit(0);
+                }
+                ApplicationStateChangeMsg::Pong => {}
+                ApplicationStateChangeMsg::None => {}
+                ApplicationStateChangeMsg::ResetDisplay => todo!(),
+                ApplicationStateChangeMsg::UpdateSourceImage {
+                    image: image,
+                    extents: (x, y, width, height),
+                } => {
+                    if let Some(handle) = &mut self.source_image_handle {
+                        handle.set(image, egui::TextureOptions::NEAREST);
+                        self.source_image_extents = Some(Rect::from_min_size(
+                            pos2(x as f32, y as f32),
+                            vec2(width as f32, height as f32),
+                        ));
+                    }
+                    // self.dirty = false;
+                    self.timeout_for_source_image = None;
+                }
+                ApplicationStateChangeMsg::UpdateMachineConfig(machine_config) => todo!(),
+                ApplicationStateChangeMsg::ProgressMessage {
+                    message,
+                    percentage,
+                } => {
+                    self.progress = Some((message, percentage));
+                }
+                ApplicationStateChangeMsg::SourceChanged { extents } => {
+                    // self.waiting_for_source_image=true;
+                    self.source_image_extents = Some(Rect::from_min_size(
+                        pos2(extents.0 as f32, extents.1 as f32),
+                        vec2(extents.2 as f32, extents.3 as f32),
+                    ));
+                    self.dirty = true;
+                }
+                ApplicationStateChangeMsg::PlotterState(plotter_state) => {
+                    self.plotter_state = plotter_state
+                    // self.handle_plotter_response(plotter_response);
+                }
+                ApplicationStateChangeMsg::FoundPorts(items) => {
+                    // self.serial_ports = items
+                    let old_ports = self.serial_ports.clone();
+                    self.serial_ports = items;
+                    for port in &old_ports {
+                        if !self.serial_ports.contains(&port) {
+                            self.queued_toasts.push_back(Toast {
+                                kind: ToastKind::Info,
+                                text: format!("Serial port {} removed.", &port).into(),
+                                options: ToastOptions::default()
+                                    .duration_in_seconds(15.)
+                                    .show_progress(true),
+                                ..Default::default()
+                            })
+                        }
+                    }
+                    for port in &self.serial_ports {
+                        if !old_ports.contains(&port) {
+                            self.queued_toasts.push_back(Toast {
+                                kind: ToastKind::Info,
+                                text: format!("Serial port {} discovered.", &port).into(),
+                                options: ToastOptions::default()
+                                    .duration_in_seconds(15.)
+                                    .show_progress(true),
+                                ..Default::default()
+                            })
+                        }
+                    }
+                }
+                ApplicationStateChangeMsg::PostComplete(lines) => {
+                    self.queued_toasts.push_back(Toast {
+                        kind: ToastKind::Success,
+                        text: format!("Post completed with {} GCODE lines.", &lines).into(),
+                        options: ToastOptions::default().duration_in_seconds(15.),
+                        ..Default::default()
+                    });
+                    self.display_mode = BAPDisplayMode::Plot;
+                }
+                ApplicationStateChangeMsg::Error(msg) => self.queued_toasts.push_back(Toast {
+                    kind: ToastKind::Error,
+                    text: msg.into(),
+                    options: ToastOptions::default().duration_in_seconds(15.),
+                    ..Default::default()
+                }),
+                ApplicationStateChangeMsg::PlotterResponse(plotter_response) => {
+                    self.handle_plotter_response(plotter_response);
+                }
             }
-            ApplicationStateChangeMsg::SourceChanged { extents } => {
-                // self.waiting_for_source_image=true;
-                self.source_image_extents = Some(Rect::from_min_size(
-                    pos2(extents.0 as f32, extents.1 as f32),
-                    vec2(extents.2 as f32, extents.3 as f32),
-                ));
-                self.dirty = true;
-            }
-            ApplicationStateChangeMsg::PlotterState(plotter_state) => {
-                self.plotter_state = plotter_state
-            }
-            ApplicationStateChangeMsg::FoundPorts(items) => self.serial_ports = items,
         }
 
         crate::ui::update_ui(self, ctx, frame);

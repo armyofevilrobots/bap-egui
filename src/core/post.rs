@@ -1,4 +1,4 @@
-use crate::project::Project;
+use super::project::Project;
 use anyhow::Result as AnyResult;
 use anyhow::anyhow;
 use aoer_plotty_rs::optimizer::*;
@@ -215,13 +215,13 @@ impl GeometryToMultiLineString for Geometry<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::project::svg_to_geometries;
+    use crate::core::project::svg_to_geometries;
     use std::include_bytes;
     use usvg::{Options, Tree};
 
     #[test]
     fn flatten_svg_geom() {
-        let svg_data = include_bytes!("../resources/test_groups_simple.svg");
+        let svg_data = include_bytes!("../../resources/test_groups_simple.svg");
         let mut opt = usvg::Options::default();
         opt.dpi = 25.4;
         if let Ok(rtree) = usvg::Tree::from_data(svg_data, &opt) {

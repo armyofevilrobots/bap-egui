@@ -19,7 +19,6 @@ pub(crate) mod paper_chooser;
 pub(crate) mod pen_crib;
 pub(crate) mod scene_toggle;
 pub(crate) mod themes;
-pub(crate) mod toast;
 pub(crate) mod tool_button;
 
 // pub(crate) fn native_to_mm(native: Pos2, zoom: f32) -> Pos2 {
@@ -211,7 +210,8 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
             match model.command_context {
                 CommandContext::Origin => {
                     if let Some(pos) = ctx.pointer_hover_pos() {
-                        model.origin = model.frame_coords_to_mm(pos)
+                        // model.origin = model.frame_coords_to_mm(pos)
+                        model.set_origin(model.frame_coords_to_mm(pos));
                     }
                 }
                 CommandContext::None => (),
@@ -288,6 +288,11 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
         }
 
         bottom_panel::bottom_panel(model, ctx);
+        while !model.queued_toasts.is_empty() {
+            if let Some(toast) = model.queued_toasts.pop_front() {
+                toasts.add(toast);
+            }
+        }
         toasts.show(ctx);
         (precursor, ui.cursor())
     });

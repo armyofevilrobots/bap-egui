@@ -45,6 +45,7 @@ pub struct PenDetail {
     pub name: String,
     pub stroke_width: f64,
     pub stroke_density: f64,
+    // pub velocity: f64, //mm/min
     pub color: String,
 }
 

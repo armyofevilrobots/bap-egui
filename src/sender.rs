@@ -9,7 +9,8 @@ use std::num::ParseIntError;
 use std::ops::DerefMut;
 use std::sync::mpsc::{self, TryRecvError};
 use std::time::Duration;
-const DEFAULT_TIMEOUT: u64 = 5000;
+const DEFAULT_TIMEOUT: u64 = 30000;
+const HOMING_TIMEOUT: u64 = 60000;
 
 #[derive(Debug)]
 pub enum PlotterConnectionError {
@@ -38,7 +39,7 @@ impl From<serialport::Error> for PlotterConnectionError {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PlotterCommand {
     Connect(String), // A URL to connect to (/dev/ttyACM0, telnet://foo:1234, etc)
     Disconnect,
@@ -65,7 +66,7 @@ pub enum PlotterState {
     Dead,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PlotterResponse {
     Ok(PlotterCommand, String),
     Loaded(String),
@@ -212,6 +213,12 @@ impl PlotterConnection {
             },
             PlotterCommand::Program(program) => {
                 self.program = Some(program.clone());
+                self.send
+                    .send(PlotterResponse::Loaded(format!(
+                        "Loaded {} lines.",
+                        program.len()
+                    )))
+                    .expect("Cannot send OK response to parent thread");
             }
             PlotterCommand::Run => match &self.state {
                 PlotterState::Running(line, lines, oks) => {}
@@ -269,6 +276,7 @@ impl PlotterConnection {
                 }
             },
             PlotterCommand::Reset => {
+                println!("Got reset.");
                 self.transport = None;
                 self.set_state(PlotterState::Disconnected)
                     .expect("Cannot send disconnected state to parent thread");

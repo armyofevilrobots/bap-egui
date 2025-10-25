@@ -35,6 +35,10 @@ impl MachineConfig {
         self.feedrate
     }
 
+    pub fn set_feedrate(&mut self, feedrate: f64) {
+        self.feedrate = feedrate;
+    }
+
     pub fn bapv1() -> Self {
         let bap_top = 4.;
         let bap_bottom = 13.;

@@ -103,7 +103,17 @@ pub(crate) fn floating_tool_window(
                         },
                     )
                     .clicked()
-                    {};
+                    {
+                        model.request_post();
+                        toasts.add(Toast {
+                            kind: ToastKind::Info,
+                            text: format!("Posting program...").into(),
+                            options: ToastOptions::default()
+                                .duration_in_seconds(10.)
+                                .show_progress(true),
+                            ..Default::default()
+                        });
+                    };
                     if tool_button(
                         ui,
                         egui::include_image!("../../resources/images/zoom_fit.png"),
@@ -248,7 +258,7 @@ pub(crate) fn floating_tool_window(
             egui::Grid::new("PLOT-TOOLZ")
                 .spacing(vec2(0., 5.))
                 .show(ui, |ui| {
-                    tool_button(
+                    if tool_button(
                         ui,
                         egui::include_image!("../../resources/images/pen_up.png"),
                         Some("Pen Up (from paper)".into()),
@@ -257,7 +267,11 @@ pub(crate) fn floating_tool_window(
                             PlotterState::Paused(_, _, _) => true,
                             _ => false,
                         },
-                    );
+                    )
+                    .clicked()
+                    {
+                        model.pen_up();
+                    }
                     if tool_button(
                         ui,
                         egui::include_image!("../../resources/images/move_arrow_up.png"),
@@ -272,12 +286,20 @@ pub(crate) fn floating_tool_window(
                     {
                         model.request_relative_move(vec2(0., model.move_increment));
                     };
-                    tool_button(
+                    if tool_button(
                         ui,
                         egui::include_image!("../../resources/images/cancel.png"),
                         Some("Cancel".into()),
-                        true,
-                    );
+                        match model.plotter_state {
+                            PlotterState::Running(_, _, _) => true,
+                            PlotterState::Paused(_, _, _) => true,
+                            _ => false,
+                        },
+                    )
+                    .clicked()
+                    {
+                        model.plot_cancel();
+                    };
 
                     ui.end_row();
 
@@ -325,7 +347,7 @@ pub(crate) fn floating_tool_window(
                     }
                     ui.end_row();
 
-                    tool_button(
+                    if tool_button(
                         ui,
                         egui::include_image!("../../resources/images/pen_down.png"),
                         Some("Pen down (on paper)".into()),
@@ -334,7 +356,11 @@ pub(crate) fn floating_tool_window(
                             PlotterState::Paused(_, _, _) => true,
                             _ => false,
                         },
-                    );
+                    )
+                    .clicked()
+                    {
+                        model.pen_down();
+                    };
                     if tool_button(
                         ui,
                         egui::include_image!("../../resources/images/move_arrow_down.png"),
@@ -350,9 +376,13 @@ pub(crate) fn floating_tool_window(
                         model.request_relative_move(vec2(0., -model.move_increment));
                     }
 
-                    tool_button(
+                    if tool_button(
                         ui,
-                        egui::include_image!("../../resources/images/play_circle.png"),
+                        if let PlotterState::Running(_, _, _) = model.plotter_state {
+                            egui::include_image!("../../resources/images/pause_circle.png")
+                        } else {
+                            egui::include_image!("../../resources/images/play_circle.png")
+                        },
                         Some("Start/Resume plotting".into()),
                         match model.plotter_state {
                             PlotterState::Ready => true,
@@ -361,7 +391,16 @@ pub(crate) fn floating_tool_window(
                             PlotterState::Failed(_) => true,
                             _ => false,
                         },
-                    );
+                    )
+                    .clicked()
+                    {
+                        match model.plotter_state {
+                            PlotterState::Running(_, _, _) => model.plot_pause(),
+                            PlotterState::Paused(_, _, _) => model.plot_start(),
+                            PlotterState::Ready => model.plot_start(),
+                            _ => (),
+                        }
+                    };
                     ui.end_row();
                 });
             ui.add_space(8.);

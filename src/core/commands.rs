@@ -1,7 +1,10 @@
 use egui::{ColorImage, Vec2};
 use std::path::PathBuf;
 
-use crate::{machine::MachineConfig, sender::PlotterState};
+use crate::{
+    machine::MachineConfig,
+    sender::{PlotterResponse, PlotterState},
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
@@ -28,6 +31,8 @@ pub enum ViewCommand {
     StartPlot,
     PausePlot,
     CancelPlot,
+    PenUp,
+    PenDown,
     SendCommand(String),
     ConnectPlotter(String),
     DisconnectPlotter,
@@ -54,6 +59,9 @@ pub enum ApplicationStateChangeMsg {
         percentage: usize,
     },
     PlotterState(PlotterState),
+    PlotterResponse(PlotterResponse),
     FoundPorts(Vec<String>),
+    PostComplete(usize),
+    Error(String),
     None,
 }

@@ -7,7 +7,6 @@ use egui::{Color32, ColorImage, Rect, Vec2, include_image, pos2, vec2};
 
 pub(crate) mod core;
 pub(crate) mod machine;
-//pub(crate) mod post;
 pub(crate) mod sender;
 pub(crate) mod ui;
 pub(crate) mod view_model;
