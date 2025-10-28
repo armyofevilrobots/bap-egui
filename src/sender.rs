@@ -361,14 +361,22 @@ impl PlotterConnection {
                 PlotterState::Paused(_, _, _) => {
                     std::thread::sleep(std::time::Duration::from_millis(100))
                 }
-                PlotterState::Running(current_line, total_lines, _oks) => {
+                PlotterState::Running(current_line, total_lines, oks) => {
                     if self.oks < 5 {
                         match &mut self.transport {
                             Some(transport) => {
                                 // println!("Transport: {:?}", &transport);
                                 if let Some(program) = &self.program {
-                                    if let Some(line) = program.get(current_line as usize) {
-                                        // println!("-->> {}", &line);
+                                    if let Some(line) = program.get(current_line as usize).clone() {
+                                        if line.to_uppercase().trim().starts_with("M06") {
+                                            self.set_state(PlotterState::Paused(
+                                                current_line + 1,
+                                                total_lines,
+                                                self.oks as u32,
+                                            ))
+                                            .expect("Failed to M06 ToolChange pause the machine.");
+                                            continue;
+                                        }
                                         match transport.write_line(line) {
                                             Ok(_) => {
                                                 transport

@@ -97,6 +97,8 @@ impl MachineConfig {
                 "lineto".into(),
                 "G01 F{{feedrate|round(precision=2)}} X{{xmm|round(precision=2)}} Y{{ymm|round(precision=2)}}".to_string(),
             ),
+            ("toolchange".into(),
+                "M600 ; Pause for change to tool {{tool_id}}".to_string()),
         ];
         Self {
             name: "BAPv1".into(),

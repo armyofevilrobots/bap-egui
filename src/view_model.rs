@@ -11,7 +11,7 @@ use egui_toast::{Toast, ToastKind, ToastOptions};
 
 use crate::core::commands::{ApplicationStateChangeMsg, ViewCommand};
 
-use crate::core::project::{Orientation, PaperSize};
+use crate::core::project::{Orientation, PaperSize, PenDetail};
 use crate::machine::MachineConfig;
 use crate::sender::{PlotterResponse, PlotterState};
 
@@ -27,6 +27,9 @@ pub enum BAPDisplayMode {
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum CommandContext {
     Origin,
+    PaperChooser,
+    PenCrib,
+    PenEdit(usize), // The pen index in Vec<Pens>
     Clip(Option<Pos2>, Option<Pos2>),
     None,
 }
@@ -46,13 +49,12 @@ pub struct BAPViewModel {
     pub look_at: Pos2, // What coordinate is currently at the center of the screen
     pub center_coords: Pos2, // Where in the window (cursor) is the center of the view
     view_zoom: f64, // What is our coordinate/zoom multiplier
-    ppp: f32,
-    /// Pixels per point.
+    ppp: f32,    // Pixels per point.
     pub command_context: CommandContext,
     pub paper_orientation: Orientation,
     pub paper_size: PaperSize,
-    pub paper_modal_open: bool,
-    pub pen_crib_open: bool,
+    // pub paper_modal_open: bool,
+    // pub pen_crib_open: bool,
     pub origin: Pos2,
     pub machine_config: MachineConfig,
     pub paper_color: Color32,
@@ -68,6 +70,7 @@ pub struct BAPViewModel {
     join_handle: Option<JoinHandle<()>>,
     pub plotter_state: PlotterState,
     pub queued_toasts: VecDeque<Toast>,
+    pub pen_crib: Vec<PenDetail>,
 }
 
 pub trait IsPos2Able {
@@ -449,11 +452,10 @@ impl Default for BAPViewModel {
             timeout_for_source_image: None,
             look_at: Pos2 { x: 0., y: 0. },
             view_zoom: 4.,
-
             command_context: CommandContext::None,
             paper_orientation: Orientation::Portrait,
-            paper_modal_open: false,
-            pen_crib_open: false,
+            // paper_modal_open: false,
+            // pen_crib_open: false,
             paper_size: PaperSize::Letter,
             origin: pos2(0., 0.),
             paper_color: Color32::WHITE,
@@ -473,6 +475,25 @@ impl Default for BAPViewModel {
             move_increment: 5.,
             plotter_state: PlotterState::Disconnected,
             queued_toasts: VecDeque::new(),
+            pen_crib: vec![
+                Default::default(),
+                PenDetail {
+                    tool_id: 2,
+                    name: "Red Pen".to_string(),
+                    stroke_width: 1.0,
+                    stroke_density: 1.0,
+                    feed_rate: Some(2000.0),
+                    color: "#FF0000".to_string(),
+                },
+                PenDetail {
+                    tool_id: 3,
+                    name: "Blue Pen".to_string(),
+                    stroke_width: 0.25,
+                    stroke_density: 0.5, // It's runny
+                    feed_rate: Some(1000.0),
+                    color: "#0000FF".to_string(),
+                },
+            ],
         }
     }
 }
@@ -506,7 +527,7 @@ impl eframe::App for BAPViewModel {
                 break;
             }
             if received != ApplicationStateChangeMsg::None {
-                println!("Received: {:?}", received);
+                // println!("Received: {:?}", received);
             };
             match received {
                 ApplicationStateChangeMsg::Dead => {

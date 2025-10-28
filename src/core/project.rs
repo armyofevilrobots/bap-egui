@@ -35,7 +35,7 @@ impl KeepdownStrategy {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PenDetail {
     #[serde(default)]
     pub tool_id: u32,
@@ -43,14 +43,27 @@ pub struct PenDetail {
     pub name: String,
     pub stroke_width: f64,
     pub stroke_density: f64,
-    // pub velocity: f64, //mm/min
+    pub feed_rate: Option<f64>, //mm/min
     pub color: String,
+}
+
+impl Default for PenDetail {
+    fn default() -> Self {
+        Self {
+            tool_id: 1,
+            name: "Default Pen".to_string(),
+            stroke_width: 0.5,
+            stroke_density: 0.5,
+            feed_rate: None,
+            color: "#000000".to_string(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HatchDetail {
     pub hatch_pattern: String, //Arc<Box<dyn HatchPattern>>,
-    pub pen: PenDetail,
+    pub pen: Option<PenDetail>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
@@ -482,7 +495,7 @@ impl Project {
                 let svg_string = rtree.to_string(&usvg::WriteOptions::default());
                 // println!("{:?}", rtree.root());
                 self.svg = Some(svg_string);
-                self.geometry = svg_to_geometries(&rtree, scale_x, scale_y, keepdown);
+                self.geometry = svg_to_geometries(&rtree, scale_x, scale_y, keepdown, &self.pens);
                 self.extents = self.calc_extents();
             }
         }
@@ -500,6 +513,7 @@ pub fn svg_to_geometries(
     scale_x: f64,
     scale_y: f64,
     keepdown: bool,
+    pens: &Vec<PenDetail>,
 ) -> Vec<PlotGeometry> {
     let mut geometries: Vec<PlotGeometry> = vec![];
     let mut multilines: MultiLineString<f64> = MultiLineString::new(vec![]);
@@ -521,21 +535,32 @@ pub fn svg_to_geometries(
         geometry: Geometry::MultiLineString(multilines),
         hatch: Some(HatchDetail {
             hatch_pattern: "".to_string(), //Hatches::none(),
-            pen: PenDetail {
-                stroke_width: 0.5,
-                stroke_density: 1.0,
-                color: "black".to_string(),
-                tool_id: 1,
-                name: "PEN1".to_string(),
-            },
+            // TODO: This should in the future be copied from pen settings.
+            pen: Some(
+                pens.first()
+                    .unwrap_or(&PenDetail {
+                        stroke_width: 0.5,
+                        stroke_density: 1.0,
+                        feed_rate: None,
+                        color: "black".to_string(),
+                        tool_id: 1,
+                        name: "PEN1".to_string(),
+                    })
+                    .clone(),
+            ),
         }),
-        stroke: Some(PenDetail {
-            stroke_width: 0.5,
-            stroke_density: 1.,
-            color: "black".to_string(),
-            tool_id: 1,
-            name: "PEN1".to_string(),
-        }),
+        stroke: Some(
+            pens.first()
+                .unwrap_or(&PenDetail {
+                    stroke_width: 0.5,
+                    stroke_density: 1.0,
+                    feed_rate: None,
+                    color: "black".to_string(),
+                    tool_id: 1,
+                    name: "PEN1".to_string(),
+                })
+                .clone(),
+        ),
         keepdown_strategy: if keepdown {
             KeepdownStrategy::PenWidthAuto
         } else {

@@ -6,17 +6,18 @@ use crate::view_model::{BAPViewModel, CommandContext};
 use eframe::egui;
 use egui::Direction::BottomUp;
 use egui::{Align2, Color32, Key, Rect, Stroke, StrokeKind, pos2};
-
-pub(crate) mod tool_window;
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
-use tool_window::floating_tool_window;
+
 pub(crate) mod bottom_panel;
 pub(crate) mod menu;
 pub(crate) mod paper_chooser;
 pub(crate) mod pen_crib;
+pub(crate) mod pen_editor;
 pub(crate) mod scene_toggle;
 pub(crate) mod themes;
 pub(crate) mod tool_button;
+pub(crate) mod tool_window;
+use tool_window::floating_tool_window;
 
 // pub(crate) fn native_to_mm(native: Pos2, zoom: f32) -> Pos2 {
 //     (PIXELS_PER_MM * native) / zoom
@@ -40,11 +41,18 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
 
     let wtop = tbp.top();
     floating_tool_window(model, ctx, wtop, &mut toasts);
-    if model.paper_modal_open {
-        paper_chooser_window(model, ctx);
-    }
-    if model.pen_crib_open {
-        pen_crib_window(model, ctx);
+    // if model.paper_modal_open {
+    // if let CommandContext::PaperChooser = model.command_context {
+    //     paper_chooser_window(model, ctx);
+    // } else if let CommandContext::PenCrib
+    // if model.pen_crib_open {
+    //     pen_crib_window(model, ctx);
+    // }
+    match model.command_context {
+        CommandContext::PaperChooser => paper_chooser_window(model, ctx),
+        CommandContext::PenCrib => pen_crib_window(model, ctx),
+        CommandContext::PenEdit(pen_idx) => pen_editor::pen_editor_window(model, ctx, pen_idx),
+        _ => (),
     }
 
     let _cp = egui::CentralPanel::default().show(ctx, |ui| {
@@ -53,6 +61,10 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
         let precursor = ui.cursor();
         // let painter = ui.painter();
         let (painter_resp, painter) = ui.allocate_painter(ui.available_size(), egui::Sense::all());
+        let painter_resp = painter_resp.on_hover_cursor(match model.command_context {
+            CommandContext::Origin => egui::CursorIcon::Crosshair,
+            _ => egui::CursorIcon::Default,
+        });
 
         model.container_rect = Some(painter_resp.rect.clone());
 
@@ -211,8 +223,8 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                         model.set_origin(model.frame_coords_to_mm(pos));
                     }
                 }
-                CommandContext::None => (),
                 CommandContext::Clip(_pos2, _pos3) => todo!(),
+                _ => (),
             }
             model.command_context = CommandContext::None;
         }

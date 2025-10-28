@@ -215,7 +215,7 @@ impl GeometryToMultiLineString for Geometry<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::project::svg_to_geometries;
+    use crate::core::project::{PenDetail, svg_to_geometries};
     use std::include_bytes;
     use usvg::{Options, Tree};
 
@@ -225,7 +225,7 @@ mod tests {
         let mut opt = usvg::Options::default();
         opt.dpi = 25.4;
         if let Ok(rtree) = usvg::Tree::from_data(svg_data, &opt) {
-            let geometry = svg_to_geometries(&rtree, 1., 1., true);
+            let geometry = svg_to_geometries(&rtree, 1., 1., true, &vec![PenDetail::default()]);
             for geo in geometry {
                 let lines = geo.geometry.to_multi_line_strings();
                 // println!("Lines are: {:?}", lines);

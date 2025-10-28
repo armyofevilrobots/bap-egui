@@ -250,7 +250,7 @@ impl ApplicationCore {
             // Also, we need to check for plotter responses...
             loop {
                 if let Ok(response) = self.plot_receiver.recv_timeout(Duration::from_millis(100)) {
-                    println!("Sending response: {:?}", &response);
+                    // println!("Sending response: {:?}", &response);
                     match &response {
                         PlotterResponse::Ok(_plotter_command, _) => (),
                         PlotterResponse::Err(_plotter_command, _) => {}

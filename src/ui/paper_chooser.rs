@@ -83,11 +83,13 @@ pub(crate) fn paper_chooser_window(
             dimensions_text_color.clone(),
         );
         ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.button("Cancel").clicked() {
-                model.paper_modal_open = false
-            }
+            // if ui.button("Cancel").clicked() {
+            //     // model.paper_modal_open = false
+            //     model.command_context = crate::view_model::CommandContext::None;
+            // }
             if ui.button("Ok").clicked() {
-                model.paper_modal_open = false
+                // model.paper_modal_open = false
+                model.command_context = crate::view_model::CommandContext::None;
             }
 
             paper_chooser_combobox(model, ui);

@@ -2,7 +2,7 @@ use crate::core::project::Orientation;
 use crate::sender::PlotterState;
 use crate::view_model::{BAPDisplayMode, BAPViewModel, CommandContext};
 use eframe::egui;
-use egui::{ComboBox, Slider, TextEdit, vec2};
+use egui::{ComboBox, Label, Slider, TextEdit, Widget, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 
 use super::tool_button::tool_button;
@@ -45,7 +45,8 @@ pub(crate) fn floating_tool_window(
                     .clicked()
                     {
                         // println!("Showing paper chooser w indow.");
-                        model.paper_modal_open = true;
+                        // model.paper_modal_open = true;
+                        model.command_context = CommandContext::PaperChooser;
                     }
                     if tool_button(
                         ui,
@@ -87,7 +88,8 @@ pub(crate) fn floating_tool_window(
                     )
                     .clicked()
                     {
-                        model.pen_crib_open = true;
+                        // model.pen_crib_open = true;
+                        model.command_context = CommandContext::PenCrib;
                     };
                     if tool_button(
                         ui,
@@ -125,7 +127,7 @@ pub(crate) fn floating_tool_window(
 
             // ui.collapsing("Alignment", |ui| {
             ui.add_space(8.);
-            ui.label("Alignment");
+            // Label::new("Alignment");
             egui::Grid::new("AlignmentToolz")
                 .spacing(vec2(0., 5.))
                 .show(ui, |ui| {
