@@ -2,7 +2,7 @@ use crate::core::project::Orientation;
 use crate::sender::PlotterState;
 use crate::view_model::{BAPDisplayMode, BAPViewModel, CommandContext};
 use eframe::egui;
-use egui::{ComboBox, Label, Slider, TextEdit, Widget, vec2};
+use egui::{ComboBox, Slider, TextEdit, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 
 use super::tool_button::tool_button;

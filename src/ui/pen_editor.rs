@@ -19,7 +19,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                     .name
             ));
             let (painter_resp, painter) = ui.allocate_painter(vec2(390., 420.), egui::Sense::all());
-            let cur = ui.cursor().min;
+            let _cur = ui.cursor().min;
             let prect = painter_resp.rect;
             let ofs = (prect.min.clone() + vec2(10., 10.)).to_vec2();
             let pen = model
@@ -52,7 +52,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
             );
 
             // Create the pen color picker
-            let pen_color_response = ui.allocate_ui_at_rect(
+            let _pen_color_response = ui.allocate_ui_at_rect(
                 Rect::from_min_max(pos2(0., 150.) + ofs, pos2(300.0, 250.0) + ofs),
                 |ui| {
                     ui.horizontal(|ui| {
@@ -114,7 +114,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                 -25. + 5.0 * pen.stroke_width as f32 / 2.,
                 100.0 - (10.0 * pen.stroke_width as f32) * (15. * PI / 180.).cos() as f32,
             ); // -25. is sin(15)*100;
-            let pen_slope_left = vec2(
+            let _pen_slope_left = vec2(
                 -25. - 5.0 * pen.stroke_width as f32 / 2.,
                 -100.0 - (10.0 * pen.stroke_width as f32) * (15. * PI / 180.).cos() as f32,
             ); // -25. is sin(15)*100;

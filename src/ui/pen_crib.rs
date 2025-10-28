@@ -1,11 +1,8 @@
 use std::sync::Arc;
 
-use crate::{BAPViewModel, core::project::PenDetail};
+use crate::BAPViewModel;
 use eframe::egui;
-use egui::{
-    Button, Color32, Frame, Grid, Id, Image, InnerResponse, Layout, Modal, Response, Rgba, Slider,
-    Ui, Vec2, Widget, epaint::Hsva, style::HandleShape,
-};
+use egui::{Button, Color32, Frame, Grid, Id, Layout};
 
 pub(crate) fn pen_crib_window(model: &mut BAPViewModel, ctx: &egui::Context) {
     let mut drag_from: Option<Arc<usize>> = None;
@@ -79,7 +76,7 @@ pub(crate) fn pen_crib_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                     }
                 });
         }); // End of DND dropzone frame wrapper
-        if let Some(payload) = dropped_payload {
+        if let Some(_payload) = dropped_payload {
             // The user dropped onto the column, but not on any one item.
         } else if let Some(from) = drag_from
             && let Some(to) = drag_to

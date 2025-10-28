@@ -361,7 +361,7 @@ impl PlotterConnection {
                 PlotterState::Paused(_, _, _) => {
                     std::thread::sleep(std::time::Duration::from_millis(100))
                 }
-                PlotterState::Running(current_line, total_lines, oks) => {
+                PlotterState::Running(current_line, total_lines, _oks) => {
                     if self.oks < 5 {
                         match &mut self.transport {
                             Some(transport) => {
