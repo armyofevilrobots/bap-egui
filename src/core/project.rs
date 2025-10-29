@@ -5,7 +5,7 @@ use aoer_plotty_rs::context::operation::OPLayer;
 use geo::algorithm::bounding_rect::BoundingRect;
 use geo::prelude::MapCoords;
 use geo::{Coord, Geometry, LineString, MultiLineString, Rect, coord};
-use nalgebra::{Affine2, Point2};
+use nalgebra::{Affine2, Matrix3, Point2};
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 use std::ffi::OsString;
@@ -427,6 +427,17 @@ impl Project {
         }
     }
 
+    /// Scales the entire set of geometries by some factor.
+    pub fn scale_by_factor(&mut self, factor: f64) {
+        let tx_affine2 = Affine2::<f64>::from_matrix_unchecked(Matrix3::new(
+            factor, 0., 0., 0., factor, 0., 0., 0., 1.,
+        ));
+        for geo in self.geometry.iter_mut() {
+            *geo = geo.transformed(&tx_affine2);
+        }
+        self.regenerate_extents();
+    }
+
     fn dims_from_dimattr(attr: &str) -> Option<(f64, &str)> {
         let units_re =
             regex::Regex::new(r"^(?P<val>[0-9]+\.?[0-9]*)\s*(?P<units>[a-zA-Z]*)").unwrap();
@@ -500,7 +511,8 @@ impl Project {
                 // println!("{:?}", rtree.root());
                 self.svg = Some(svg_string);
                 self.geometry = svg_to_geometries(&rtree, scale_x, scale_y, keepdown, &self.pens);
-                self.extents = self.calc_extents();
+                // self.extents = self.calc_extents();
+                self.regenerate_extents();
             }
         }
     }

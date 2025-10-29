@@ -126,7 +126,7 @@ pub(crate) fn floating_tool_window(
                 });
 
             // ui.collapsing("Alignment", |ui| {
-            ui.add_space(8.);
+            ui.add_space(16.);
             // Label::new("Alignment");
             egui::Grid::new("AlignmentToolz")
                 .spacing(vec2(0., 5.))
@@ -175,7 +175,7 @@ pub(crate) fn floating_tool_window(
                     ui.end_row();
                 });
             // });
-            ui.add_space(8.);
+            ui.add_space(16.);
             ui.label("Display...");
             ui.checkbox(&mut model.show_paper, "Show paper");
             ui.checkbox(&mut model.show_machine_limits, "Show limits");

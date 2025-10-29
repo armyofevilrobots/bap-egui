@@ -248,21 +248,8 @@ impl ApplicationCore {
                         self.set_pen_position(true);
                     }
                     ViewCommand::Scale(factor) => {
-                        let tx_affine2 = Affine2::<f64>::from_matrix_unchecked(Matrix3::new(
-                            factor,
-                            0.,
-                            0.,
-                            0.,
-                            factor,
-                            0.,
-                            0.,
-                            0.,
-                            1.,
-                        ));
-                        for geo in self.project.geometry.iter_mut(){
-                            *geo = geo.transformed(&tx_affine2);
-                        }
-                        self.project.regenerate_extents();
+                        //TODO: MIgrate this into Project.
+                        self.project.scale_by_factor(factor);
 
                         self.state_change_out
                             .send(ApplicationStateChangeMsg::SourceChanged {
