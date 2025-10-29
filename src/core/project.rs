@@ -409,6 +409,10 @@ impl Project {
         extents
     }
 
+    pub fn regenerate_extents(&mut self) {
+        self.extents = self.calc_extents();
+    }
+
     fn scale_native_units(units: &str) -> f64 {
         if units == "mm" {
             1.

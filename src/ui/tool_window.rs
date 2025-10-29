@@ -139,7 +139,7 @@ pub(crate) fn floating_tool_window(
                     )
                     .clicked()
                     {
-                        println!("CENTER!!");
+                        model.center_paper();
                     }
                     if tool_button(
                         ui,
@@ -149,7 +149,7 @@ pub(crate) fn floating_tool_window(
                     )
                     .clicked()
                     {
-                        println!("CENTER!!");
+                        model.center_machine();
                     }
                     if tool_button(
                         ui,
@@ -158,8 +158,20 @@ pub(crate) fn floating_tool_window(
                         true,
                     )
                     .clicked()
-                    {};
+                    {
+                        model.center_smart();
+                    };
                     ui.end_row();
+                    if tool_button(
+                        ui,
+                        egui::include_image!("../../resources/images/scale.png"),
+                        Some("Scale by a factor".into()),
+                        true,
+                    )
+                    .clicked()
+                    {
+                        model.command_context = CommandContext::Scale;
+                    }
                     ui.end_row();
                 });
             // });

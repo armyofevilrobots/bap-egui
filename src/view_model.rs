@@ -31,6 +31,7 @@ pub enum CommandContext {
     PenCrib,
     PenEdit(usize), // The pen index in Vec<Pens>
     Clip(Option<Pos2>, Option<Pos2>),
+    Scale,
     None,
 }
 
@@ -71,6 +72,7 @@ pub struct BAPViewModel {
     pub plotter_state: PlotterState,
     pub queued_toasts: VecDeque<Toast>,
     pub pen_crib: Vec<PenDetail>,
+    pub scale_factor_temp: f64,
 }
 
 pub trait IsPos2Able {
@@ -91,6 +93,14 @@ impl IsPos2Able for Vec2 {
 impl BAPViewModel {
     pub fn name() -> &'static str {
         "Bot-a-Plot"
+    }
+
+    pub fn scale_by_factor(&mut self, factor: f64) {
+        if let Some(cmd_out) = &self.cmd_out {
+            cmd_out
+                .send(ViewCommand::Scale(factor))
+                .expect("Failed to send Scale Factor command?");
+        }
     }
 
     pub fn set_origin(&mut self, origin: Pos2) {
@@ -194,16 +204,98 @@ impl BAPViewModel {
         // TODO: Reload the svg preview.
     }
 
-    pub fn center_paper(&mut self, _ppp: f32) {
-        // self.set_origin
-        // let top = self.get_paper_rect()
+    /// Just checks if the source image is too big for either paper or machine.
+    fn warn_if_bigger_than_available(&mut self) {
+        if let Some(extents) = self.source_image_extents {
+            if extents.height() > self.machine_config.limits().1 as f32 {
+                self.toast_warning(
+                    "Source image is taller than machine extents. Trying flipping or scaling?"
+                        .to_string(),
+                );
+            }
+            if extents.width() > self.machine_config.limits().0 as f32 {
+                self.toast_warning(
+                    "Source image is wider than machine extents. Trying flipping or scaling?"
+                        .to_string(),
+                );
+            }
+        }
+    }
+
+    pub fn center_machine(&mut self) {
+        if let Some(extents) = self.source_image_extents {
+            let avail_width = self.machine_config.limits().0;
+            let avail_height = self.machine_config.limits().1;
+
+            let left_gap = (avail_width as f32 - extents.width()) / 2.;
+            let bottom_gap = (avail_height as f32 - extents.height()) / 2.;
+            self.set_origin(pos2(
+                0.0 - (left_gap - extents.min.x),
+                avail_height as f32 - (bottom_gap - extents.min.y),
+            ));
+        } else {
+            self.toast_error(
+                "Cannot smart center when source image has no extents.\
+                Try importing an image first?"
+                    .to_string(),
+            );
+        }
+    }
+
+    /// Just to the paper, ignoring machine limits
+    pub fn center_paper(&mut self) {
+        if let Some(extents) = self.source_image_extents {
+            let avail_width = self.get_paper_size().x as f64;
+            let avail_height = self.get_paper_size().y as f64;
+
+            let left_gap = (avail_width as f32 - extents.width()) / 2.;
+            let bottom_gap = (avail_height as f32 - extents.height()) / 2.;
+            self.set_origin(pos2(
+                0.0 - (left_gap - extents.min.x),
+                avail_height as f32 - (bottom_gap - extents.min.y),
+            ));
+        } else {
+            self.toast_error(
+                "Cannot smart center when source image has no extents.\
+                Try importing an image first?"
+                    .to_string(),
+            );
+        }
     }
 
     /// This one will figure out the center of the paper, center of
     /// the machine, and try and arrange things to give us the nicest
     /// compromise based on the paper being _somewhere_ north-east of
     /// the machine origin.
-    pub fn center_smart(&mut self) {}
+    pub fn center_smart(&mut self) {
+        if let Some(extents) = self.source_image_extents {
+            self.warn_if_bigger_than_available();
+            let avail_width = if self.get_paper_size().x as f64 > self.machine_config.limits().0 {
+                self.machine_config.limits().0
+            } else {
+                self.get_paper_size().x as f64
+            };
+            let avail_height = if self.get_paper_size().y as f64 > self.machine_config.limits().1 {
+                self.machine_config.limits().1
+            } else {
+                // self.paper_size.dims().1
+                self.get_paper_size().y as f64
+            };
+
+            let left_gap = (avail_width as f32 - extents.width()) / 2.;
+            let bottom_gap = (avail_height as f32 - extents.height()) / 2.;
+            self.set_origin(pos2(
+                0.0 - (left_gap - extents.min.x),
+                avail_height as f32 - (bottom_gap - extents.min.y),
+            ));
+        } else {
+            self.toast_error(
+                "Cannot smart center when source image has no extents.\
+                Try importing an image first?"
+                    .to_string(),
+            );
+        }
+    }
 
     pub fn zoom_fit(&mut self) {
         let rect = if let Some(rect) = self.source_image_extents {
@@ -310,6 +402,19 @@ impl BAPViewModel {
         self.calc_paper_rect(self.origin)
     }
 
+    pub fn get_paper_size(&self) -> Vec2 {
+        match self.paper_orientation {
+            Orientation::Portrait => vec2(
+                self.paper_size.dims().0 as f32,
+                self.paper_size.dims().1 as f32,
+            ),
+            Orientation::Landscape => vec2(
+                self.paper_size.dims().1 as f32,
+                self.paper_size.dims().0 as f32,
+            ),
+        }
+    }
+
     pub fn calc_paper_rect(&self, origin: Pos2) -> Rect {
         match self.paper_orientation {
             Orientation::Portrait => {
@@ -378,22 +483,28 @@ impl BAPViewModel {
     }
 
     /// Sends a quick info message.
-    pub fn toast_info(&mut self, message: String) {
+
+    pub fn toast(&mut self, message: String, kind: ToastKind, duration: f64) {
         self.queued_toasts.push_back(Toast {
-            kind: ToastKind::Info,
+            kind,
             text: message.into(),
-            options: ToastOptions::default().duration_in_seconds(15.),
+            options: ToastOptions::default().duration_in_seconds(duration),
             ..Default::default()
         })
     }
-    /// Sends a quick info message.
+
+    pub fn toast_info(&mut self, message: String) {
+        self.toast(message, ToastKind::Info, 5.);
+    }
+
+    /// Sends a quick error message.
+    pub fn toast_warning(&mut self, message: String) {
+        self.toast(message, ToastKind::Warning, 10.);
+    }
+
+    /// Sends a quick error message.
     pub fn toast_error(&mut self, message: String) {
-        self.queued_toasts.push_back(Toast {
-            kind: ToastKind::Error,
-            text: message.into(),
-            options: ToastOptions::default().duration_in_seconds(15.),
-            ..Default::default()
-        })
+        self.toast(message, ToastKind::Error, 15.);
     }
 
     pub fn handle_plotter_response(&mut self, plotter_response: PlotterResponse) {
@@ -494,6 +605,7 @@ impl Default for BAPViewModel {
                     color: "#0000FF".to_string(),
                 },
             ],
+            scale_factor_temp: 1.,
         }
     }
 }
@@ -542,6 +654,7 @@ impl eframe::App for BAPViewModel {
                 } => {
                     if let Some(handle) = &mut self.source_image_handle {
                         handle.set(image, egui::TextureOptions::NEAREST);
+                        println!("Got incoming extents: {},{},{}w,{}h", x, y, width, height);
                         self.source_image_extents = Some(Rect::from_min_size(
                             pos2(x as f32, y as f32),
                             vec2(width as f32, height as f32),
@@ -579,7 +692,7 @@ impl eframe::App for BAPViewModel {
                                 kind: ToastKind::Info,
                                 text: format!("Serial port {} removed.", &port).into(),
                                 options: ToastOptions::default()
-                                    .duration_in_seconds(15.)
+                                    .duration_in_seconds(5.)
                                     .show_progress(true),
                                 ..Default::default()
                             })
@@ -591,7 +704,7 @@ impl eframe::App for BAPViewModel {
                                 kind: ToastKind::Info,
                                 text: format!("Serial port {} discovered.", &port).into(),
                                 options: ToastOptions::default()
-                                    .duration_in_seconds(15.)
+                                    .duration_in_seconds(5.)
                                     .show_progress(true),
                                 ..Default::default()
                             })

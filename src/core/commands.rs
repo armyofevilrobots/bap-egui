@@ -27,6 +27,7 @@ pub enum ViewCommand {
         center: (f64, f64),
         theta: f64,
     },
+    Scale(f64),
     Post,
     StartPlot,
     PausePlot,
