@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 
 use csscolorparser::Color;
-use egui::{Color32, Id, Layout, Rect, Slider, epaint::PathStroke, pos2, vec2};
+use egui::{Color32, Id, Layout, Rect, Slider, Stroke, StrokeKind, epaint::PathStroke, pos2, vec2};
 
 use crate::{core::project::PenDetail, view_model::BAPViewModel};
 
@@ -19,7 +19,6 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                     .name
             ));
             let (painter_resp, painter) = ui.allocate_painter(vec2(390., 420.), egui::Sense::all());
-            let _cur = ui.cursor().min;
             let prect = painter_resp.rect;
             let ofs = (prect.min.clone() + vec2(10., 10.)).to_vec2();
             let pen = model
@@ -51,8 +50,33 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                 },
             );
 
+            ui.allocate_ui_at_rect(
+                Rect::from_min_max(pos2(0., 80.) + ofs, prect.min + vec2(200., 120.)),
+                |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label("Feed(mm/s)");
+                        let (mut enabled, mut tmp_vel) = match pen.feed_rate.clone() {
+                            Some(vel) => (true, vel),
+                            None => (false, 1200.),
+                        };
+                        ui.checkbox(&mut enabled, "Custom");
+                        if enabled {
+                            ui.add(Slider::new(&mut tmp_vel, 100.0..=10000.0));
+                        } else {
+                            ui.label(" - machine default -");
+                        }
+
+                        if enabled {
+                            pen.feed_rate = Some(tmp_vel);
+                        } else {
+                            pen.feed_rate = None
+                        }
+                    })
+                },
+            );
+
             // Create the pen color picker
-            let _pen_color_response = ui.allocate_ui_at_rect(
+            let pen_color_response = ui.allocate_ui_at_rect(
                 Rect::from_min_max(pos2(0., 150.) + ofs, pos2(300.0, 250.0) + ofs),
                 |ui| {
                     ui.horizontal(|ui| {
@@ -76,7 +100,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
 
             // The input for the pen width
             let pen_width_slider_response = ui.allocate_ui_at_rect(
-                Rect::from_min_max(pos2(0., 300.) + ofs, pos2(300.0, 330.0) + ofs),
+                Rect::from_min_max(pos2(0., 240.) + ofs, pos2(300.0, 270.0) + ofs),
                 |ui| {
                     ui.add(
                         Slider::new(&mut pen.stroke_width, 0.1..=10.0)
@@ -114,7 +138,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                 -25. + 5.0 * pen.stroke_width as f32 / 2.,
                 100.0 - (10.0 * pen.stroke_width as f32) * (15. * PI / 180.).cos() as f32,
             ); // -25. is sin(15)*100;
-            let _pen_slope_left = vec2(
+            let pen_slope_left = vec2(
                 -25. - 5.0 * pen.stroke_width as f32 / 2.,
                 -100.0 - (10.0 * pen.stroke_width as f32) * (15. * PI / 180.).cos() as f32,
             ); // -25. is sin(15)*100;
@@ -176,20 +200,36 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                 vec![
                     pen_right_tip.clone() + vec2(-5.0 * (pen.stroke_width as f32) / 2., 15.0),
                     pen_right_tip.clone() + vec2(-5.0 * (pen.stroke_width as f32) / 2., 25.0),
-                    pen_width_slider_response.response.rect.right_center() + vec2(90.0, 0.0),
+                    pen_right_tip.clone()
+                        + vec2(-5.0 * (pen.stroke_width as f32) / 2. - 50.0, 25.0),
+                    pen_width_slider_response.response.rect.right_center() + vec2(70.0, 0.0),
                     pen_width_slider_response.response.rect.right_center() + vec2(10.0, 0.0),
                 ],
                 PathStroke::new(1., ui.visuals().text_color()),
             );
 
+            let paper_top = pen_left_tip.y + 5.;
+
+            // Draw the paper.
+            painter.rect(
+                Rect::from_min_max(
+                    pen_left_tip + vec2(-10., 30.),
+                    pen_right_tip + vec2(10., 80.),
+                ),
+                0.,
+                model.paper_color.clone(),
+                Stroke::NONE,
+                StrokeKind::Outside,
+            );
+
             // Simulate the density of the pen with a bunch of hatchlines.
-            for i in 0..(1 + pen.stroke_width as usize) {
+            for i in 0..(1 + (8. * pen.stroke_width) as usize / 2) {
                 painter.line(
                     vec![
-                        pen_left_tip + vec2(0. + i as f32 * 5.0, 30.),
-                        pen_left_tip + vec2(0. + i as f32 * 5.0, 80.),
+                        pen_left_tip + vec2(0. + i as f32 * 10. / 8., 30.),
+                        pen_left_tip + vec2(0. + i as f32 * 10. / 8., 80.),
                     ],
-                    PathStroke::new((5. * pen.stroke_density as f32).ceil(), pen_color32.clone()),
+                    PathStroke::new((11. / 8. * pen.stroke_density as f32), pen_color32.clone()),
                 );
             }
 
@@ -198,7 +238,9 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                 vec![
                     pen_right_tip.clone() + vec2(-5.0 * (pen.stroke_width as f32) / 2., 90.0),
                     pen_right_tip.clone() + vec2(-5.0 * (pen.stroke_width as f32) / 2., 100.0),
-                    pen_density_slider_response.response.rect.right_center() + vec2(90.0, 0.0),
+                    pen_right_tip.clone()
+                        + vec2(-5.0 * (pen.stroke_width as f32) / 2. - 50., 100.0),
+                    pen_density_slider_response.response.rect.right_center() + vec2(70.0, 0.0),
                     pen_density_slider_response.response.rect.right_center() + vec2(10.0, 0.0),
                 ],
                 PathStroke::new(1., ui.visuals().text_color()),

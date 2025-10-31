@@ -16,7 +16,7 @@ use crate::machine::MachineConfig;
 use crate::sender::{PlotterResponse, PlotterState};
 
 pub const PIXELS_PER_MM: f32 = 4.; // This is also scaled by the PPP value, but whatever.
-pub const MAX_SIZE: usize = 2048;
+pub const MAX_SIZE: usize = 4096;
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum BAPDisplayMode {
@@ -24,14 +24,14 @@ pub enum BAPDisplayMode {
     Plot,
 }
 
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum CommandContext {
     Origin,
     PaperChooser,
     PenCrib,
     PenEdit(usize), // The pen index in Vec<Pens>
     Clip(Option<Pos2>, Option<Pos2>),
-    Scale,
+    Scale(f64),
     None,
 }
 
@@ -72,7 +72,8 @@ pub struct BAPViewModel {
     pub plotter_state: PlotterState,
     pub queued_toasts: VecDeque<Toast>,
     pub pen_crib: Vec<PenDetail>,
-    pub scale_factor_temp: f64,
+    // pub scale_factor_temp: f64,
+    pub cancel_render: Option<Sender<()>>,
 }
 
 pub trait IsPos2Able {
@@ -326,6 +327,16 @@ impl BAPViewModel {
             // calculate a new image size for the current zoom level.
             self.request_new_source_image();
         }
+
+        if let Some(timeout) = &self.timeout_for_source_image {
+            if let Some(cancel) = &self.cancel_render {
+                println!("Sending cancel, dirty is... {}", self.dirty);
+                self.timeout_for_source_image = None;
+                cancel
+                    .send(())
+                    .expect("Failed to send cancellation of render?!");
+            }
+        }
     }
 
     pub fn request_new_source_image(&mut self) {
@@ -561,6 +572,7 @@ impl Default for BAPViewModel {
             source_image_handle: None,
             source_image_extents: None,
             timeout_for_source_image: None,
+            cancel_render: None,
             look_at: Pos2 { x: 0., y: 0. },
             view_zoom: 4.,
             command_context: CommandContext::None,
@@ -605,7 +617,6 @@ impl Default for BAPViewModel {
                     color: "#0000FF".to_string(),
                 },
             ],
-            scale_factor_temp: 1.,
         }
     }
 }
@@ -729,6 +740,7 @@ impl eframe::App for BAPViewModel {
                 ApplicationStateChangeMsg::PlotterResponse(plotter_response) => {
                     self.handle_plotter_response(plotter_response);
                 }
+                ApplicationStateChangeMsg::PlotPreviewChanged { extents } => todo!(),
             }
         }
 

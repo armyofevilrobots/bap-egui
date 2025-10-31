@@ -16,6 +16,10 @@ pub enum ViewCommand {
         extents: (f64, f64, f64, f64),
         resolution: (usize, usize),
     },
+    RequestPlotPreviewImage {
+        extents: (f64, f64, f64, f64),
+        resolution: (usize, usize),
+    },
     ImportSVG(PathBuf),
     SetOrigin(f64, f64),
     UpdateMachineConfig(MachineConfig),
@@ -50,6 +54,9 @@ pub enum ApplicationStateChangeMsg {
         extents: (f64, f64, f64, f64), //Min.x, Min.y, width, height
     },
     SourceChanged {
+        extents: (f64, f64, f64, f64),
+    },
+    PlotPreviewChanged {
         extents: (f64, f64, f64, f64),
     },
     UpdateMachineConfig(MachineConfig),

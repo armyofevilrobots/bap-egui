@@ -34,11 +34,13 @@ fn main() -> eframe::Result<()> {
         native_options,
         Box::new(|ctx| {
             let ctx_app = ctx.egui_ctx.clone();
-            let (mut application, cmd_out, state_in) = ApplicationCore::new(ctx_app);
+            let (mut application, cmd_out, state_in, cancel_render_sender) =
+                ApplicationCore::new(ctx_app);
             let mut model = BAPViewModel::default();
             model.state_in = Some(state_in);
             model.cmd_out = Some(cmd_out);
             model.origin = pos2(0., 279.);
+            model.cancel_render = Some(cancel_render_sender);
 
             // We need some kind of placeholder due to the API. How bout a secret pixel?
             let tmp_svg_image = ColorImage::filled([3, 3], Color32::TRANSPARENT);

@@ -3,6 +3,11 @@ name = "bap-egui"
 version = "0.1.0"
 edition = "2024"
 
+# [features]
+# default=["skia"]
+# skia=[]
+# tiny_skia=["tiny-skia"]
+
 [dependencies]
 anyhow = "1.0.100"
 aoer-plotty-rs = {path="../aoer-plotty-rs"}

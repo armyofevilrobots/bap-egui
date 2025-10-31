@@ -13,6 +13,7 @@ pub(crate) mod menu;
 pub(crate) mod paper_chooser;
 pub(crate) mod pen_crib;
 pub(crate) mod pen_editor;
+pub(crate) mod scale_window;
 pub(crate) mod scene_toggle;
 pub(crate) mod themes;
 pub(crate) mod tool_button;
@@ -26,38 +27,6 @@ use tool_window::floating_tool_window;
 // pub(crate) fn mm_to_native(mm: Pos2, zoom: f32) -> Pos2 {
 //     (mm * zoom) / PIXELS_PER_MM
 // }
-
-pub(crate) fn scale_window(
-    model: &mut BAPViewModel,
-    ctx: &egui::Context,
-    // ui: &mut egui::Ui,
-) /*-> ModalResponse<()>*/
-{
-    egui::Modal::new(Id::new("ScaleFactor")).show(ctx, |ui| {
-        ui.set_width(400.);
-        ui.heading("Scale by factor");
-
-        ui.add(
-            Slider::new(&mut model.scale_factor_temp, 0.01..=100.0)
-                .logarithmic(true)
-                .text("Width"),
-        );
-
-        ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.button("Ok").clicked() {
-                // model.pen_crib_open = false
-                println!("Would scale by a factor {} here.", model.scale_factor_temp);
-                model.scale_by_factor(model.scale_factor_temp);
-                model.command_context = crate::view_model::CommandContext::None
-            }
-            if ui.button("Cancel").clicked() {
-                // model.pen_crib_open = false
-                println!("Not scaling. Quitting modal.");
-                model.command_context = crate::view_model::CommandContext::None
-            }
-        });
-    });
-}
 
 pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &mut eframe::Frame) {
     // Looks better on 4k montior
@@ -84,7 +53,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
         CommandContext::PaperChooser => paper_chooser_window(model, ctx),
         CommandContext::PenCrib => pen_crib_window(model, ctx),
         CommandContext::PenEdit(pen_idx) => pen_editor::pen_editor_window(model, ctx, pen_idx),
-        CommandContext::Scale => scale_window(model, ctx),
+        CommandContext::Scale(_factor) => scale_window::scale_window(model, ctx),
         _ => (),
     }
 

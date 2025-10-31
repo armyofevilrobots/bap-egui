@@ -25,9 +25,11 @@ use crate::sender::{PlotterCommand, PlotterConnection, PlotterResponse};
 pub struct ApplicationCore {
     view_command_in: Receiver<ViewCommand>,
     state_change_out: Sender<ApplicationStateChangeMsg>,
+    cancel_render: Receiver<()>,
     shutdown: bool,
     project: Project,
     machine: MachineConfig,
+    last_render: Option<ColorImage>,
     ctx: Context, // Just a repaint context, not used for ANYTHING else.
     plot_sender: Sender<PlotterCommand>,
     plot_receiver: Receiver<PlotterResponse>,
@@ -42,9 +44,11 @@ impl ApplicationCore {
         ApplicationCore,
         Sender<ViewCommand>,
         Receiver<ApplicationStateChangeMsg>,
+        Sender<()>,
     ) {
         let (vm_to_app, app_from_vm) = mpsc::channel::<ViewCommand>();
         let (app_to_vm, vm_from_app) = mpsc::channel::<ApplicationStateChangeMsg>();
+        let (cancel_render_sender, cancel_render_receiver) = mpsc::channel::<()>();
         // let (app_to_plotter, plotter_from_app) = mpsc::channel::<PlotterCommand>();
         // let (plotter_to_app, app_from_plotter) = mpsc::channel::<PlotterResponse>();
         let (app_to_plotter, plotter_to_app) =
@@ -52,7 +56,7 @@ impl ApplicationCore {
         app_to_vm
             .send(ApplicationStateChangeMsg::FoundPorts(serial::scan_ports()))
             .expect("Failed to send serial port list up to view.");
-        let new = ApplicationCore {
+        let core = ApplicationCore {
             view_command_in: app_from_vm,
             state_change_out: app_to_vm,
             shutdown: false,
@@ -63,8 +67,10 @@ impl ApplicationCore {
             ctx,
             last_serial_scan: Instant::now(),
             program: None,
+            cancel_render: cancel_render_receiver,
+            last_render: None,
         };
-        (new, vm_to_app, vm_from_app)
+        (core, vm_to_app, vm_from_app, cancel_render_sender)
     }
 
     pub fn set_pen_position(&mut self, down: bool) {
@@ -127,20 +133,25 @@ impl ApplicationCore {
                             extents,
                             resolution,
                             &self.state_change_out,
+                            &self.cancel_render
                         ) {
-                            Ok(cimg) => cimg,
-                            Err(_) => ColorImage::example(),
+                            Ok(cimg) => Some(cimg),
+                            Err(_) => None,
                         };
 
-                        self.state_change_out
-                            .send(ApplicationStateChangeMsg::UpdateSourceImage {
-                                image: cimg,
-                                extents,
-                            })
-                            .unwrap_or_else(|_err| {
-                                self.shutdown = true;
-                                eprintln!("Failed to send message from bap core. Shutting down.");
-                            });
+                        if let Some(cimg) = cimg{
+                            self.last_render = Some(cimg.clone());
+                            self.state_change_out
+                                .send(ApplicationStateChangeMsg::UpdateSourceImage {
+                                    image: cimg,
+                                    extents,
+                                })
+                                .unwrap_or_else(|_err| {
+                                    self.shutdown = true;
+                                    eprintln!("Failed to send message from bap core. Shutting down.");
+                                });
+
+                        }
                         self.ctx.request_repaint();
                     }
                     ViewCommand::ImportSVG(path_buf) => {
@@ -267,6 +278,7 @@ impl ApplicationCore {
 
                         self.ctx.request_repaint();
                     },
+                    ViewCommand::RequestPlotPreviewImage { extents, resolution } => todo!(),
                 },
             }
 

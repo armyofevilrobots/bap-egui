@@ -170,7 +170,7 @@ pub(crate) fn floating_tool_window(
                     )
                     .clicked()
                     {
-                        model.command_context = CommandContext::Scale;
+                        model.command_context = CommandContext::Scale(1.);
                     }
                     ui.end_row();
                 });
