@@ -33,7 +33,7 @@ pub(crate) fn render_svg_preview(
     let mut pixmap =
         Pixmap::new(resolution.0 as u32, resolution.1 as u32).expect("Failed to create pixmap!");
     let (xofs, yofs) = extents.min().x_y();
-    let (_xofs, _yofs) = (xofs as f32, yofs as f32); // In case it's negative, which happens sometimes.
+    // let (_xofs, _yofs) = (xofs as f32, yofs as f32); // In case it's negative, which happens sometimes.
 
     let _stroke_width = (resolution.0 as f32 / extents.width() as f32) * 2.5;
     let sx = resolution.0 as f32 / extents.width() as f32;
@@ -129,50 +129,5 @@ pub(crate) fn render_svg_preview(
             percentage: 100,
         })
         .expect("Failed to send state change message.");
-    Ok(cimg)
-}
-
-pub(crate) fn render_plot_preview(
-    project: &Project,
-    extents: (f64, f64, f64, f64),
-    progress: (usize, usize),
-    resolution: (usize, usize),
-    state_change_out: &Sender<ApplicationStateChangeMsg>,
-) -> Result<ColorImage, anyhow::Error> {
-    let mut paint = tiny_skia::Paint::default();
-    paint.set_color_rgba8(0, 0, 0, 255);
-    paint.blend_mode = tiny_skia::BlendMode::Source;
-    paint.anti_alias = true;
-    let extents = Rect::new(
-        Coord {
-            x: extents.0,
-            y: extents.1,
-        },
-        Coord {
-            x: extents.2 + extents.0,
-            y: extents.3 + extents.1,
-        },
-    );
-    let mut pixmap =
-        Pixmap::new(resolution.0 as u32, resolution.1 as u32).expect("Failed to create pixmap!");
-    let (xofs, yofs) = extents.min().x_y();
-    let (_xofs, _yofs) = (xofs as f32, yofs as f32); // In case it's negative, which happens sometimes.
-
-    let _stroke_width = (resolution.0 as f32 / extents.width() as f32) * 2.5;
-    let sx = resolution.0 as f32 / extents.width() as f32;
-    let sy = resolution.1 as f32 / extents.height() as f32;
-
-    let transform = Transform::from_row(
-        sx,
-        0.,
-        0.,
-        sy,
-        -extents.min().x as f32 * sx,
-        -extents.min().y as f32 * sy,
-    );
-    let cimg: ColorImage = ColorImage::from_rgba_premultiplied(
-        [pixmap.width() as usize, pixmap.height() as usize],
-        pixmap.data(),
-    );
     Ok(cimg)
 }

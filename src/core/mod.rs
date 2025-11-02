@@ -6,16 +6,19 @@ use egui::{ColorImage, Context};
 pub(crate) mod commands;
 pub(crate) mod post;
 pub(crate) mod project;
-pub(crate) mod render;
+pub(crate) mod render_plot;
+pub(crate) mod render_source;
 pub(crate) mod serial;
 
 use commands::{ApplicationStateChangeMsg, ViewCommand};
+use gcode::GCode;
 use nalgebra::{Affine2, Matrix3, Scale2, Transform2};
 use tera::Context as TeraContext;
 
 use crate::core::project::Project;
+use crate::core::render_plot::render_plot_preview;
 use crate::machine::MachineConfig;
-use crate::sender::{PlotterCommand, PlotterConnection, PlotterResponse};
+use crate::sender::{PlotterCommand, PlotterConnection, PlotterResponse, PlotterState};
 
 /// The actual application core that does shit.
 ///
@@ -35,6 +38,9 @@ pub struct ApplicationCore {
     plot_receiver: Receiver<PlotterResponse>,
     last_serial_scan: Instant,
     program: Option<Vec<String>>,
+    gcode: Option<Vec<GCode>>,
+    progress: (usize, usize, usize),
+    state: PlotterState,
 }
 
 impl ApplicationCore {
@@ -69,6 +75,9 @@ impl ApplicationCore {
             program: None,
             cancel_render: cancel_render_receiver,
             last_render: None,
+            gcode: None,
+            progress: (0, 0, 0),
+            state: PlotterState::Busy,
         };
         (core, vm_to_app, vm_from_app, cancel_render_sender)
     }
@@ -109,6 +118,7 @@ impl ApplicationCore {
 
     pub fn run(&mut self) {
         // First, send the default image to display:
+        let mut last_sent_plotter_running_progress = Instant::now() - Duration::from_secs(60); // Just pretend it's been a while.
 
         while !self.shutdown {
             match self
@@ -118,7 +128,7 @@ impl ApplicationCore {
                 Err(_err) => (),
                 Ok(msg) => match msg {
                     ViewCommand::Ping => {
-                        println!("PING!");
+                        // println!("PING!");
                         self.state_change_out
                             .send(ApplicationStateChangeMsg::Pong)
                             .unwrap_or_else(|_op| self.shutdown = true);
@@ -128,7 +138,7 @@ impl ApplicationCore {
                         extents,
                         resolution,
                     } => {
-                        let cimg = match render::render_svg_preview(
+                        let cimg = match render_source::render_svg_preview(
                             &self.project,
                             extents,
                             resolution,
@@ -187,11 +197,14 @@ impl ApplicationCore {
                     ViewCommand::Post => {
                         let prep_sender = match post::post(&self.project){
                             Ok(program) => {
-                                self.program = Some(program);
+                                self.program = Some(program.clone());
+                                self.project.set_program(Some(Box::new(program.clone())));
                                 self.state_change_out
                                     .send(ApplicationStateChangeMsg::PostComplete(
                                         self.program.as_ref().unwrap().len()))
                                     .expect("Failed to send state change up to VM. Dead view?");
+                                self.progress=(0, 0, 0); // Reset progress
+                                self.gcode = Some(gcode::parse(self.program.clone().unwrap().join("\n").as_str()).collect());
                                 self.ctx.request_repaint();
                                 true
                             },
@@ -278,27 +291,65 @@ impl ApplicationCore {
 
                         self.ctx.request_repaint();
                     },
-                    ViewCommand::RequestPlotPreviewImage { extents, resolution } => todo!(),
+                    ViewCommand::RequestPlotPreviewImage { extents, resolution } => {
+                        let empty = Vec::new();
+                        let gcode = match &self.gcode{
+                            Some(gcode)=>gcode,
+                            None=>&empty,
+                        };
+                        let cimg = match render_plot_preview(
+                            &self.project,
+                            gcode,
+                            extents,
+                            (self.progress.0, self.progress.1),
+                            resolution,
+                            &self.state_change_out,
+                            &self.cancel_render
+                        ) {
+                            Ok(cimg) => Some(cimg),
+                            Err(_) => None,
+                        };
+
+                        if let Some(cimg) = cimg{
+                            self.last_render = Some(cimg.clone());
+                            self.state_change_out
+                                .send(ApplicationStateChangeMsg::UpdateSourceImage {
+                                    image: cimg,
+                                    extents,
+                                })
+                                .unwrap_or_else(|_err| {
+                                    self.shutdown = true;
+                                    eprintln!("Failed to send message from bap core. Shutting down.");
+                                });
+
+                        }
+                        self.ctx.request_repaint();
+
+                    },
                 },
             }
 
             // Also, we need to check for plotter responses...
+            let now = Instant::now();
             loop {
+                if Instant::now() - now > Duration::from_secs(1) {
+                    // println!("Breaking plotter service loop to service UI requests.");
+                    break;
+                }; // Don't sit here forever reading responses.
                 if let Ok(response) = self.plot_receiver.recv_timeout(Duration::from_millis(100)) {
                     // println!("Sending response: {:?}", &response);
                     match &response {
                         PlotterResponse::Ok(_plotter_command, _) => (),
                         PlotterResponse::Err(_plotter_command, _) => {}
                         PlotterResponse::State(plotter_state) => {
-                            self.state_change_out
-                                .send(ApplicationStateChangeMsg::PlotterState(
-                                    plotter_state.clone(),
-                                ))
-                                .expect("Failed to send to ViewModel. Dead conn?");
-                            self.ctx.request_repaint();
+                            if let PlotterState::Running(line, of, _something) = plotter_state {
+                                self.progress =
+                                    (*line as usize, *of as usize, *_something as usize);
+                            };
+                            self.state = plotter_state.clone();
                         }
                         PlotterResponse::Loaded(msg) => {
-                            println!("MSG ON PLOTTER REPONSE LOADED: {:?}", msg);
+                            // println!("MSG ON PLOTTER REPONSE LOADED: {:?}", msg);
                             self.state_change_out
                                 .send(ApplicationStateChangeMsg::PlotterResponse(
                                     PlotterResponse::Loaded("OK!".into()),
@@ -308,16 +359,43 @@ impl ApplicationCore {
                             self.ctx.request_repaint();
                         }
                     }
-                    self.state_change_out
-                        .send(ApplicationStateChangeMsg::PlotterResponse(response.clone()))
-                        .expect("Failed to send to ViewModel. Dead conn?")
+                    if let PlotterResponse::State(PlotterState::Running(line, of, other)) =
+                        &response
+                    {
+                        if Instant::now() - last_sent_plotter_running_progress
+                            > Duration::from_secs(1)
+                        {
+                            // println!("Sending progress running stanza.");
+                            self.state_change_out
+                                .send(ApplicationStateChangeMsg::PlotterResponse(
+                                    PlotterResponse::State(PlotterState::Running(
+                                        *line, *of, *other,
+                                    )),
+                                ))
+                                .expect("Failed to send to ViewModel. Dead conn?");
+                            last_sent_plotter_running_progress = Instant::now();
+                        }
+                    } else {
+                        self.state_change_out
+                            .send(ApplicationStateChangeMsg::PlotterResponse(response.clone()))
+                            .expect("Failed to send to ViewModel. Dead conn?");
+                    }
                 } else {
+                    // println!("Breaking plotter service loop because no messages available.");
                     break;
                 }
+                self.ctx.request_repaint();
             }
 
+            let can_scan: bool = match self.state {
+                PlotterState::Ready => true,
+                PlotterState::Dead => true,
+                PlotterState::Failed(_) => true,
+                PlotterState::Paused(_, _, _) => true,
+                _ => false,
+            };
             // Housekeeping stuffs.
-            if self.last_serial_scan + Duration::from_secs(10) < Instant::now() {
+            if self.last_serial_scan + Duration::from_secs(10) < Instant::now() && can_scan {
                 self.state_change_out
                     .send(ApplicationStateChangeMsg::FoundPorts(serial::scan_ports()))
                     .expect("Failed to send serial port update. Dead ViewModel?");
@@ -330,34 +408,4 @@ impl ApplicationCore {
             .send(ApplicationStateChangeMsg::Dead)
             .expect("Failed to send shutdown status back to viewmodel.");
     }
-
-    /*
-    pub fn import_svg(&mut self, path: &PathBuf, keepdown: bool) {
-        self.state_change_out
-            .send(ApplicationStateChangeMsg::ProgressMessage {
-                message: format!(
-                    "Loading SVG from {}",
-                    path.as_os_str()
-                        .to_str()
-                        .expect("Can't convert path to str")
-                ),
-                percentage: 0,
-            })
-            .expect("Dead VM right after getting command? PANIC!");
-        self.ctx.request_repaint();
-        // sleep(Duration::from_millis(5000 as u64));
-        self.project.import_svg(path, keepdown);
-        self.state_change_out
-            .send(ApplicationStateChangeMsg::ProgressMessage {
-                message: format!(
-                    "Loaded SVG from {}",
-                    path.as_os_str()
-                        .to_str()
-                        .expect("Can't convert path to str")
-                ),
-                percentage: 100,
-            })
-            .expect("Dead VM right after getting command? PANIC!");
-        self.ctx.request_repaint();
-    }*/
 }

@@ -1,6 +1,7 @@
 use crate::machine::MachineConfig;
 use anyhow::{Result, anyhow};
 use aoer_plotty_rs::context::operation::OPLayer;
+use gcode::GCode;
 // use aoer_plotty_rs::geo_types::hatch::Hatches;
 use geo::algorithm::bounding_rect::BoundingRect;
 use geo::prelude::MapCoords;

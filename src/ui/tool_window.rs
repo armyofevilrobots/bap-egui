@@ -30,7 +30,7 @@ pub(crate) fn floating_tool_window(
             ui.toggle_value(&mut model.docked, "📌");
         });
         // ui.separator();
-        if model.display_mode == BAPDisplayMode::SVG {
+        if model.display_mode() == BAPDisplayMode::SVG {
             ui.add_space(8.);
             egui::Grid::new("SVGTOOLZ")
                 .spacing(vec2(0., 5.))

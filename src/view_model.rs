@@ -16,7 +16,7 @@ use crate::machine::MachineConfig;
 use crate::sender::{PlotterResponse, PlotterState};
 
 pub const PIXELS_PER_MM: f32 = 4.; // This is also scaled by the PPP value, but whatever.
-pub const MAX_SIZE: usize = 4096;
+pub const MAX_SIZE: usize = 8192;
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum BAPDisplayMode {
@@ -37,7 +37,7 @@ pub enum CommandContext {
 
 pub struct BAPViewModel {
     pub docked: bool,
-    pub display_mode: BAPDisplayMode,
+    display_mode: BAPDisplayMode,
     pub state_in: Option<Receiver<ApplicationStateChangeMsg>>,
     pub cmd_out: Option<Sender<ViewCommand>>,
     pub status_msg: Option<String>,
@@ -319,15 +319,7 @@ impl BAPViewModel {
         self.view_zoom
     }
 
-    pub fn set_zoom(&mut self, zoom: f64) {
-        self.view_zoom = zoom;
-
-        if let Some(_sender) = &self.cmd_out {
-            // We know the extents of the svg, so we just need to
-            // calculate a new image size for the current zoom level.
-            self.request_new_source_image();
-        }
-
+    fn cancel_render(&mut self) {
         if let Some(timeout) = &self.timeout_for_source_image {
             if let Some(cancel) = &self.cancel_render {
                 println!("Sending cancel, dirty is... {}", self.dirty);
@@ -338,13 +330,40 @@ impl BAPViewModel {
             }
         }
     }
+    pub fn set_zoom(&mut self, zoom: f64) {
+        self.view_zoom = zoom;
+
+        self.cancel_render();
+
+        if let Some(_sender) = &self.cmd_out {
+            // We know the extents of the svg, so we just need to
+            // calculate a new image size for the current zoom level.
+            self.request_new_source_image();
+        }
+    }
 
     pub fn request_new_source_image(&mut self) {
         self.dirty = true
     }
 
+    pub fn display_mode(&self) -> BAPDisplayMode {
+        self.display_mode.clone()
+    }
+
+    pub fn set_display_mode(&mut self, mode: BAPDisplayMode) {
+        self.dirty = true;
+        self.display_mode = mode;
+    }
+
     pub fn check_for_new_source_image(&mut self) {
+        if let Some(timeout) = self.timeout_for_source_image {
+            if timeout < Instant::now() {
+                self.timeout_for_source_image = None;
+                self.cancel_render();
+            }
+        }
         if self.dirty && self.timeout_for_source_image.is_none() {
+            println!("Requesting image for {:?}", self.display_mode);
             if let Some(extents) = self.source_image_extents {
                 let cmd_extents = (
                     extents.left() as f64,
@@ -371,9 +390,21 @@ impl BAPViewModel {
                         if hs[0] < MAX_SIZE && hs[1] < MAX_SIZE {
                             eprintln!("Smaller than max size. Requesting.");
                             sender
-                                .send(ViewCommand::RequestSourceImage {
-                                    extents: cmd_extents,
-                                    resolution: resolution,
+                                .send(match self.display_mode {
+                                    BAPDisplayMode::SVG => {
+                                        println!("REQUESTING SVG PREVIEW!");
+                                        ViewCommand::RequestSourceImage {
+                                            extents: cmd_extents,
+                                            resolution: resolution,
+                                        }
+                                    }
+                                    BAPDisplayMode::Plot => {
+                                        println!("REQUESTING PLOT PREVIEW!");
+                                        ViewCommand::RequestPlotPreviewImage {
+                                            extents: cmd_extents,
+                                            resolution: resolution,
+                                        }
+                                    }
                                 })
                                 .unwrap_or_else(|err| {
                                     eprintln!("Failed to send request for updated image to core.");
@@ -532,12 +563,19 @@ impl BAPViewModel {
             }
             crate::sender::PlotterResponse::State(plotter_state) => {
                 self.plotter_state = plotter_state.clone();
+                println!("Got plotter state: {:?}", plotter_state);
                 match &plotter_state {
                     PlotterState::Running(lines, oflines, _) => {
+                        println!("Received running stanza: {:?}", plotter_state);
                         self.progress = Some((
                             format!("Plotting: {}/{} GCODE commands", lines, oflines).to_string(),
                             ((lines * 100) / oflines) as usize,
                         ));
+                        if self.timeout_for_source_image.is_none() {
+                            // self.dirty = true;
+                            println!("Requesting new source image.");
+                            self.request_new_source_image();
+                        }
                     }
                     PlotterState::Disconnected => {
                         self.toast_error("Plotter disconnected.".to_string())
@@ -679,6 +717,7 @@ impl eframe::App for BAPViewModel {
                     message,
                     percentage,
                 } => {
+                    //println!("Got a progress message.");
                     self.progress = Some((message, percentage));
                 }
                 ApplicationStateChangeMsg::SourceChanged { extents } => {
@@ -729,7 +768,8 @@ impl eframe::App for BAPViewModel {
                         options: ToastOptions::default().duration_in_seconds(15.),
                         ..Default::default()
                     });
-                    self.display_mode = BAPDisplayMode::Plot;
+                    // self.display_mode = BAPDisplayMode::Plot;
+                    self.set_display_mode(BAPDisplayMode::Plot);
                 }
                 ApplicationStateChangeMsg::Error(msg) => self.queued_toasts.push_back(Toast {
                     kind: ToastKind::Error,
