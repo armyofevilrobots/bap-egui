@@ -306,9 +306,11 @@ impl BAPViewModel {
             self.get_paper_rect()
         };
         self.look_at = rect.center();
-        if let Some(container_rect) = self.container_rect
-            && let Some(extents) = self.source_image_extents
-        {
+        if let Some(container_rect) = self.container_rect {
+            let extents = match self.source_image_extents {
+                Some(extents) => extents,
+                None => self.get_paper_rect(),
+            };
             let zoom_height = (container_rect.height() - 64.) / extents.height();
             let zoom_width = (container_rect.width() - 64.) / extents.width();
             let zoom_final = (PIXELS_PER_MM * zoom_height.min(zoom_width)) as f64;

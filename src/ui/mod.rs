@@ -6,7 +6,10 @@ use crate::ui::pen_delete::pen_delete_window;
 use crate::view_model::{BAPViewModel, CommandContext};
 use eframe::egui;
 use egui::Direction::BottomUp;
-use egui::{Align2, Color32, Id, Key, Layout, Rect, Slider, Stroke, StrokeKind, pos2};
+use egui::epaint::PathStroke;
+use egui::{
+    Align2, Color32, FontId, Id, Key, Layout, Rect, Slider, Stroke, StrokeKind, pos2, vec2,
+};
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 
 pub(crate) mod bottom_panel;
@@ -44,13 +47,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
 
     let wtop = tbp.top();
     floating_tool_window(model, ctx, wtop, &mut toasts);
-    // if model.paper_modal_open {
-    // if let CommandContext::PaperChooser = model.command_context {
-    //     paper_chooser_window(model, ctx);
-    // } else if let CommandContext::PenCrib
-    // if model.pen_crib_open {
-    //     pen_crib_window(model, ctx);
-    // }
+
     match model.command_context {
         CommandContext::PaperChooser => paper_chooser_window(model, ctx),
         CommandContext::PenCrib => pen_crib_window(model, ctx),
@@ -196,28 +193,156 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
             }
 
             // This is the ruler display
-            if model.show_rulers {
+            let (top_ruler_rect, left_ruler_rect) = if model.show_rulers {
                 let p1 = painter_resp.rect.min;
                 let p2 = painter_resp.rect.max;
                 let p3 = pos2(p2.x, p1.y + 16.);
                 let p4 = pos2(p1.x, p1.y + 16.);
                 let p5 = pos2(p1.x + 16., p2.y);
                 let color = ui.visuals().faint_bg_color.clone();
-                painter.rect(
-                    Rect::from_min_max(p1, p3),
-                    0.,
-                    color,
-                    Stroke::NONE,
-                    StrokeKind::Outside,
-                );
-                painter.rect(
-                    Rect::from_min_max(p4, p5),
-                    0.,
-                    color,
-                    Stroke::NONE,
-                    StrokeKind::Outside,
-                );
-            }
+                let top_rect = Rect::from_min_max(p1, p3);
+                let left_rect = Rect::from_min_max(p4, p5);
+                painter.rect(top_rect, 0., color, Stroke::NONE, StrokeKind::Outside);
+                painter.rect(left_rect, 0., color, Stroke::NONE, StrokeKind::Outside);
+
+                // Then the pips
+                let scale = model.scale_mm_to_screen(vec2(1., 0.)).x;
+                let ruler_major = if scale > 20. {
+                    1.
+                } else if scale > 10. {
+                    2.
+                } else if scale > 4. {
+                    5.
+                } else if scale > 2. {
+                    10.
+                } else if scale > 1. {
+                    20.
+                } else if scale > 1. / 2.5 {
+                    50.
+                } else {
+                    100.
+                };
+                let mut major_x = model.origin.x;
+                let mut major_y = model.origin.y;
+                let right_limit = painter_resp.rect.right();
+                let left_limit = painter_resp.rect.left();
+                let right_of_y_bar = painter_resp.rect.left();
+                let top_limit = painter_resp.rect.top();
+                let bottom_limit = painter_resp.rect.bottom();
+                let bottom_of_x_bar = painter_resp.rect.top() + 16.;
+                let color = ui.visuals().weak_text_color();
+                let mm_right = model.frame_coords_to_mm(pos2(right_limit, 0.)).x;
+                let mm_left = model.frame_coords_to_mm(pos2(left_limit, 0.)).x;
+                let mm_bottom = model.frame_coords_to_mm(pos2(0., bottom_limit)).y;
+                let mm_top = model.frame_coords_to_mm(pos2(0., top_limit + 16.)).y;
+
+                // X Axis ruler positive.
+                while major_x < mm_right {
+                    let xpos = model.mm_to_frame_coords(pos2(major_x, 0.)).x;
+                    painter.line_segment(
+                        [pos2(xpos, top_limit), pos2(xpos, bottom_of_x_bar)],
+                        Stroke {
+                            width: 1.,
+                            color: color,
+                        },
+                    );
+                    painter.text(
+                        pos2(xpos + 2., top_limit),
+                        Align2::LEFT_TOP,
+                        format!("{:3.1}", major_x),
+                        FontId::proportional(6.),
+                        color,
+                    );
+                    major_x += ruler_major;
+                }
+
+                // Y axis ruler positive
+                while major_y < bottom_limit {
+                    let ypos = model.mm_to_frame_coords(pos2(0., major_y)).y;
+                    painter.line_segment(
+                        [pos2(left_limit, ypos), pos2(left_limit + 16., ypos)],
+                        Stroke {
+                            width: 1.,
+                            color: color,
+                        },
+                    );
+                    painter.text(
+                        pos2(left_limit, ypos + 2.),
+                        Align2::LEFT_TOP,
+                        format!("{:3.1}", major_y),
+                        FontId::proportional(6.),
+                        color,
+                    );
+                    major_y += ruler_major;
+                }
+
+                major_x = model.origin.x - ruler_major;
+                let mm_left = model.frame_coords_to_mm(pos2(left_limit, 0.)).x;
+                while major_x > mm_left {
+                    let xpos = model.mm_to_frame_coords(pos2(major_x, 0.)).x;
+                    painter.line_segment(
+                        [pos2(xpos, top_limit), pos2(xpos, bottom_of_x_bar)],
+                        Stroke {
+                            width: 1.,
+                            color: color,
+                        },
+                    );
+                    painter.text(
+                        pos2(xpos + 2., top_limit),
+                        Align2::LEFT_TOP,
+                        format!("{:3.1}", major_x),
+                        FontId::proportional(6.),
+                        color,
+                    );
+                    major_x -= ruler_major;
+                }
+
+                // Y axis ruler negative
+                let mut major_y = model.origin.y - ruler_major;
+                while major_y > mm_top {
+                    let ypos = model.mm_to_frame_coords(pos2(0., major_y)).y;
+                    painter.line_segment(
+                        [pos2(left_limit, ypos), pos2(left_limit + 16., ypos)],
+                        Stroke {
+                            width: 1.,
+                            color: color,
+                        },
+                    );
+                    painter.text(
+                        pos2(left_limit, ypos + 2.),
+                        Align2::LEFT_TOP,
+                        format!("{:3.1}", major_y),
+                        FontId::proportional(6.),
+                        color,
+                    );
+                    major_y -= ruler_major;
+                }
+
+                // Done the ruler, now just an overlay in red with current position.
+                let color = ui.visuals().strong_text_color();
+                if let Some(lpos) = ctx.pointer_latest_pos() {
+                    painter.line_segment(
+                        [pos2(lpos.x, top_limit), pos2(lpos.x, bottom_of_x_bar)],
+                        Stroke {
+                            width: 1.,
+                            // color: color,
+                            color: Color32::RED,
+                        },
+                    );
+                    painter.line_segment(
+                        [pos2(left_limit, lpos.y), pos2(left_limit + 16., lpos.y)],
+                        Stroke {
+                            width: 1.,
+                            // color: color,
+                            color: Color32::RED,
+                        },
+                    );
+                }
+
+                (Some(top_rect), Some(left_rect))
+            } else {
+                (None, None)
+            };
         }
 
         if painter_resp.clicked() {
