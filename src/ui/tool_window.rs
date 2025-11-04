@@ -98,7 +98,7 @@ pub(crate) fn floating_tool_window(
                         match model.plotter_state {
                             PlotterState::Running(_, _, _) => false,
                             _ => true,
-                        },
+                        } && model.source_image_extents.is_some(),
                     )
                     .clicked()
                     {
@@ -135,7 +135,7 @@ pub(crate) fn floating_tool_window(
                         ui,
                         egui::include_image!("../../resources/images/align_center_paper.png"),
                         Some("Center to paper".into()),
-                        true,
+                        model.source_image_extents.is_some(),
                     )
                     .clicked()
                     {
@@ -145,7 +145,7 @@ pub(crate) fn floating_tool_window(
                         ui,
                         egui::include_image!("../../resources/images/align_center_limits.png"),
                         Some("Center to machine limits".into()),
-                        true,
+                        model.source_image_extents.is_some(),
                     )
                     .clicked()
                     {
@@ -155,7 +155,7 @@ pub(crate) fn floating_tool_window(
                         ui,
                         egui::include_image!("../../resources/images/smart_center.png"),
                         Some("Optimal center for paper size and machine limits".into()),
-                        true,
+                        model.source_image_extents.is_some(),
                     )
                     .clicked()
                     {
@@ -166,12 +166,24 @@ pub(crate) fn floating_tool_window(
                         ui,
                         egui::include_image!("../../resources/images/scale.png"),
                         Some("Scale by a factor".into()),
-                        true,
+                        model.source_image_extents.is_some(),
                     )
                     .clicked()
                     {
                         model.command_context = CommandContext::Scale(1.);
                     }
+
+                    if tool_button(
+                        ui,
+                        egui::include_image!("../../resources/images/expand.png"),
+                        Some("Scale to fit paper/machine with matting".into()),
+                        model.source_image_extents.is_some(),
+                    )
+                    .clicked()
+                    {
+                        model.command_context = CommandContext::Scale(1.);
+                    }
+
                     ui.end_row();
                 });
             // });

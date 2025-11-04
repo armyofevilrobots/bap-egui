@@ -1,7 +1,11 @@
+use crate::core::project::PenDetail;
+
 use super::project::Project;
 use anyhow::Result as AnyResult;
 use anyhow::anyhow;
 use aoer_plotty_rs::optimizer::*;
+use geo::Coord;
+use geo::EuclideanDistance;
 use geo::{Geometry, LineString, MultiLineString};
 use nalgebra::{Affine2, Matrix3};
 use tera::Context;
@@ -10,6 +14,7 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
     let machine = project.machine().ok_or(anyhow!("Invalid machine"))?;
     let post_template = &machine.post_template()?;
     let mut pen_up = false;
+    let mut distance_down = 0.0f64; // Used to ensure we do an extra pen down periodically?
 
     let mut program: Vec<String> = Vec::new();
     program.extend(
@@ -65,6 +70,12 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
             machine.keepdown().unwrap_or(1.0),
             OptimizationStrategy::Greedy,
         );
+        let feedrate = geometry
+            .stroke
+            .clone()
+            .unwrap_or(PenDetail::default())
+            .feed_rate
+            .unwrap_or(machine.feedrate());
         let geo_lines = opt.optimize(&geo_lines);
         for line in geo_lines {
             let mut context = Context::new();
@@ -80,6 +91,7 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
             {
                 // Then we're doing a keepdown.
             } else if !pen_up {
+                distance_down = 0.0;
                 program.extend(
                     post_template
                         .render("penup_skim", &context)?
@@ -130,17 +142,36 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
             }
 
             for point in &line.0[1..] {
+                if pen_up == false {
+                    distance_down += point.euclidean_distance(&Coord {
+                        x: last_x,
+                        y: last_y,
+                    });
+                } else {
+                    distance_down = 0.0;
+                }
                 (last_x, last_y) = (point.x.clone(), point.y.clone());
                 let mut context = Context::new();
                 context.insert("xmm", &point.x);
                 context.insert("ymm", &point.y);
-                context.insert("feedrate", &machine.feedrate());
+                // context.insert("feedrate", &machine.feedrate());
+                context.insert("feedrate", &feedrate);
                 program.extend(
                     post_template
                         .render("lineto", &context)?
                         .split("\n")
                         .map(|s| s.to_string()),
                 );
+                // This should really be configurable.
+                if !pen_up && distance_down > 1500.0 {
+                    distance_down = 0.;
+                    program.extend(
+                        post_template
+                            .render("pendrop", &Context::new())?
+                            .split("\n")
+                            .map(|s| s.to_string()),
+                    );
+                }
             }
         }
     }

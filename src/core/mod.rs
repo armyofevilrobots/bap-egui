@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 use egui::{ColorImage, Context};
 
 pub(crate) mod commands;
+pub(crate) mod machine;
 pub(crate) mod post;
 pub(crate) mod project;
 pub(crate) mod render_plot;
@@ -17,8 +18,8 @@ use tera::Context as TeraContext;
 
 use crate::core::project::Project;
 use crate::core::render_plot::render_plot_preview;
-use crate::machine::MachineConfig;
 use crate::sender::{PlotterCommand, PlotterConnection, PlotterResponse, PlotterState};
+use machine::MachineConfig;
 
 /// The actual application core that does shit.
 ///
@@ -325,6 +326,10 @@ impl ApplicationCore {
                         }
                         self.ctx.request_repaint();
 
+                    },
+                    ViewCommand::ApplyPens(pen_details) => {
+                        println!("GOT NEW PENS: {:?}", pen_details);
+                        self.project.update_pen_details(&pen_details);
                     },
                 },
             }

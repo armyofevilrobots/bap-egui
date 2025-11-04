@@ -1,4 +1,4 @@
-use crate::machine::MachineConfig;
+use crate::core::machine::MachineConfig;
 use anyhow::{Result, anyhow};
 use aoer_plotty_rs::context::operation::OPLayer;
 use gcode::GCode;
@@ -36,10 +36,10 @@ impl KeepdownStrategy {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct PenDetail {
     #[serde(default)]
-    pub tool_id: u32,
+    pub tool_id: usize,
     #[serde(default)]
     pub name: String,
     pub stroke_width: f64,
@@ -329,7 +329,7 @@ impl Project {
             return match ron::de::from_reader(project_rdr) {
                 Ok(prj) => Ok(prj),
                 Err(err) => {
-                    println!("Failed to load due to: {:?}", &err);
+                    eprintln!("Failed to load due to: {:?}", &err);
                     Err(anyhow!(format!("Error was: {:?}", &err)))
                 }
             };
@@ -481,9 +481,9 @@ impl Project {
                 .filter(|item| item.has_tag_name("svg"))
             {
                 if let Some(width) = child.attribute("width") {
-                    println!("WIDTH IS: {:?} and rsize is {:?}", width, rsize);
+                    // println!("WIDTH IS: {:?} and rsize is {:?}", width, rsize);
                     if let Some((value, units)) = Self::dims_from_dimattr(width) {
-                        println!("Values, Units: {},{}", &value, &units);
+                        // println!("Values, Units: {},{}", &value, &units);
                         // scale_x = (value / rsize.width() as f64) * Self::scale_native_units(units);
                         // println!("ScaleX is now: {}", scale_x);
                     }
@@ -504,8 +504,58 @@ impl Project {
         }
     }
 
+    pub fn update_pen_details(&mut self, pen_crib: &Vec<PenDetail>) {
+        // println!("Updating pens with {:?}", &pen_crib);
+        self.pens = pen_crib.clone();
+        let default_pen = match pen_crib.get(0) {
+            Some(pen_detail) => pen_detail.clone(),
+            None => PenDetail::default(),
+        };
+        for (idx, geometry) in self.geometry.iter_mut().enumerate() {
+            let new_stroke_pen = if geometry.stroke.is_some() {
+                if let Some(current_stroke_pen) = geometry.stroke.clone() {
+                    match pen_crib.get(current_stroke_pen.tool_id - 1) {
+                        // Pens IDs are counted from 1, not zero
+                        Some(pen) => pen.clone(),
+                        None => default_pen.clone(),
+                    }
+                } else {
+                    default_pen.clone()
+                }
+            } else {
+                default_pen.clone()
+            };
+            // println!(
+            //     "Replacing stroke pen {:?} with pen {:?}",
+            //     geometry.stroke, new_stroke_pen
+            // );
+            geometry.stroke = Some(new_stroke_pen);
+
+            if geometry.hatch.is_some() {
+                let new_hatch_pen = if let Some(hatch_detail) = geometry.hatch.clone() {
+                    if let Some(current_hatch_pen) = hatch_detail.pen {
+                        match pen_crib.get(current_hatch_pen.tool_id - 1) {
+                            Some(pen) => pen.clone(),
+                            None => default_pen.clone(),
+                        }
+                    } else {
+                        default_pen.clone()
+                    }
+                } else {
+                    default_pen.clone()
+                };
+                // println!(
+                //     "Updating hatch pen {:?} with pen {:?}",
+                //     geometry.hatch, new_hatch_pen
+                // );
+                geometry.hatch.as_mut().unwrap().pen = Some(new_hatch_pen);
+            };
+        }
+    }
+
     pub fn import_svg(&mut self, path: &PathBuf, keepdown: bool) {
-        self.paper.rgb = (1., 1., 1.);
+        // Paper should already be set?
+        // self.paper.rgb = (1., 1., 1.);
         if let Ok(path) = std::fs::canonicalize(path) {
             if let Ok((rtree, scale_x, scale_y)) = Self::load_svg(&path) {
                 let svg_string = rtree.to_string(&usvg::WriteOptions::default());
@@ -532,6 +582,7 @@ pub fn svg_to_geometries(
     keepdown: bool,
     pens: &Vec<PenDetail>,
 ) -> Vec<PlotGeometry> {
+    // println!("I received pens: {:?}", pens);
     let mut geometries: Vec<PlotGeometry> = vec![];
     let mut multilines: MultiLineString<f64> = MultiLineString::new(vec![]);
     // TODO: We should look at parsing WITH preprocessing if it makes things more reliable

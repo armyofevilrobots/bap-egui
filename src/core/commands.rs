@@ -2,7 +2,8 @@ use egui::ColorImage;
 use std::path::PathBuf;
 
 use crate::{
-    machine::MachineConfig,
+    core::machine::MachineConfig,
+    core::project::PenDetail,
     sender::{PlotterResponse, PlotterState},
 };
 use serde::{Deserialize, Serialize};
@@ -42,6 +43,7 @@ pub enum ViewCommand {
     ConnectPlotter(String),
     DisconnectPlotter,
     Quit,
+    ApplyPens(Vec<PenDetail>),
     None,
 }
 

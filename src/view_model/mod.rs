@@ -11,9 +11,12 @@ use egui_toast::{Toast, ToastKind, ToastOptions};
 
 use crate::core::commands::{ApplicationStateChangeMsg, ViewCommand};
 
+use crate::core::machine::MachineConfig;
 use crate::core::project::{Orientation, PaperSize, PenDetail};
-use crate::machine::MachineConfig;
 use crate::sender::{PlotterResponse, PlotterState};
+pub(crate) mod command_context;
+pub(crate) mod view_model_eframe;
+pub use command_context::CommandContext;
 
 pub const PIXELS_PER_MM: f32 = 4.; // This is also scaled by the PPP value, but whatever.
 pub const MAX_SIZE: usize = 8192;
@@ -22,17 +25,6 @@ pub const MAX_SIZE: usize = 8192;
 pub enum BAPDisplayMode {
     SVG,
     Plot,
-}
-
-#[derive(PartialEq, Clone, Debug)]
-pub enum CommandContext {
-    Origin,
-    PaperChooser,
-    PenCrib,
-    PenEdit(usize), // The pen index in Vec<Pens>
-    Clip(Option<Pos2>, Option<Pos2>),
-    Scale(f64),
-    None,
 }
 
 pub struct BAPViewModel {
@@ -94,6 +86,15 @@ impl IsPos2Able for Vec2 {
 impl BAPViewModel {
     pub fn name() -> &'static str {
         "Bot-a-Plot"
+    }
+
+    pub fn update_pen_details(&mut self) {
+        if let Some(cmd_out) = &self.cmd_out {
+            cmd_out
+                .send(ViewCommand::ApplyPens(self.pen_crib.clone()))
+                .expect("Failed to send Scale Factor command?");
+            self.request_new_source_image();
+        }
     }
 
     pub fn scale_by_factor(&mut self, factor: f64) {
@@ -236,7 +237,7 @@ impl BAPViewModel {
             ));
         } else {
             self.toast_error(
-                "Cannot smart center when source image has no extents.\
+                "Cannot center when source image has no extents.\
                 Try importing an image first?"
                     .to_string(),
             );
@@ -257,7 +258,7 @@ impl BAPViewModel {
             ));
         } else {
             self.toast_error(
-                "Cannot smart center when source image has no extents.\
+                "Cannot center when source image has no extents.\
                 Try importing an image first?"
                     .to_string(),
             );
@@ -656,137 +657,5 @@ impl Default for BAPViewModel {
                 },
             ],
         }
-    }
-}
-
-impl eframe::App for BAPViewModel {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        if let Some(msg_in) = &self.svg_import_mpsc {
-            match msg_in.try_recv() {
-                Ok(path) => {
-                    if let Some(cmd_out) = &self.cmd_out {
-                        self.svg_import_mpsc = None;
-                        cmd_out
-                            .send(ViewCommand::ImportSVG(path))
-                            .expect("Failed to send Import SVG command over MPSC.");
-                    }
-                }
-                Err(_) => (),
-            }
-        }
-
-        loop {
-            let received = if let Some(msg_in) = &self.state_in {
-                match msg_in.try_recv() {
-                    Ok(msg) => msg,
-                    Err(_nomsg) => ApplicationStateChangeMsg::None,
-                }
-            } else {
-                ApplicationStateChangeMsg::None
-            };
-            if received == ApplicationStateChangeMsg::None {
-                break;
-            }
-            if received != ApplicationStateChangeMsg::None {
-                // println!("Received: {:?}", received);
-            };
-            match received {
-                ApplicationStateChangeMsg::Dead => {
-                    exit(0);
-                }
-                ApplicationStateChangeMsg::Pong => {}
-                ApplicationStateChangeMsg::None => {}
-                ApplicationStateChangeMsg::ResetDisplay => todo!(),
-                ApplicationStateChangeMsg::UpdateSourceImage {
-                    image,
-                    extents: (x, y, width, height),
-                } => {
-                    if let Some(handle) = &mut self.source_image_handle {
-                        handle.set(image, egui::TextureOptions::NEAREST);
-                        println!("Got incoming extents: {},{},{}w,{}h", x, y, width, height);
-                        self.source_image_extents = Some(Rect::from_min_size(
-                            pos2(x as f32, y as f32),
-                            vec2(width as f32, height as f32),
-                        ));
-                    }
-                    // self.dirty = false;
-                    self.timeout_for_source_image = None;
-                }
-                ApplicationStateChangeMsg::UpdateMachineConfig(_machine_config) => todo!(),
-                ApplicationStateChangeMsg::ProgressMessage {
-                    message,
-                    percentage,
-                } => {
-                    //println!("Got a progress message.");
-                    self.progress = Some((message, percentage));
-                }
-                ApplicationStateChangeMsg::SourceChanged { extents } => {
-                    // self.waiting_for_source_image=true;
-                    self.source_image_extents = Some(Rect::from_min_size(
-                        pos2(extents.0 as f32, extents.1 as f32),
-                        vec2(extents.2 as f32, extents.3 as f32),
-                    ));
-                    self.dirty = true;
-                }
-                ApplicationStateChangeMsg::PlotterState(plotter_state) => {
-                    self.plotter_state = plotter_state
-                    // self.handle_plotter_response(plotter_response);
-                }
-                ApplicationStateChangeMsg::FoundPorts(items) => {
-                    // self.serial_ports = items
-                    let old_ports = self.serial_ports.clone();
-                    self.serial_ports = items;
-                    for port in &old_ports {
-                        if !self.serial_ports.contains(&port) {
-                            self.queued_toasts.push_back(Toast {
-                                kind: ToastKind::Info,
-                                text: format!("Serial port {} removed.", &port).into(),
-                                options: ToastOptions::default()
-                                    .duration_in_seconds(5.)
-                                    .show_progress(true),
-                                ..Default::default()
-                            })
-                        }
-                    }
-                    for port in &self.serial_ports {
-                        if !old_ports.contains(&port) {
-                            self.queued_toasts.push_back(Toast {
-                                kind: ToastKind::Info,
-                                text: format!("Serial port {} discovered.", &port).into(),
-                                options: ToastOptions::default()
-                                    .duration_in_seconds(5.)
-                                    .show_progress(true),
-                                ..Default::default()
-                            })
-                        }
-                    }
-                }
-                ApplicationStateChangeMsg::PostComplete(lines) => {
-                    self.queued_toasts.push_back(Toast {
-                        kind: ToastKind::Success,
-                        text: format!("Post completed with {} GCODE lines.", &lines).into(),
-                        options: ToastOptions::default().duration_in_seconds(15.),
-                        ..Default::default()
-                    });
-                    // self.display_mode = BAPDisplayMode::Plot;
-                    self.set_display_mode(BAPDisplayMode::Plot);
-                }
-                ApplicationStateChangeMsg::Error(msg) => self.queued_toasts.push_back(Toast {
-                    kind: ToastKind::Error,
-                    text: msg.into(),
-                    options: ToastOptions::default().duration_in_seconds(15.),
-                    ..Default::default()
-                }),
-                ApplicationStateChangeMsg::PlotterResponse(plotter_response) => {
-                    self.handle_plotter_response(plotter_response);
-                }
-                ApplicationStateChangeMsg::PlotPreviewChanged { extents } => todo!(),
-            }
-        }
-
-        crate::ui::update_ui(self, ctx, frame);
-
-        // This is how to go into continuous mode - uncomment this to see example of continuous mode
-        // ctx.request_repaint();
     }
 }

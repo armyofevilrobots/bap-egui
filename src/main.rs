@@ -5,7 +5,6 @@ use eframe::egui;
 use egui::{Color32, ColorImage, Vec2, pos2};
 
 pub(crate) mod core;
-pub(crate) mod machine;
 pub(crate) mod sender;
 pub(crate) mod ui;
 pub(crate) mod view_model;
@@ -51,6 +50,7 @@ fn main() -> eframe::Result<()> {
             );
             model.source_image_handle = Some(Box::new(tex));
             model.source_image_extents = None;
+            model.update_pen_details();
 
             let handle = thread::spawn(move || application.run());
             model.set_join_handle(handle);

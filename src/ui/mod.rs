@@ -2,6 +2,7 @@
 use crate::ui::menu::main_menu;
 use crate::ui::paper_chooser::paper_chooser_window;
 use crate::ui::pen_crib::pen_crib_window;
+use crate::ui::pen_delete::pen_delete_window;
 use crate::view_model::{BAPViewModel, CommandContext};
 use eframe::egui;
 use egui::Direction::BottomUp;
@@ -12,6 +13,7 @@ pub(crate) mod bottom_panel;
 pub(crate) mod menu;
 pub(crate) mod paper_chooser;
 pub(crate) mod pen_crib;
+pub(crate) mod pen_delete;
 pub(crate) mod pen_editor;
 pub(crate) mod scale_window;
 pub(crate) mod scene_toggle;
@@ -54,6 +56,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
         CommandContext::PenCrib => pen_crib_window(model, ctx),
         CommandContext::PenEdit(pen_idx) => pen_editor::pen_editor_window(model, ctx, pen_idx),
         CommandContext::Scale(_factor) => scale_window::scale_window(model, ctx),
+        CommandContext::PenDelete(pen_idx) => pen_delete_window(model, ctx, pen_idx),
         _ => (),
     }
 

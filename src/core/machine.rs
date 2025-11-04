@@ -70,6 +70,9 @@ impl MachineConfig {
                 "penup_skim".into(),
                 "M400\nM280 S{{skim}}\nG4 P150\nM400 ; PENUP_SKIM".to_string(),
             ),
+            ("pendrop".into(),
+                format!("M280 S{}", bap_bottom)),
+
             ("pendown".into(), format!("M400\n{}", pen_downs)),
             (
                 "pendown_skim".into(),

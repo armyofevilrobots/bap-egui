@@ -6,7 +6,7 @@ use egui::{Color32, Id, Layout, Rect, Slider, Stroke, StrokeKind, epaint::PathSt
 use crate::{core::project::PenDetail, view_model::BAPViewModel};
 
 pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx: usize) {
-    egui::Modal::new(Id::new("Paper Chooser")).show(ctx, |ui| {
+    egui::Modal::new(Id::new("Pen Editor")).show(ctx, |ui| {
         ui.vertical(|ui| {
             ui.set_width(400.);
             ui.heading(format!(
@@ -21,10 +21,14 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
             let (painter_resp, painter) = ui.allocate_painter(vec2(390., 420.), egui::Sense::all());
             let prect = painter_resp.rect;
             let ofs = (prect.min.clone() + vec2(10., 10.)).to_vec2();
-            let pen = model
-                .pen_crib
-                .get_mut(pen_idx)
-                .expect("Somehow pen indexes got mangled.");
+            let pen_crib_len = model.pen_crib.len();
+            let pen = model.pen_crib.get_mut(pen_idx).expect(
+                format!(
+                    "Somehow pen indexes got mangled getting pen {} from pen crib of length {}",
+                    pen_idx, pen_crib_len
+                )
+                .as_str(),
+            );
             let color_code = csscolorparser::parse(pen.color.as_str()).unwrap_or_default();
             let [r, g, b, a] = color_code.to_linear_rgba_u8();
             let mut pen_color32 = Color32::from_rgba_premultiplied(r, g, b, a);
@@ -40,15 +44,15 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                 },
             );
 
-            ui.allocate_ui_at_rect(
-                Rect::from_min_max(pos2(0., 30.) + ofs, prect.min + vec2(250., 50.)),
-                |ui| {
-                    ui.horizontal(|ui| {
-                        ui.label("Pen/Tool ID");
-                        ui.add(Slider::new(&mut pen.tool_id, 0..=100));
-                    })
-                },
-            );
+            // ui.allocate_ui_at_rect(
+            //     Rect::from_min_max(pos2(0., 30.) + ofs, prect.min + vec2(250., 50.)),
+            //     |ui| {
+            //         ui.horizontal(|ui| {
+            //             ui.label("Pen/Tool ID");
+            //             ui.add(Slider::new(&mut pen.tool_id, 0..=100));
+            //         })
+            //     },
+            // );
 
             ui.allocate_ui_at_rect(
                 Rect::from_min_max(pos2(0., 80.) + ofs, prect.min + vec2(200., 120.)),
