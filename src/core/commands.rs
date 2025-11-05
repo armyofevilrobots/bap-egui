@@ -30,7 +30,7 @@ pub enum ViewCommand {
     },
     RotateSource {
         center: (f64, f64),
-        theta: f64,
+        degrees: f64,
     },
     Scale(f64),
     Post,
@@ -55,12 +55,17 @@ pub enum ApplicationStateChangeMsg {
         image: ColorImage,             // The image to draw.
         extents: (f64, f64, f64, f64), //Min.x, Min.y, width, height
     },
+    TransformPreviewImage {
+        image: ColorImage,
+        extents: (f64, f64, f64, f64),
+    },
     SourceChanged {
         extents: (f64, f64, f64, f64),
     },
     PlotPreviewChanged {
         extents: (f64, f64, f64, f64),
     },
+
     UpdateMachineConfig(MachineConfig),
     ResetDisplay,
     Dead,

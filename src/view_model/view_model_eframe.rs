@@ -61,12 +61,19 @@ impl eframe::App for BAPViewModel {
                     extents: (x, y, width, height),
                 } => {
                     if let Some(handle) = &mut self.source_image_handle {
-                        handle.set(image, egui::TextureOptions::NEAREST);
-                        // println!("Got incoming extents: {},{},{}w,{}h", x, y, width, height);
-                        self.source_image_extents = Some(Rect::from_min_size(
-                            pos2(x as f32, y as f32),
-                            vec2(width as f32, height as f32),
-                        ));
+                        // println!(
+                        //     "Got incoming extents with image: {},{},{}w,{}h",
+                        //     x, y, width, height
+                        // );
+                        // let tmp_source_image_extents = Some(Rect::from_min_size(
+                        //     pos2(x as f32, y as f32),
+                        //     vec2(width as f32, height as f32),
+                        // ));
+                        // println!(
+                        //     "Incoming extents are : {:?} and known extents are: {:?}",
+                        //     tmp_source_image_extents, self.source_image_extents
+                        // );
+                        handle.set(image, egui::TextureOptions::LINEAR);
                     }
                     // self.dirty = false;
                     self.timeout_for_source_image = None;
@@ -85,7 +92,12 @@ impl eframe::App for BAPViewModel {
                         pos2(extents.0 as f32, extents.1 as f32),
                         vec2(extents.2 as f32, extents.3 as f32),
                     ));
-                    self.dirty = true;
+                    // println!(
+                    //     "Got a new source image? Extents: {:?}",
+                    //     self.source_image_extents
+                    // );
+                    // self.dirty = true;
+                    self.request_new_source_image();
                 }
                 ApplicationStateChangeMsg::PlotterState(plotter_state) => {
                     self.plotter_state = plotter_state
@@ -140,6 +152,7 @@ impl eframe::App for BAPViewModel {
                     self.handle_plotter_response(plotter_response);
                 }
                 ApplicationStateChangeMsg::PlotPreviewChanged { extents } => todo!(),
+                ApplicationStateChangeMsg::TransformPreviewImage { image, extents } => todo!(),
             }
         }
 

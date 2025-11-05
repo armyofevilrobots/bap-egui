@@ -23,6 +23,7 @@ pub enum CommandContext {
     PenEdit(usize),   // The pen index in Vec<Pens>
     PenDelete(usize), // Delete the pen at IDX via modal confirmation
     Clip(Option<Pos2>, Option<Pos2>),
+    Rotate(Option<Pos2>, Option<Pos2>, Option<Pos2>), // center, reference, angle
     Scale(f64),
     None,
 }

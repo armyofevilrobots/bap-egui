@@ -22,7 +22,7 @@ pub(crate) fn floating_tool_window(
         win.title_bar(false)
     } else {
         win.title_bar(false)
-            .anchor(egui::Align2::LEFT_TOP, (0., wtop - 3.))
+            .anchor(egui::Align2::LEFT_TOP, (25.0, wtop + 49.))
     };
 
     win.show(ctx, |ui| {
@@ -171,6 +171,17 @@ pub(crate) fn floating_tool_window(
                     .clicked()
                     {
                         model.command_context = CommandContext::Scale(1.);
+                    }
+
+                    if tool_button(
+                        ui,
+                        egui::include_image!("../../resources/images/rotate_right.png"),
+                        Some("Free Rotate".into()),
+                        model.source_image_extents.is_some(),
+                    )
+                    .clicked()
+                    {
+                        model.command_context = CommandContext::Rotate(None, None, None);
                     }
 
                     if tool_button(

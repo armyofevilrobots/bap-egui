@@ -24,6 +24,7 @@ use machine::MachineConfig;
 /// The actual application core that does shit.
 ///
 ///
+const UNDO_MAX: usize = 16;
 
 #[derive(Debug)]
 pub struct ApplicationCore {
@@ -32,8 +33,9 @@ pub struct ApplicationCore {
     cancel_render: Receiver<()>,
     shutdown: bool,
     project: Project,
+    history: Vec<Project>,
     machine: MachineConfig,
-    last_render: Option<ColorImage>,
+    last_render: Option<(ColorImage, (f64, f64, f64, f64))>,
     ctx: Context, // Just a repaint context, not used for ANYTHING else.
     plot_sender: Sender<PlotterCommand>,
     plot_receiver: Receiver<PlotterResponse>,
@@ -68,6 +70,7 @@ impl ApplicationCore {
             state_change_out: app_to_vm,
             shutdown: false,
             project: Project::new(),
+            history: vec![],
             machine: MachineConfig::default(),
             plot_receiver: plotter_to_app,
             plot_sender: app_to_plotter,
@@ -117,6 +120,39 @@ impl ApplicationCore {
         }
     }
 
+    fn force_reset_extents_in_view(&mut self) {
+        self.project.regenerate_extents();
+        let app_extents = ApplicationStateChangeMsg::SourceChanged {
+            extents: (
+                self.project.extents().min().x,
+                self.project.extents().min().y,
+                self.project.extents().width(),
+                self.project.extents().height(),
+            ),
+        };
+        // println!("Going to send AppSCMSG: {:?}", app_extents);
+        self.state_change_out
+            .send(app_extents)
+            .unwrap_or_else(|_err| {
+                self.shutdown = true;
+                eprintln!("Failed to send message from bap core. Shutting down.");
+            });
+
+        self.ctx.request_repaint();
+    }
+
+    pub fn checkpoint(&mut self) {
+        self.history.push(self.project.clone());
+        if self.history.len() > UNDO_MAX {
+            self.history.remove(0);
+        }
+        self.force_reset_extents_in_view();
+    }
+
+    pub fn undo(&mut self) {
+        self.project = self.history.pop().unwrap_or(Project::new());
+    }
+
     pub fn run(&mut self) {
         // First, send the default image to display:
         let mut last_sent_plotter_running_progress = Instant::now() - Duration::from_secs(60); // Just pretend it's been a while.
@@ -151,7 +187,7 @@ impl ApplicationCore {
                         };
 
                         if let Some(cimg) = cimg{
-                            self.last_render = Some(cimg.clone());
+                            self.last_render = Some((cimg.clone(), extents.clone()));
                             self.state_change_out
                                 .send(ApplicationStateChangeMsg::UpdateSourceImage {
                                     image: cimg,
@@ -167,22 +203,8 @@ impl ApplicationCore {
                     }
                     ViewCommand::ImportSVG(path_buf) => {
                         self.project.import_svg(&path_buf, true);
+                        self.force_reset_extents_in_view();
 
-                        self.state_change_out
-                            .send(ApplicationStateChangeMsg::SourceChanged {
-                                extents: (
-                                    self.project.extents().min().x,
-                                    self.project.extents().min().y,
-                                    self.project.extents().width(),
-                                    self.project.extents().height(),
-                                ),
-                            })
-                            .unwrap_or_else(|_err| {
-                                self.shutdown = true;
-                                eprintln!("Failed to send message from bap core. Shutting down.");
-                            });
-
-                        self.ctx.request_repaint();
                     }
                     ViewCommand::SetOrigin(x, y) => {
                         self.project.set_origin(&Some((x,y)));
@@ -192,9 +214,17 @@ impl ApplicationCore {
                         max: _max,
                     } => todo!(),
                     ViewCommand::RotateSource {
-                        center: _center,
-                        theta: _theta,
-                    } => todo!(),
+                        center,
+                        degrees,
+                    } => {
+                        // println!("Rotating source data around {},{} by {} degrees", center.0, center.1, degrees);
+                        // println!("PRE EXTENTS: {:?}", self.project.extents());
+                        self.project.rotate_geometry_around_point(center, degrees);
+                        // println!("POST EXTENTS: {:?}", self.project.extents());
+                        self.force_reset_extents_in_view();
+                        // println!("POST RESEND EXTENTS: {:?}", self.project.extents());
+
+                    },
                     ViewCommand::Post => {
                         let prep_sender = match post::post(&self.project){
                             Ok(program) => {
@@ -275,22 +305,8 @@ impl ApplicationCore {
                     ViewCommand::Scale(factor) => {
                         //TODO: MIgrate this into Project.
                         self.project.scale_by_factor(factor);
+                        self.force_reset_extents_in_view();
 
-                        self.state_change_out
-                            .send(ApplicationStateChangeMsg::SourceChanged {
-                                extents: (
-                                    self.project.extents().min().x,
-                                    self.project.extents().min().y,
-                                    self.project.extents().width(),
-                                    self.project.extents().height(),
-                                ),
-                            })
-                            .unwrap_or_else(|_err| {
-                                self.shutdown = true;
-                                eprintln!("Failed to send message from bap core. Shutting down.");
-                            });
-
-                        self.ctx.request_repaint();
                     },
                     ViewCommand::RequestPlotPreviewImage { extents, resolution } => {
                         let empty = Vec::new();
@@ -312,7 +328,7 @@ impl ApplicationCore {
                         };
 
                         if let Some(cimg) = cimg{
-                            self.last_render = Some(cimg.clone());
+                            self.last_render = Some((cimg.clone(), extents));
                             self.state_change_out
                                 .send(ApplicationStateChangeMsg::UpdateSourceImage {
                                     image: cimg,

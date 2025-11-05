@@ -18,6 +18,7 @@ pub(crate) mod paper_chooser;
 pub(crate) mod pen_crib;
 pub(crate) mod pen_delete;
 pub(crate) mod pen_editor;
+pub(crate) mod rulers;
 pub(crate) mod scale_window;
 pub(crate) mod scene_toggle;
 pub(crate) mod themes;
@@ -33,7 +34,7 @@ use tool_window::floating_tool_window;
 //     (mm * zoom) / PIXELS_PER_MM
 // }
 
-pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, frame: &mut eframe::Frame) {
     // Looks better on 4k montior
     ctx.set_pixels_per_point(model.ppp());
 
@@ -150,242 +151,126 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
             };
         }
 
-        {
-            let machine_rect = model.mm_rect_to_screen_rect(Rect::from_min_max(
-                pos2(
-                    model.origin.x,
-                    model.origin.y - model.machine_config.limits().1 as f32,
-                ),
-                pos2(
-                    model.origin.x + model.machine_config.limits().0 as f32,
-                    model.origin.y,
-                ),
-            ));
-            if model.show_machine_limits {
-                painter.rect(
-                    machine_rect,
-                    0.,
-                    Color32::TRANSPARENT,
-                    Stroke::new(1., Color32::YELLOW),
-                    StrokeKind::Outside,
-                );
-            }
-            if model.show_extents {
-                if let Some(extents) = model.source_image_extents {
-                    let extents_rect = model.mm_rect_to_screen_rect(extents);
-                    if model.show_extents {
-                        painter.rect(
-                            extents_rect,
-                            0.,
+        // The rotation tool.
+        if let CommandContext::Rotate(center, ref1, ref2) = model.command_context {
+            if let Some(pos) = ctx.pointer_latest_pos() {
+                let p1 = painter_resp.rect.min.clone();
+                let p2 = painter_resp.rect.max.clone();
+                if let Some(center_pos) = center {
+                    // Center is set.
+                    let center_pos_frame = model.mm_to_frame_coords(center_pos);
+                    painter.line(
+                        vec![
+                            pos2(center_pos_frame.x, p1.y),
+                            pos2(center_pos_frame.x, p2.y),
+                        ],
+                        Stroke::new(0.5, Color32::RED),
+                    );
+                    painter.line(
+                        vec![
+                            pos2(p1.x, center_pos_frame.y),
+                            pos2(p2.x, center_pos_frame.y),
+                        ],
+                        Stroke::new(0.5, Color32::RED),
+                    );
+                    let center_as_frame = model.mm_to_frame_coords(center_pos);
+
+                    // Then we draw the live arc and second ref, if available...
+                    if let Some(ref1_mm) = ref1 {
+                        let ref_circle_rad =
+                            (center_as_frame - model.mm_to_frame_coords(ref1_mm)).length();
+                        let ref2_vec = (pos - model.mm_to_frame_coords(center_pos)).normalized()
+                            * ref_circle_rad;
+                        painter.line_segment(
+                            [center_as_frame.clone(), center_as_frame + ref2_vec],
+                            Stroke::new(0.5, Color32::RED),
+                        );
+                    } else {
+                        painter.circle(
+                            center_as_frame.clone(),
+                            (center_as_frame - pos).length(),
                             Color32::TRANSPARENT,
-                            Stroke::new(1., Color32::BLUE),
-                            StrokeKind::Outside,
+                            Stroke::new(0.5, Color32::RED),
                         );
                     }
+
+                    // Draw the ref1 angle line.
+                    if let Some(ref_pos) = ref1 {
+                        painter.line_segment(
+                            [
+                                model.mm_to_frame_coords(center_pos),
+                                model.mm_to_frame_coords(ref_pos),
+                            ],
+                            Stroke::new(0.5, Color32::RED),
+                        );
+                    } else {
+                        painter.line_segment(
+                            [model.mm_to_frame_coords(center_pos), pos],
+                            Stroke::new(0.5, Color32::RED),
+                        );
+                    }
+                } else {
+                    // No center is set
+                    painter.line(
+                        vec![pos2(pos.x, p1.y), pos2(pos.x, p2.y)],
+                        Stroke::new(0.5, Color32::RED),
+                    );
+                    painter.line(
+                        vec![pos2(p1.x, pos.y), pos2(p2.x, pos.y)],
+                        Stroke::new(0.5, Color32::RED),
+                    );
+                    if ref1.is_none() {
+                        painter.circle(
+                            pos,
+                            32.,
+                            Color32::TRANSPARENT,
+                            Stroke::new(0.5, Color32::RED),
+                        );
+                    }
+                };
+            }; // Only do stuff if we're actually in the window.
+        } // End rotate display context.
+
+        let machine_rect = model.mm_rect_to_screen_rect(Rect::from_min_max(
+            pos2(
+                model.origin.x,
+                model.origin.y - model.machine_config.limits().1 as f32,
+            ),
+            pos2(
+                model.origin.x + model.machine_config.limits().0 as f32,
+                model.origin.y,
+            ),
+        ));
+        if model.show_machine_limits {
+            painter.rect(
+                machine_rect,
+                0.,
+                Color32::TRANSPARENT,
+                Stroke::new(1., Color32::YELLOW),
+                StrokeKind::Outside,
+            );
+        }
+        if model.show_extents {
+            if let Some(extents) = model.source_image_extents {
+                let extents_rect = model.mm_rect_to_screen_rect(extents);
+                if model.show_extents {
+                    painter.rect(
+                        extents_rect,
+                        0.,
+                        Color32::TRANSPARENT,
+                        Stroke::new(1., Color32::BLUE),
+                        StrokeKind::Outside,
+                    );
                 }
             }
-
-            // This is the ruler display
-            let (top_ruler_rect, left_ruler_rect) = if model.show_rulers {
-                let p1 = painter_resp.rect.min;
-                let p2 = painter_resp.rect.max;
-                let p3 = pos2(p2.x, p1.y + 16.);
-                let p4 = pos2(p1.x, p1.y + 16.);
-                let p5 = pos2(p1.x + 16., p2.y);
-                let color = ui.visuals().text_edit_bg_color(); //.faint_bg_color.clone();
-                let top_rect = Rect::from_min_max(p1, p3);
-                let left_rect = Rect::from_min_max(p4, p5);
-                painter.rect(top_rect, 0., color, Stroke::NONE, StrokeKind::Outside);
-                painter.rect(left_rect, 0., color, Stroke::NONE, StrokeKind::Outside);
-
-                // Then the pips
-                let scale = model.scale_mm_to_screen(vec2(1., 0.)).x;
-                let (ruler_major, ruler_minor, minor_count) = if scale > 20. {
-                    (1., 0.2, 4usize)
-                } else if scale > 10. {
-                    (2., 0.5, 3usize)
-                } else if scale > 4. {
-                    (5., 1., 4)
-                } else if scale > 2. {
-                    (10., 2., 4)
-                } else if scale > 1. {
-                    (20., 5., 3)
-                } else if scale > 1. / 2.5 {
-                    (50., 10., 4)
-                } else {
-                    (100., 20., 4)
-                };
-                let mut major_x = model.origin.x;
-                let mut major_y = model.origin.y;
-                let right_limit = painter_resp.rect.right();
-                let left_limit = painter_resp.rect.left();
-                let right_of_y_bar = painter_resp.rect.left();
-                let top_limit = painter_resp.rect.top();
-                let bottom_limit = painter_resp.rect.bottom();
-                let bottom_of_x_bar = painter_resp.rect.top() + 16.;
-                let color = ui.visuals().text_color();
-                let mm_right = model.frame_coords_to_mm(pos2(right_limit, 0.)).x;
-                let mm_left = model.frame_coords_to_mm(pos2(left_limit, 0.)).x;
-                let mm_bottom = model.frame_coords_to_mm(pos2(0., bottom_limit)).y;
-                let mm_top = model.frame_coords_to_mm(pos2(0., top_limit + 16.)).y;
-                let minor_inc = model.scale_mm_to_screen(vec2(ruler_minor, 0.)).x;
-
-                // X Axis ruler positive.
-                while major_x < mm_right {
-                    let xpos = model.mm_to_frame_coords(pos2(major_x, 0.)).x;
-                    painter.line_segment(
-                        [pos2(xpos, top_limit), pos2(xpos, bottom_of_x_bar)],
-                        Stroke {
-                            width: 1.,
-                            color: color,
-                        },
-                    );
-                    for i in 1..=minor_count {
-                        painter.line_segment(
-                            [
-                                pos2(xpos + (i as f32 * minor_inc), bottom_of_x_bar - 4.),
-                                pos2(xpos + (i as f32 * minor_inc), bottom_of_x_bar),
-                            ],
-                            Stroke {
-                                width: 1.,
-                                color: color,
-                            },
-                        );
-                    }
-                    painter.text(
-                        pos2(xpos + 2., top_limit),
-                        Align2::LEFT_TOP,
-                        format!("{:3.1}", major_x),
-                        FontId::proportional(6.),
-                        color,
-                    );
-                    major_x += ruler_major;
-                }
-
-                // Y axis ruler positive
-                while major_y < bottom_limit {
-                    let ypos = model.mm_to_frame_coords(pos2(0., major_y)).y;
-                    painter.line_segment(
-                        [pos2(left_limit, ypos), pos2(left_limit + 16., ypos)],
-                        Stroke {
-                            width: 1.,
-                            color: color,
-                        },
-                    );
-                    painter.text(
-                        pos2(left_limit, ypos + 1.),
-                        Align2::LEFT_TOP,
-                        format!("{:3.1}", major_y),
-                        FontId::proportional(6.),
-                        color,
-                    );
-                    for i in 1..=minor_count {
-                        painter.line_segment(
-                            [
-                                pos2(left_limit + 12.0, ypos + (i as f32 * minor_inc)),
-                                pos2(left_limit + 16., ypos + (i as f32 * minor_inc)),
-                            ],
-                            Stroke {
-                                width: 1.,
-                                color: color,
-                            },
-                        );
-                    }
-                    major_y += ruler_major;
-                }
-
-                major_x = model.origin.x - ruler_major;
-                let mm_left = model.frame_coords_to_mm(pos2(left_limit, 0.)).x;
-                while major_x > mm_left {
-                    let xpos = model.mm_to_frame_coords(pos2(major_x, 0.)).x;
-                    painter.line_segment(
-                        [pos2(xpos, top_limit), pos2(xpos, bottom_of_x_bar)],
-                        Stroke {
-                            width: 1.,
-                            color: color,
-                        },
-                    );
-                    for i in 1..=minor_count {
-                        painter.line_segment(
-                            [
-                                pos2(xpos + (i as f32 * minor_inc), bottom_of_x_bar - 4.),
-                                pos2(xpos + (i as f32 * minor_inc), bottom_of_x_bar),
-                            ],
-                            Stroke {
-                                width: 1.,
-                                color: color,
-                            },
-                        );
-                    }
-                    painter.text(
-                        pos2(xpos + 2., top_limit),
-                        Align2::LEFT_TOP,
-                        format!("{:3.1}", major_x),
-                        FontId::proportional(6.),
-                        color,
-                    );
-                    major_x -= ruler_major;
-                }
-
-                // Y axis ruler negative
-                let mut major_y = model.origin.y - ruler_major;
-                while major_y > mm_top {
-                    let ypos = model.mm_to_frame_coords(pos2(0., major_y)).y;
-                    painter.line_segment(
-                        [pos2(left_limit, ypos), pos2(left_limit + 16., ypos)],
-                        Stroke {
-                            width: 1.,
-                            color: color,
-                        },
-                    );
-                    for i in 1..=minor_count {
-                        painter.line_segment(
-                            [
-                                pos2(left_limit + 12.0, ypos + (i as f32 * minor_inc)),
-                                pos2(left_limit + 16., ypos + (i as f32 * minor_inc)),
-                            ],
-                            Stroke {
-                                width: 1.,
-                                color: color,
-                            },
-                        );
-                    }
-                    painter.text(
-                        pos2(left_limit, ypos + 1.),
-                        Align2::LEFT_TOP,
-                        format!("{:3.1}", major_y),
-                        FontId::proportional(6.),
-                        color,
-                    );
-                    major_y -= ruler_major;
-                }
-
-                // Done the ruler, now just an overlay in red with current position.
-                let color = ui.visuals().strong_text_color();
-                if let Some(lpos) = ctx.pointer_latest_pos() {
-                    painter.line_segment(
-                        [pos2(lpos.x, top_limit), pos2(lpos.x, bottom_of_x_bar)],
-                        Stroke {
-                            width: 1.,
-                            // color: color,
-                            color: Color32::RED,
-                        },
-                    );
-                    painter.line_segment(
-                        [pos2(left_limit, lpos.y), pos2(left_limit + 16., lpos.y)],
-                        Stroke {
-                            width: 1.,
-                            // color: color,
-                            color: Color32::RED,
-                        },
-                    );
-                }
-
-                (Some(top_rect), Some(left_rect))
-            } else {
-                (None, None)
-            };
         }
+
+        // The ruler display bit.
+        if model.show_rulers {
+            rulers::draw_rulers(model, &ui, ctx, &painter, &painter_resp)
+        };
+
+        // The rotation thing.
 
         if painter_resp.clicked() {
             match model.command_context {
@@ -393,12 +278,43 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     if let Some(pos) = ctx.pointer_hover_pos() {
                         // model.origin = model.frame_coords_to_mm(pos)
                         model.set_origin(model.frame_coords_to_mm(pos));
+                        model.command_context = CommandContext::None;
                     }
                 }
                 CommandContext::Clip(_pos2, _pos3) => todo!(),
-                _ => (),
+                CommandContext::Rotate(None, None, None) => {
+                    if let Some(pos) = ctx.pointer_hover_pos() {
+                        model.command_context =
+                            CommandContext::Rotate(Some(model.frame_coords_to_mm(pos)), None, None)
+                    }
+                }
+                CommandContext::Rotate(Some(center_mm), None, None) => {
+                    if let Some(pos) = ctx.pointer_hover_pos() {
+                        model.command_context = CommandContext::Rotate(
+                            Some(center_mm),
+                            Some(model.frame_coords_to_mm(pos)),
+                            None,
+                        )
+                    }
+                }
+                CommandContext::Rotate(Some(center_mm), Some(ref1_mm), None) => {
+                    if let Some(pos) = ctx.pointer_hover_pos() {
+                        let ref2_mm = model.frame_coords_to_mm(pos);
+                        // model.command_context =
+                        //     CommandContext::Rotate(Some(center_mm), Some(ref1_mm), Some(ref2_mm));
+                        let vec_a = ref1_mm - center_mm;
+                        let vec_b = ref2_mm - center_mm;
+                        let degrees = BAPViewModel::degrees_between_two_vecs(vec_a, vec_b);
+                        // println!("Calculated angle is {}", degrees);
+                        model.rotate_around_point(
+                            (center_mm.x as f64, center_mm.y as f64),
+                            degrees as f64,
+                        );
+                        model.command_context = CommandContext::None;
+                    }
+                }
+                _ => model.command_context = CommandContext::None,
             }
-            model.command_context = CommandContext::None;
         }
 
         if painter_resp.dragged() {

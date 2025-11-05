@@ -5,7 +5,7 @@ use gcode::GCode;
 // use aoer_plotty_rs::geo_types::hatch::Hatches;
 use geo::algorithm::bounding_rect::BoundingRect;
 use geo::prelude::MapCoords;
-use geo::{Coord, Geometry, LineString, MultiLineString, Rect, coord};
+use geo::{Coord, Geometry, LineString, MultiLineString, Point, Rect, Rotate, coord};
 use nalgebra::{Affine2, Matrix3, Point2};
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
@@ -294,6 +294,17 @@ impl Project {
         }
     }
 
+    /// Rotates all geometry around a given point.
+    pub fn rotate_geometry_around_point(&mut self, center: (f64, f64), degrees: f64) {
+        for geometry in &mut self.geometry {
+            geometry
+                .geometry
+                .rotate_around_point_mut(degrees, Point::new(center.0, center.1));
+        }
+        // println!("ROTATED. Now redoing extents etc.");
+        self.regenerate_extents();
+    }
+
     /// Saves to a destination path. Makes a new temp file and moves
     /// it to the destination after writing it.
     pub fn save_to_path(&self, path: &PathBuf) -> Result<()> {
@@ -406,7 +417,7 @@ impl Project {
             ymax = 1.;
         }
         let extents = Rect::new(coord! {x: xmin, y:ymin}, coord! {x:xmax, y: ymax});
-        // println!("Extents are now {:?}", &extents);
+        // println!("Returning calculated extents of {:?}", &extents);
         extents
     }
 

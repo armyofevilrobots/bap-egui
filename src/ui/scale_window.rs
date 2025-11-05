@@ -15,14 +15,15 @@ pub(crate) fn scale_window(
 ) /*-> ModalResponse<()>*/
 {
     egui::Modal::new(Id::new("ScaleFactor")).show(ctx, |ui| {
-        ui.set_width(400.);
+        ui.set_width(250.);
         ui.heading("Scale by factor");
 
         if let CommandContext::Scale(factor) = &mut model.command_context {
             ui.add(
                 Slider::new(factor, 0.01..=100.0)
+                    .custom_formatter(|val, range| format!("{:0.1}%", val * 100.0))
                     .logarithmic(true)
-                    .text("Width"),
+                    .text("Percent"),
             );
         }
         if let CommandContext::Scale(factor) = model.command_context {
@@ -34,7 +35,7 @@ pub(crate) fn scale_window(
                 }
                 if ui.button("Cancel").clicked() {
                     // model.pen_crib_open = false
-                    println!("Not scaling. Quitting modal.");
+                    // println!("Not scaling. Quitting modal.");
                     model.command_context = crate::view_model::CommandContext::None
                 }
             });

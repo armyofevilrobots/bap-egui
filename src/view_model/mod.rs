@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::f32;
 use std::path::PathBuf;
 use std::process::exit;
 use std::sync::mpsc::{Receiver, Sender};
@@ -86,6 +87,32 @@ impl IsPos2Able for Vec2 {
 impl BAPViewModel {
     pub fn name() -> &'static str {
         "Bot-a-Plot"
+    }
+
+    pub fn degrees_between_two_vecs(a: Vec2, b: Vec2) -> f32 {
+        Self::radians_between_two_vecs(a, b) * (180.0 / f32::consts::PI)
+    }
+
+    pub fn radians_between_two_vecs(a: Vec2, b: Vec2) -> f32 {
+        let a = a.normalized() * vec2(1., -1.);
+        let b = b.normalized() * vec2(1., -1.);
+        // let a_dot_b_old = a.x * b.x + a.y + b.y;
+        let a_dot_b = a.dot(b);
+        let a_det_b = a.x * b.y - a.y * b.x;
+        let radians = a_det_b.atan2(a_dot_b);
+        -radians // Because compass vs trig degrees
+    }
+
+    pub fn rotate_around_point(&mut self, point: (f64, f64), degrees: f64) {
+        if let Some(cmd_out) = &self.cmd_out {
+            cmd_out
+                .send(ViewCommand::RotateSource {
+                    center: point,
+                    degrees,
+                })
+                .expect("Failed to send Scale Factor command?");
+            self.request_new_source_image();
+        }
     }
 
     pub fn update_pen_details(&mut self) {
@@ -391,7 +418,7 @@ impl BAPViewModel {
                         let hs = handle.size();
                         // println!("Self::hs {:?}", hs);
                         if hs[0] < MAX_SIZE && hs[1] < MAX_SIZE {
-                            eprintln!("Smaller than max size. Requesting.");
+                            //eprintln!("Smaller than max size. Requesting.");
                             sender
                                 .send(match self.display_mode {
                                     BAPDisplayMode::SVG => {
@@ -415,10 +442,11 @@ impl BAPViewModel {
                                 });
                             self.timeout_for_source_image =
                                 Some(Instant::now() + Duration::from_secs(3));
-                        } else if hs[0] / 5 > resolution.0 / 4 || hs[1] / 5 > resolution.1 / 4 {
-                            eprintln!(
-                                "Requesting WAY smaller than current image to avoid jaggies."
-                            );
+                        // } else if hs[0] / 5 > resolution.0 / 4 || hs[1] / 5 > resolution.1 / 4 {
+                        } else if hs[0] > resolution.0 || hs[1] > resolution.1 {
+                            //eprintln!(
+                            //    "Requesting WAY smaller than current image to avoid jaggies."
+                            //);
                             sender
                                 .send(ViewCommand::RequestSourceImage {
                                     extents: cmd_extents,
