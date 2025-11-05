@@ -62,7 +62,7 @@ impl eframe::App for BAPViewModel {
                 } => {
                     if let Some(handle) = &mut self.source_image_handle {
                         handle.set(image, egui::TextureOptions::NEAREST);
-                        println!("Got incoming extents: {},{},{}w,{}h", x, y, width, height);
+                        // println!("Got incoming extents: {},{},{}w,{}h", x, y, width, height);
                         self.source_image_extents = Some(Rect::from_min_size(
                             pos2(x as f32, y as f32),
                             vec2(width as f32, height as f32),

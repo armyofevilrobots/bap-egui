@@ -328,7 +328,7 @@ impl ApplicationCore {
 
                     },
                     ViewCommand::ApplyPens(pen_details) => {
-                        println!("GOT NEW PENS: {:?}", pen_details);
+                        // println!("GOT NEW PENS: {:?}", pen_details);
                         self.project.update_pen_details(&pen_details);
                     },
                 },

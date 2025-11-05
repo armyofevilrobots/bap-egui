@@ -12,24 +12,23 @@ pub fn pen_delete_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
     egui::Modal::new(Id::new("DeletePen")).show(ctx, |ui| {
         ui.vertical(|ui| {
             ui.set_width(400.);
-            ui.heading(format!(
-                "Delete Pen #{} - {}",
-                pen_idx,
-                model
-                    .pen_crib
-                    .get(pen_idx)
-                    .unwrap_or(&PenDetail::default())
-                    .name
-            ));
-            ui.horizontal_centered(|ui| {
+            if let Some(pen) = model.pen_crib.get(pen_idx) {
+                ui.heading(format!("Delete Pen #{} - {}", pen.tool_id, pen.name));
+                ui.horizontal_centered(|ui| {
+                    if ui.button("Cancel Delete?").clicked() {
+                        model.command_context = CommandContext::PenCrib;
+                    };
+                    if ui.button("Confirm Delete!").clicked() {
+                        model.pen_crib.remove(pen_idx);
+                        model.command_context = CommandContext::PenCrib;
+                    }
+                });
+            } else {
+                ui.label("Cannot find a pen with that ID. This is almost certainly a bug.");
                 if ui.button("Cancel Delete?").clicked() {
                     model.command_context = CommandContext::PenCrib;
                 };
-                if ui.button("Confirm Delete!").clicked() {
-                    model.pen_crib.remove(pen_idx);
-                    model.command_context = CommandContext::PenCrib;
-                }
-            });
+            }
         });
     });
 }

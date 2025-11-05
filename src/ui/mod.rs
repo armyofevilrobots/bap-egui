@@ -85,13 +85,6 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
             );
         }
         if let Some(imghandle) = &model.source_image_handle {
-            // let size_raw = imghandle.size_vec2();
-            // let size = size_raw * model.view_zoom as f32 / PIXELS_PER_MM;
-            // let center = mm_to_native(mm, zoom)
-            // let svgrect = model.svg_img_dims.expect(
-            //     "Somehow we have an image handle with no dims.
-            //         This should be impossible. Dying.",
-            // );
             if let Some(svgrect) = model.source_image_extents {
                 let rect = Rect::from_min_size(
                     model.mm_to_frame_coords(svgrect.min),
@@ -199,7 +192,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                 let p3 = pos2(p2.x, p1.y + 16.);
                 let p4 = pos2(p1.x, p1.y + 16.);
                 let p5 = pos2(p1.x + 16., p2.y);
-                let color = ui.visuals().faint_bg_color.clone();
+                let color = ui.visuals().text_edit_bg_color(); //.faint_bg_color.clone();
                 let top_rect = Rect::from_min_max(p1, p3);
                 let left_rect = Rect::from_min_max(p4, p5);
                 painter.rect(top_rect, 0., color, Stroke::NONE, StrokeKind::Outside);
@@ -207,20 +200,20 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
 
                 // Then the pips
                 let scale = model.scale_mm_to_screen(vec2(1., 0.)).x;
-                let ruler_major = if scale > 20. {
-                    1.
+                let (ruler_major, ruler_minor, minor_count) = if scale > 20. {
+                    (1., 0.2, 4usize)
                 } else if scale > 10. {
-                    2.
+                    (2., 0.5, 3usize)
                 } else if scale > 4. {
-                    5.
+                    (5., 1., 4)
                 } else if scale > 2. {
-                    10.
+                    (10., 2., 4)
                 } else if scale > 1. {
-                    20.
+                    (20., 5., 3)
                 } else if scale > 1. / 2.5 {
-                    50.
+                    (50., 10., 4)
                 } else {
-                    100.
+                    (100., 20., 4)
                 };
                 let mut major_x = model.origin.x;
                 let mut major_y = model.origin.y;
@@ -230,11 +223,12 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                 let top_limit = painter_resp.rect.top();
                 let bottom_limit = painter_resp.rect.bottom();
                 let bottom_of_x_bar = painter_resp.rect.top() + 16.;
-                let color = ui.visuals().weak_text_color();
+                let color = ui.visuals().text_color();
                 let mm_right = model.frame_coords_to_mm(pos2(right_limit, 0.)).x;
                 let mm_left = model.frame_coords_to_mm(pos2(left_limit, 0.)).x;
                 let mm_bottom = model.frame_coords_to_mm(pos2(0., bottom_limit)).y;
                 let mm_top = model.frame_coords_to_mm(pos2(0., top_limit + 16.)).y;
+                let minor_inc = model.scale_mm_to_screen(vec2(ruler_minor, 0.)).x;
 
                 // X Axis ruler positive.
                 while major_x < mm_right {
@@ -246,6 +240,18 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                             color: color,
                         },
                     );
+                    for i in 1..=minor_count {
+                        painter.line_segment(
+                            [
+                                pos2(xpos + (i as f32 * minor_inc), bottom_of_x_bar - 4.),
+                                pos2(xpos + (i as f32 * minor_inc), bottom_of_x_bar),
+                            ],
+                            Stroke {
+                                width: 1.,
+                                color: color,
+                            },
+                        );
+                    }
                     painter.text(
                         pos2(xpos + 2., top_limit),
                         Align2::LEFT_TOP,
@@ -267,12 +273,24 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                         },
                     );
                     painter.text(
-                        pos2(left_limit, ypos + 2.),
+                        pos2(left_limit, ypos + 1.),
                         Align2::LEFT_TOP,
                         format!("{:3.1}", major_y),
                         FontId::proportional(6.),
                         color,
                     );
+                    for i in 1..=minor_count {
+                        painter.line_segment(
+                            [
+                                pos2(left_limit + 12.0, ypos + (i as f32 * minor_inc)),
+                                pos2(left_limit + 16., ypos + (i as f32 * minor_inc)),
+                            ],
+                            Stroke {
+                                width: 1.,
+                                color: color,
+                            },
+                        );
+                    }
                     major_y += ruler_major;
                 }
 
@@ -287,6 +305,18 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                             color: color,
                         },
                     );
+                    for i in 1..=minor_count {
+                        painter.line_segment(
+                            [
+                                pos2(xpos + (i as f32 * minor_inc), bottom_of_x_bar - 4.),
+                                pos2(xpos + (i as f32 * minor_inc), bottom_of_x_bar),
+                            ],
+                            Stroke {
+                                width: 1.,
+                                color: color,
+                            },
+                        );
+                    }
                     painter.text(
                         pos2(xpos + 2., top_limit),
                         Align2::LEFT_TOP,
@@ -308,8 +338,20 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                             color: color,
                         },
                     );
+                    for i in 1..=minor_count {
+                        painter.line_segment(
+                            [
+                                pos2(left_limit + 12.0, ypos + (i as f32 * minor_inc)),
+                                pos2(left_limit + 16., ypos + (i as f32 * minor_inc)),
+                            ],
+                            Stroke {
+                                width: 1.,
+                                color: color,
+                            },
+                        );
+                    }
                     painter.text(
-                        pos2(left_limit, ypos + 2.),
+                        pos2(left_limit, ypos + 1.),
                         Align2::LEFT_TOP,
                         format!("{:3.1}", major_y),
                         FontId::proportional(6.),

@@ -25,6 +25,7 @@ pub fn bottom_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
                         let pos = model.frame_coords_to_mm(pos);
                         ui.label(format!("❌X{:.2},Y{:.2}", model.origin.x, model.origin.y));
                         ui.label(format!("↖X{:.2},Y{:.2}", pos.x, pos.y));
+                        ui.label(format!("🔍{:.2}%", 100.0 * model.zoom() / 11.50)); // This is just a weird zoom factor correction.
                     });
                 };
             });

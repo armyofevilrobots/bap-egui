@@ -185,7 +185,7 @@ impl BAPViewModel {
     }
 
     pub fn set_serial(&self, port: &String) {
-        println!("Connecting port: {:?}", port);
+        // println!("Connecting port: {:?}", port);
         if let Some(cmd_out) = &self.cmd_out {
             cmd_out
                 .send(ViewCommand::ConnectPlotter(port.clone()))
@@ -325,7 +325,7 @@ impl BAPViewModel {
     fn cancel_render(&mut self) {
         if let Some(timeout) = &self.timeout_for_source_image {
             if let Some(cancel) = &self.cancel_render {
-                println!("Sending cancel, dirty is... {}", self.dirty);
+                // println!("Sending cancel, dirty is... {}", self.dirty);
                 self.timeout_for_source_image = None;
                 cancel
                     .send(())
@@ -334,7 +334,7 @@ impl BAPViewModel {
         }
     }
     pub fn set_zoom(&mut self, zoom: f64) {
-        self.view_zoom = zoom;
+        self.view_zoom = zoom.min(200.).max(1.);
 
         self.cancel_render();
 
@@ -366,7 +366,7 @@ impl BAPViewModel {
             }
         }
         if self.dirty && self.timeout_for_source_image.is_none() {
-            println!("Requesting image for {:?}", self.display_mode);
+            // println!("Requesting image for {:?}", self.display_mode);
             if let Some(extents) = self.source_image_extents {
                 let cmd_extents = (
                     extents.left() as f64,
@@ -395,14 +395,14 @@ impl BAPViewModel {
                             sender
                                 .send(match self.display_mode {
                                     BAPDisplayMode::SVG => {
-                                        println!("REQUESTING SVG PREVIEW!");
+                                        // println!("REQUESTING SVG PREVIEW!");
                                         ViewCommand::RequestSourceImage {
                                             extents: cmd_extents,
                                             resolution: resolution,
                                         }
                                     }
                                     BAPDisplayMode::Plot => {
-                                        println!("REQUESTING PLOT PREVIEW!");
+                                        // println!("REQUESTING PLOT PREVIEW!");
                                         ViewCommand::RequestPlotPreviewImage {
                                             extents: cmd_extents,
                                             resolution: resolution,
@@ -566,17 +566,17 @@ impl BAPViewModel {
             }
             crate::sender::PlotterResponse::State(plotter_state) => {
                 self.plotter_state = plotter_state.clone();
-                println!("Got plotter state: {:?}", plotter_state);
+                // println!("Got plotter state: {:?}", plotter_state);
                 match &plotter_state {
                     PlotterState::Running(lines, oflines, _) => {
-                        println!("Received running stanza: {:?}", plotter_state);
+                        // println!("Received running stanza: {:?}", plotter_state);
                         self.progress = Some((
                             format!("Plotting: {}/{} GCODE commands", lines, oflines).to_string(),
                             ((lines * 100) / oflines) as usize,
                         ));
                         if self.timeout_for_source_image.is_none() {
                             // self.dirty = true;
-                            println!("Requesting new source image.");
+                            // println!("Requesting new source image.");
                             self.request_new_source_image();
                         }
                     }
