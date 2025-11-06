@@ -2,8 +2,10 @@ use egui::ColorImage;
 use std::path::PathBuf;
 
 use crate::{
-    core::machine::MachineConfig,
-    core::project::PenDetail,
+    core::{
+        machine::MachineConfig,
+        project::{Paper, PenDetail},
+    },
     sender::{PlotterResponse, PlotterState},
 };
 use serde::{Deserialize, Serialize};
@@ -23,6 +25,7 @@ pub enum ViewCommand {
     },
     ImportSVG(PathBuf),
     SetOrigin(f64, f64),
+    SetPaper(Paper),
     UpdateMachineConfig(MachineConfig),
     SetClipBoundary {
         min: (f64, f64),
@@ -44,6 +47,7 @@ pub enum ViewCommand {
     DisconnectPlotter,
     Quit,
     ApplyPens(Vec<PenDetail>),
+    Undo,
     None,
 }
 
@@ -65,6 +69,7 @@ pub enum ApplicationStateChangeMsg {
     PlotPreviewChanged {
         extents: (f64, f64, f64, f64),
     },
+    OriginChanged(f64, f64),
 
     UpdateMachineConfig(MachineConfig),
     ResetDisplay,
@@ -78,5 +83,7 @@ pub enum ApplicationStateChangeMsg {
     FoundPorts(Vec<String>),
     PostComplete(usize),
     Error(String),
+    UndoAvailable(bool),
+    PaperChanged(Paper),
     None,
 }

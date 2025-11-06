@@ -6,7 +6,7 @@ use std::thread::spawn;
 use crate::BAPViewModel;
 use crate::core::commands::ViewCommand;
 use eframe::egui;
-use egui::{Rect, Separator, Visuals};
+use egui::{Button, Rect, Separator, Visuals};
 use rfd::FileDialog;
 
 pub(crate) fn main_menu(model: &mut BAPViewModel, ctx: &egui::Context) -> Rect {
@@ -45,6 +45,25 @@ pub(crate) fn main_menu(model: &mut BAPViewModel, ctx: &egui::Context) -> Rect {
             });
 
             ui.menu_button("Edit", |ui| {
+                // if ui.button("Undo").clicked() {
+                //     if let Some(cmd_out) = &model.cmd_out {
+                //         cmd_out.send(ViewCommand::Undo).unwrap_or_else(|err| {
+                //             eprintln!("Failed to undo due to: {:?}. Terminating.", err);
+                //             exit(-1);
+                //         })
+                //     };
+                // }
+                if ui
+                    .add_enabled(model.undo_available, Button::new("Undo"))
+                    .clicked()
+                {
+                    if let Some(cmd_out) = &model.cmd_out {
+                        cmd_out.send(ViewCommand::Undo).unwrap_or_else(|err| {
+                            eprintln!("Failed to undo due to: {:?}. Terminating.", err);
+                            exit(-1);
+                        })
+                    };
+                };
                 if ui.button("Cut").clicked() {
                     //functionality
                 }

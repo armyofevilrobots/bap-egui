@@ -120,6 +120,17 @@ impl ApplicationCore {
         }
     }
 
+    fn send_project_origin(&mut self) {
+        if let Some(origin) = self.project.origin {
+            println!("Sending project origin: {:?}", self.project.origin);
+            self.state_change_out
+                .send(ApplicationStateChangeMsg::OriginChanged(origin.0, origin.1))
+                .expect("Cannot send error message. Dead?");
+        } else {
+            println!("Project has no origin to send!");
+        };
+    }
+
     fn force_reset_extents_in_view(&mut self) {
         self.project.regenerate_extents();
         let app_extents = ApplicationStateChangeMsg::SourceChanged {
@@ -147,10 +158,35 @@ impl ApplicationCore {
             self.history.remove(0);
         }
         self.force_reset_extents_in_view();
+        self.update_vm_undo_avail();
+    }
+
+    pub fn update_vm_undo_avail(&mut self) {
+        self.state_change_out
+            .send(ApplicationStateChangeMsg::UndoAvailable(
+                !self.history.is_empty(),
+            ))
+            .unwrap_or_else(|_| eprintln!("Unexpected dead sender/receiver for app state change!"));
     }
 
     pub fn undo(&mut self) {
-        self.project = self.history.pop().unwrap_or(Project::new());
+        self.project = match self.history.pop() {
+            Some(project) => project,
+            None => Project::new(),
+        };
+        self.send_project_origin();
+        self.project.regenerate_extents();
+        self.force_reset_extents_in_view();
+        self.update_vm_undo_avail();
+        self.update_vm_paper();
+    }
+
+    pub fn update_vm_paper(&self) {
+        self.state_change_out
+            .send(ApplicationStateChangeMsg::PaperChanged(
+                self.project.paper.clone(),
+            ))
+            .unwrap_or_else(|_| eprintln!("Unexpected dead sender/receiver for app state change!"));
     }
 
     pub fn run(&mut self) {
@@ -202,11 +238,13 @@ impl ApplicationCore {
                         self.ctx.request_repaint();
                     }
                     ViewCommand::ImportSVG(path_buf) => {
+                        self.checkpoint();
                         self.project.import_svg(&path_buf, true);
                         self.force_reset_extents_in_view();
 
                     }
                     ViewCommand::SetOrigin(x, y) => {
+                        self.checkpoint();
                         self.project.set_origin(&Some((x,y)));
                     },
                     ViewCommand::SetClipBoundary {
@@ -217,6 +255,7 @@ impl ApplicationCore {
                         center,
                         degrees,
                     } => {
+                        self.checkpoint();
                         // println!("Rotating source data around {},{} by {} degrees", center.0, center.1, degrees);
                         // println!("PRE EXTENTS: {:?}", self.project.extents());
                         self.project.rotate_geometry_around_point(center, degrees);
@@ -304,6 +343,7 @@ impl ApplicationCore {
                     }
                     ViewCommand::Scale(factor) => {
                         //TODO: MIgrate this into Project.
+                        self.checkpoint();
                         self.project.scale_by_factor(factor);
                         self.force_reset_extents_in_view();
 
@@ -345,7 +385,14 @@ impl ApplicationCore {
                     },
                     ViewCommand::ApplyPens(pen_details) => {
                         // println!("GOT NEW PENS: {:?}", pen_details);
+                        self.checkpoint();
                         self.project.update_pen_details(&pen_details);
+                    },
+                    ViewCommand::Undo => self.undo(),
+                    ViewCommand::SetPaper(paper) => {
+                        self.checkpoint();
+                        println!("Setting project paper to: {:?}", paper);
+                        self.project.paper = paper
                     },
                 },
             }

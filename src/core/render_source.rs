@@ -22,6 +22,7 @@ pub(crate) fn render_svg_preview(
     state_change_out: &Sender<ApplicationStateChangeMsg>,
     cancel: &Receiver<()>,
 ) -> Result<ColorImage, anyhow::Error> {
+    println!("Rendering.");
     let extents = Rect::new(
         Coord {
             x: extents.0,

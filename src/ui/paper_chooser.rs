@@ -15,8 +15,8 @@ pub(crate) fn paper_chooser_window(
         let (painter_resp, painter) = ui.allocate_painter(vec2(400., 420.), egui::Sense::all());
         let cur = ui.cursor().min;
         let prect = painter_resp.rect;
-        let (px, py) = model.paper_size.dimensions();
-        let (px, py) = match model.paper_orientation {
+        let (px, py) = model.paper_size().dimensions();
+        let (px, py) = match model.paper_orientation() {
             Orientation::Landscape => (py, px),
             Orientation::Portrait => (px, py),
         };
@@ -35,7 +35,7 @@ pub(crate) fn paper_chooser_window(
             ),
             0.,
             // Color32::from_white_alpha(128),
-            model.paper_color,
+            model.paper_color(),
             Stroke::new(1., Color32::from_black_alpha(128)),
             egui::StrokeKind::Inside,
         );
@@ -48,15 +48,15 @@ pub(crate) fn paper_chooser_window(
         painter.text(
             pos2(cur.x + prect.width() / 2., cur.y - prect.height() / 2.),
             Align2::CENTER_CENTER,
-            format!("{}\n{}", model.paper_size, model.paper_orientation),
+            format!("{}\n{}", model.paper_size(), model.paper_orientation()),
             FontId::default(),
             dimensions_text_color.clone(),
         );
 
-        let (paper_width_mm, paper_height_mm) = match model.paper_orientation {
-            Orientation::Portrait => model.paper_size.dims(),
+        let (paper_width_mm, paper_height_mm) = match model.paper_orientation() {
+            Orientation::Portrait => model.paper_size().dims(),
             Orientation::Landscape => {
-                let (w, h) = model.paper_size.dims();
+                let (w, h) = model.paper_size().dims();
                 (h, w)
             }
         };
@@ -94,26 +94,30 @@ pub(crate) fn paper_chooser_window(
 
             paper_chooser_combobox(model, ui);
             ui.radio_value(
-                &mut model.paper_orientation,
+                &mut model.paper_orientation(),
                 Orientation::Landscape,
                 "Landscape",
             );
             ui.radio_value(
-                &mut model.paper_orientation,
+                &mut model.paper_orientation(),
                 Orientation::Portrait,
                 "Portrait",
             );
-            ui.color_edit_button_srgba(&mut model.paper_color);
+            let mut color_tmp = model.paper_color();
+            ui.color_edit_button_srgba(&mut color_tmp);
+            if color_tmp != model.paper_color() {
+                model.set_paper_color(&mut color_tmp, true);
+            }
         });
     });
 }
 
 pub(crate) fn paper_chooser_combobox(model: &mut BAPViewModel, ui: &mut egui::Ui) {
     ComboBox::from_label("")
-        .selected_text(format!("{}", model.paper_size))
+        .selected_text(format!("{}", model.paper_size()))
         .show_ui(ui, |ui| {
             for ps in PaperSize::all().iter() {
-                ui.selectable_value(&mut model.paper_size, ps.clone(), format!("{}", ps));
+                ui.selectable_value(&mut model.paper_size(), ps.clone(), format!("{}", ps));
             }
         });
 }

@@ -59,7 +59,7 @@ pub(crate) fn floating_tool_window(
                         // println!("Switching to origin context.");
                         model.command_context = CommandContext::Origin;
                     };
-                    let portrait_landscape_button = match model.paper_orientation {
+                    let portrait_landscape_button = match model.paper_orientation() {
                         Orientation::Landscape => tool_button(
                             ui,
                             egui::include_image!("../../resources/images/portrait.png"),
@@ -74,10 +74,13 @@ pub(crate) fn floating_tool_window(
                         ),
                     };
                     if portrait_landscape_button.clicked() {
-                        model.paper_orientation = match model.paper_orientation {
-                            Orientation::Landscape => Orientation::Portrait,
-                            Orientation::Portrait => Orientation::Landscape,
-                        }
+                        model.set_paper_orientation(
+                            &match model.paper_orientation() {
+                                Orientation::Landscape => Orientation::Portrait,
+                                Orientation::Portrait => Orientation::Landscape,
+                            },
+                            true,
+                        );
                     };
                     ui.end_row();
                     if tool_button(

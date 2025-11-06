@@ -80,7 +80,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, frame: &m
             painter.rect(
                 paper_rect,
                 0.,
-                model.paper_color,
+                model.paper_color(),
                 Stroke::NONE,
                 egui::StrokeKind::Outside,
             );
@@ -122,7 +122,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, frame: &m
                     painter.rect(
                         paper_tmp_rect,
                         0.,
-                        model.paper_color.gamma_multiply(0.5),
+                        model.paper_color().gamma_multiply(0.5),
                         Stroke::new(2., Color32::from_gray(128)),
                         StrokeKind::Middle,
                     );
@@ -277,7 +277,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, frame: &m
                 CommandContext::Origin => {
                     if let Some(pos) = ctx.pointer_hover_pos() {
                         // model.origin = model.frame_coords_to_mm(pos)
-                        model.set_origin(model.frame_coords_to_mm(pos));
+                        model.set_origin(model.frame_coords_to_mm(pos), true);
                         model.command_context = CommandContext::None;
                     }
                 }

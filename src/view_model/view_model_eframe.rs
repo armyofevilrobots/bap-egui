@@ -92,11 +92,6 @@ impl eframe::App for BAPViewModel {
                         pos2(extents.0 as f32, extents.1 as f32),
                         vec2(extents.2 as f32, extents.3 as f32),
                     ));
-                    // println!(
-                    //     "Got a new source image? Extents: {:?}",
-                    //     self.source_image_extents
-                    // );
-                    // self.dirty = true;
                     self.request_new_source_image();
                 }
                 ApplicationStateChangeMsg::PlotterState(plotter_state) => {
@@ -153,6 +148,27 @@ impl eframe::App for BAPViewModel {
                 }
                 ApplicationStateChangeMsg::PlotPreviewChanged { extents } => todo!(),
                 ApplicationStateChangeMsg::TransformPreviewImage { image, extents } => todo!(),
+                ApplicationStateChangeMsg::OriginChanged(x, y) => {
+                    println!("Got new origin: {},{}", x, y);
+                    self.set_origin(pos2(x as f32, y as f32), false)
+                }
+                ApplicationStateChangeMsg::UndoAvailable(is_avail) => {
+                    // println!("Undo available? {}", is_avail);
+                    self.undo_available = is_avail
+                }
+                ApplicationStateChangeMsg::PaperChanged(paper) => {
+                    println!("Got a new paper of: {:?}", paper);
+                    self.set_paper_color(
+                        &Color32::from_rgb(
+                            (255.0 * paper.rgb.0 as f32).min(255.).max(0.) as u8,
+                            (255.0 * paper.rgb.1 as f32).min(255.).max(0.) as u8,
+                            (255.0 * paper.rgb.2 as f32).min(255.).max(0.) as u8,
+                        ),
+                        false,
+                    );
+                    self.set_paper_orientation(&paper.orientation, false);
+                    self.set_paper_size(&paper.size, false);
+                }
             }
         }
 

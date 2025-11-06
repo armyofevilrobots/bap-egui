@@ -204,7 +204,7 @@ impl PaperSize {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Paper {
     pub weight_gsm: f64,
     pub rgb: (f64, f64, f64), // For display purposes only.
@@ -280,7 +280,7 @@ impl Project {
             pens: Vec::new(),
             paper: Paper {
                 weight_gsm: 180.,
-                rgb: (0.2, 0.2, 0.2),
+                rgb: (1.0, 1.0, 1.0),
                 size: PaperSize::Letter,
                 orientation: Orientation::Portrait,
             },
@@ -373,6 +373,7 @@ impl Project {
     }
 
     pub fn set_origin(&mut self, origin: &Option<(f64, f64)>) {
+        println!("Setting origin.");
         self.origin = origin.clone();
     }
 

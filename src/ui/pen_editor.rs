@@ -22,6 +22,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
             let prect = painter_resp.rect;
             let ofs = (prect.min.clone() + vec2(10., 10.)).to_vec2();
             let pen_crib_len = model.pen_crib.len();
+            let paper_color = model.paper_color();
             let pen = model.pen_crib.get_mut(pen_idx).expect(
                 format!(
                     "Somehow pen indexes got mangled getting pen {} from pen crib of length {}",
@@ -221,7 +222,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                     pen_right_tip + vec2(10., 80.),
                 ),
                 0.,
-                model.paper_color.clone(),
+                paper_color,
                 Stroke::NONE,
                 StrokeKind::Outside,
             );

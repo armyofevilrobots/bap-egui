@@ -13,7 +13,7 @@ use egui_toast::{Toast, ToastKind, ToastOptions};
 use crate::core::commands::{ApplicationStateChangeMsg, ViewCommand};
 
 use crate::core::machine::MachineConfig;
-use crate::core::project::{Orientation, PaperSize, PenDetail};
+use crate::core::project::{Orientation, Paper, PaperSize, PenDetail};
 use crate::sender::{PlotterResponse, PlotterState};
 pub(crate) mod command_context;
 pub(crate) mod view_model_eframe;
@@ -45,13 +45,14 @@ pub struct BAPViewModel {
     view_zoom: f64, // What is our coordinate/zoom multiplier
     ppp: f32,    // Pixels per point.
     pub command_context: CommandContext,
-    pub paper_orientation: Orientation,
-    pub paper_size: PaperSize,
+    paper_orientation: Orientation,
+    paper_size: PaperSize,
+    paper_color: Color32,
     // pub paper_modal_open: bool,
     // pub pen_crib_open: bool,
+    // pub paper: Paper,
     pub origin: Pos2,
     pub machine_config: MachineConfig,
-    pub paper_color: Color32,
     pub show_machine_limits: bool,
     pub show_paper: bool,
     pub show_rulers: bool,
@@ -67,6 +68,7 @@ pub struct BAPViewModel {
     pub pen_crib: Vec<PenDetail>,
     // pub scale_factor_temp: f64,
     pub cancel_render: Option<Sender<()>>,
+    pub undo_available: bool,
 }
 
 pub trait IsPos2Able {
@@ -87,6 +89,88 @@ impl IsPos2Able for Vec2 {
 impl BAPViewModel {
     pub fn name() -> &'static str {
         "Bot-a-Plot"
+    }
+
+    pub fn paper_size(&self) -> PaperSize {
+        self.paper_size.clone()
+    }
+
+    pub fn paper_orientation(&self) -> Orientation {
+        self.paper_orientation.clone()
+    }
+
+    pub fn paper_color(&self) -> Color32 {
+        self.paper_color.clone()
+    }
+
+    pub fn set_paper_color(&mut self, color: &Color32, create_history: bool) {
+        println!("Setting paper color to {:?}", color.clone());
+        self.paper_color = color.clone();
+        if let Some(cmd_out) = &self.cmd_out
+            && create_history
+        {
+            let paper_out = ViewCommand::SetPaper(Paper {
+                weight_gsm: 120.,
+                rgb: (
+                    color.r() as f64 / 255.0,
+                    color.g() as f64 / 255.0,
+                    color.b() as f64 / 255.0,
+                ),
+                size: self.paper_size.clone(),
+                orientation: self.paper_orientation.clone(),
+            });
+            println!("COLOR paper out {:?}", paper_out);
+            cmd_out
+                .send(paper_out)
+                .expect("Failed to send SetPaper command?");
+        };
+        self.request_new_source_image();
+    }
+
+    pub fn set_paper_size(&mut self, paper_size: &PaperSize, create_history: bool) {
+        self.paper_size = paper_size.clone();
+        if let Some(cmd_out) = &self.cmd_out
+            && create_history
+        {
+            let color = self.paper_color.clone();
+            let paper_out = ViewCommand::SetPaper(Paper {
+                weight_gsm: 120.,
+                rgb: (
+                    color.r() as f64 / 255.0,
+                    color.g() as f64 / 255.0,
+                    color.b() as f64 / 255.0,
+                ),
+                size: self.paper_size.clone(),
+                orientation: self.paper_orientation.clone(),
+            });
+            println!("SIZE Paper out: {:?}", paper_out);
+            cmd_out
+                .send(paper_out)
+                .expect("Failed to send SetPaper command?");
+        };
+    }
+
+    pub fn set_paper_orientation(&mut self, orientation: &Orientation, create_history: bool) {
+        self.paper_orientation = orientation.clone();
+        if let Some(cmd_out) = &self.cmd_out
+            && create_history
+        {
+            let color = self.paper_color.clone();
+            let paper_out = ViewCommand::SetPaper(Paper {
+                weight_gsm: 120.,
+                rgb: (
+                    color.r() as f64 / 255.0,
+                    color.g() as f64 / 255.0,
+                    color.b() as f64 / 255.0,
+                ),
+                size: self.paper_size.clone(),
+                orientation: self.paper_orientation.clone(),
+            });
+            println!("ORIENTATION Paper out: {:?}", paper_out);
+            cmd_out
+                .send(paper_out)
+                .expect("Failed to send SetPaper command?");
+        };
     }
 
     pub fn degrees_between_two_vecs(a: Vec2, b: Vec2) -> f32 {
@@ -132,12 +216,15 @@ impl BAPViewModel {
         }
     }
 
-    pub fn set_origin(&mut self, origin: Pos2) {
+    pub fn set_origin(&mut self, origin: Pos2, create_history: bool) {
         if let Some(cmd_out) = &self.cmd_out {
             self.origin = origin;
-            cmd_out
-                .send(ViewCommand::SetOrigin(origin.x as f64, origin.y as f64))
-                .expect("Failed to send ORIGIN command?");
+            if create_history {
+                println!("Sending vm origin {:?}", origin);
+                cmd_out
+                    .send(ViewCommand::SetOrigin(origin.x as f64, origin.y as f64))
+                    .expect("Failed to send ORIGIN command?");
+            }
         }
     }
 
@@ -258,10 +345,13 @@ impl BAPViewModel {
 
             let left_gap = (avail_width as f32 - extents.width()) / 2.;
             let bottom_gap = (avail_height as f32 - extents.height()) / 2.;
-            self.set_origin(pos2(
-                0.0 - (left_gap - extents.min.x),
-                avail_height as f32 - (bottom_gap - extents.min.y),
-            ));
+            self.set_origin(
+                pos2(
+                    0.0 - (left_gap - extents.min.x),
+                    avail_height as f32 - (bottom_gap - extents.min.y),
+                ),
+                true,
+            );
         } else {
             self.toast_error(
                 "Cannot center when source image has no extents.\
@@ -279,10 +369,13 @@ impl BAPViewModel {
 
             let left_gap = (avail_width as f32 - extents.width()) / 2.;
             let bottom_gap = (avail_height as f32 - extents.height()) / 2.;
-            self.set_origin(pos2(
-                0.0 - (left_gap - extents.min.x),
-                avail_height as f32 - (bottom_gap - extents.min.y),
-            ));
+            self.set_origin(
+                pos2(
+                    0.0 - (left_gap - extents.min.x),
+                    avail_height as f32 - (bottom_gap - extents.min.y),
+                ),
+                true,
+            );
         } else {
             self.toast_error(
                 "Cannot center when source image has no extents.\
@@ -313,10 +406,13 @@ impl BAPViewModel {
 
             let left_gap = (avail_width as f32 - extents.width()) / 2.;
             let bottom_gap = (avail_height as f32 - extents.height()) / 2.;
-            self.set_origin(pos2(
-                0.0 - (left_gap - extents.min.x),
-                avail_height as f32 - (bottom_gap - extents.min.y),
-            ));
+            self.set_origin(
+                pos2(
+                    0.0 - (left_gap - extents.min.x),
+                    avail_height as f32 - (bottom_gap - extents.min.y),
+                ),
+                true,
+            );
         } else {
             self.toast_error(
                 "Cannot smart center when source image has no extents.\
@@ -648,6 +744,7 @@ impl Default for BAPViewModel {
             paper_orientation: Orientation::Portrait,
             // paper_modal_open: false,
             // pen_crib_open: false,
+            // TODO: This should just be a paper record.
             paper_size: PaperSize::Letter,
             origin: pos2(0., 0.),
             paper_color: Color32::WHITE,
@@ -686,6 +783,7 @@ impl Default for BAPViewModel {
                     color: "#0000FF".to_string(),
                 },
             ],
+            undo_available: false,
         }
     }
 }

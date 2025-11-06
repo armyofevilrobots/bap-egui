@@ -9,7 +9,10 @@ pub(crate) mod sender;
 pub(crate) mod ui;
 pub(crate) mod view_model;
 
-use crate::view_model::BAPViewModel;
+use crate::{
+    core::project::{Orientation, PaperSize},
+    view_model::BAPViewModel,
+};
 
 use core::ApplicationCore;
 use uuid::Uuid;
@@ -50,7 +53,11 @@ fn main() -> eframe::Result<()> {
             );
             model.source_image_handle = Some(Box::new(tex));
             model.source_image_extents = None;
+            model.set_origin(pos2(0., 0.), false);
             model.update_pen_details();
+            model.set_paper_color(&Color32::WHITE, false);
+            model.set_paper_orientation(&Orientation::Landscape, false);
+            model.set_paper_size(&PaperSize::Letter, false);
 
             let handle = thread::spawn(move || application.run());
             model.set_join_handle(handle);
