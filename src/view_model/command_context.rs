@@ -6,7 +6,7 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use eframe::egui;
-use egui::{Color32, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
+use egui::{Color32, Key, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
 
 use crate::core::commands::{ApplicationStateChangeMsg, ViewCommand};
@@ -25,5 +25,6 @@ pub enum CommandContext {
     Clip(Option<Pos2>, Option<Pos2>),
     Rotate(Option<Pos2>, Option<Pos2>, Option<Pos2>), // center, reference, angle
     Scale(f64),
+    Space(Vec<Key>),
     None,
 }

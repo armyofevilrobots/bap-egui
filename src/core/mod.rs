@@ -394,6 +394,14 @@ impl ApplicationCore {
                         println!("Setting project paper to: {:?}", paper);
                         self.project.paper = paper
                     },
+                    ViewCommand::LoadProject(path_buf) => todo!(),
+                    ViewCommand::SaveProject(path_buf) => todo!(),
+                    ViewCommand::LoadPGF(path_buf) => {
+                        self.checkpoint();
+                        self.project.load_pgf(&path_buf);
+                        self.force_reset_extents_in_view();
+
+                    },
                 },
             }
 

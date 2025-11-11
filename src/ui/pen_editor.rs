@@ -30,7 +30,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                 )
                 .as_str(),
             );
-            let color_code = csscolorparser::parse(pen.color.as_str()).unwrap_or_default();
+            let color_code = pen.color.clone(); //csscolorparser::parse(pen.color.as_str()).unwrap_or_default();
             let [r, g, b, a] = color_code.to_linear_rgba_u8();
             let mut pen_color32 = Color32::from_rgba_premultiplied(r, g, b, a);
 
@@ -96,8 +96,8 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                                 pen_color32.g(),
                                 pen_color32.b(),
                                 pen_color32.a(),
-                            )
-                            .to_css_hex();
+                            );
+                            // .to_css_hex();
                         }
                     })
                 },

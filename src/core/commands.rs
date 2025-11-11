@@ -7,10 +7,11 @@ use crate::{
         project::{Paper, PenDetail},
     },
     sender::{PlotterResponse, PlotterState},
+    view_model::view_model_patch::ViewModelPatch,
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Default, Clone)]
 pub enum ViewCommand {
     #[default]
     Ping,
@@ -48,6 +49,9 @@ pub enum ViewCommand {
     Quit,
     ApplyPens(Vec<PenDetail>),
     Undo,
+    LoadProject(PathBuf),
+    LoadPGF(PathBuf),
+    SaveProject(Option<PathBuf>),
     None,
 }
 
@@ -85,5 +89,6 @@ pub enum ApplicationStateChangeMsg {
     Error(String),
     UndoAvailable(bool),
     PaperChanged(Paper),
+    PatchViewModel(ViewModelPatch),
     None,
 }

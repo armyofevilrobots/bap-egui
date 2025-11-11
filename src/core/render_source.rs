@@ -22,7 +22,7 @@ pub(crate) fn render_svg_preview(
     state_change_out: &Sender<ApplicationStateChangeMsg>,
     cancel: &Receiver<()>,
 ) -> Result<ColorImage, anyhow::Error> {
-    println!("Rendering.");
+    // println!("Rendering.");
     let extents = Rect::new(
         Coord {
             x: extents.0,
@@ -57,8 +57,8 @@ pub(crate) fn render_svg_preview(
         let pen = pg.stroke.clone().unwrap_or(PenDetail::default());
         paint.set_stroke_width(pen.stroke_width as f32);
         paint.set_alpha_f(pen.stroke_density as f32);
-        let color_code = csscolorparser::parse(pen.color.as_str()).unwrap_or_default();
-        let [r, g, b, a] = color_code.to_rgba8();
+        // let color_code = pen.color.clone(); //csscolorparser::parse(pen.color.as_str()).unwrap_or_default();
+        let [r, g, b, a] = pen.color.to_rgba8();
 
         paint.set_color(Color::from_argb(a, r, g, b));
         paint.set_path_effect(None);

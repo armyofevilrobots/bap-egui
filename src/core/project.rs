@@ -3,6 +3,8 @@ use anyhow::{Result, anyhow};
 use aoer_plotty_rs::context::operation::OPLayer;
 use gcode::GCode;
 // use aoer_plotty_rs::geo_types::hatch::Hatches;
+pub use aoer_plotty_rs::context::pgf_file::*;
+pub use aoer_plotty_rs::plotter::pen::PenDetail;
 use geo::algorithm::bounding_rect::BoundingRect;
 use geo::prelude::MapCoords;
 use geo::{Coord, Geometry, LineString, MultiLineString, Point, Rect, Rotate, coord};
@@ -11,61 +13,30 @@ use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 use std::ffi::OsString;
 use std::fmt::Display;
+use std::fs::File;
 use std::io::BufWriter;
 use std::str::FromStr;
 use std::{collections::HashMap, path::PathBuf};
 use usvg::{Tree, WriteOptions};
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub enum KeepdownStrategy {
-    None,
-    #[default]
-    PenWidthAuto,
-    PenWidthMultiple(f64),
-    Static(f64),
-}
+// #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+// pub struct PenDetail {
+//     #[serde(default)]
+//     pub tool_id: usize,
+//     #[serde(default)]
+//     pub name: String,
+//     pub stroke_width: f64,
+//     pub stroke_density: f64,
+//     pub feed_rate: Option<f64>, //mm/min
+//     pub color: String,
+// }
 
-impl KeepdownStrategy {
-    pub fn threshold(&self, penwidth: f64) -> f64 {
-        match self {
-            KeepdownStrategy::None => 0.1,
-            KeepdownStrategy::PenWidthAuto => 1.414f64 * penwidth,
-            KeepdownStrategy::PenWidthMultiple(mul) => mul * penwidth,
-            KeepdownStrategy::Static(val) => *val,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct PenDetail {
-    #[serde(default)]
-    pub tool_id: usize,
-    #[serde(default)]
-    pub name: String,
-    pub stroke_width: f64,
-    pub stroke_density: f64,
-    pub feed_rate: Option<f64>, //mm/min
-    pub color: String,
-}
-
-impl Default for PenDetail {
-    fn default() -> Self {
-        Self {
-            tool_id: 1,
-            name: "Default Pen".to_string(),
-            stroke_width: 0.5,
-            stroke_density: 0.5,
-            feed_rate: None,
-            color: "#000000".to_string(),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct HatchDetail {
-    pub hatch_pattern: String, //Arc<Box<dyn HatchPattern>>,
-    pub pen: Option<PenDetail>,
-}
+// #[derive(Serialize, Deserialize, Debug, Clone)]
+// pub struct HatchDetail {
+//     pub hatch_pattern: String, // This is just informational //Arc<Box<dyn HatchPattern>>,
+//     pub geometry: Geometry,
+//     pub pen: Option<PenDetail>,
+// }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub enum Orientation {
@@ -213,52 +184,18 @@ pub struct Paper {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct PlotGeometry {
-    pub geometry: Geometry,
-    pub hatch: Option<HatchDetail>,
-    pub stroke: Option<PenDetail>,
-    #[serde(default)]
-    pub keepdown_strategy: KeepdownStrategy,
-    pub meta: HashMap<String, String>,
-}
-
-impl Default for PlotGeometry {
-    fn default() -> Self {
-        Self {
-            geometry: Geometry::GeometryCollection(geo::GeometryCollection::new_from(vec![])),
-            hatch: Default::default(),
-            stroke: Default::default(),
-            keepdown_strategy: Default::default(),
-            meta: Default::default(),
-        }
-    }
-}
-
-impl PlotGeometry {
-    pub fn transformed(&self, transformation: &Affine2<f64>) -> PlotGeometry {
-        let mut new_geo = self.clone();
-        new_geo.geometry = new_geo.geometry.map_coords(|coord| {
-            let out = transformation * Point2::new(coord.x, coord.y);
-            Coord { x: out.x, y: out.y }
-        });
-        new_geo
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Project {
     svg: Option<String>,
     pub geometry: Vec<PlotGeometry>,
     pub layers: HashMap<String, OPLayer>,
     pub pens: Vec<PenDetail>,
     pub paper: Paper,
-    pub dirty: bool,
     pub origin: Option<(f64, f64)>, // Target/center of the viewport
-    pub zoom: f64,                  // zoom level
     extents: Rect,
     machine: Option<MachineConfig>,
     program: Option<Box<Vec<String>>>,
     pub do_keepdown: bool,
+    pub file_path: Option<PathBuf>,
 }
 
 impl Paper {
@@ -285,12 +222,11 @@ impl Project {
                 orientation: Orientation::Portrait,
             },
             extents: Rect::new(coord! {x: -1., y: -1.}, coord! {x: 1., y: 1.}),
-            dirty: false,
             origin: None,
             machine: Some(MachineConfig::default()),
-            zoom: 1.,
             program: None,
             do_keepdown: true,
+            file_path: None,
         }
     }
 
@@ -307,12 +243,13 @@ impl Project {
 
     /// Saves to a destination path. Makes a new temp file and moves
     /// it to the destination after writing it.
-    pub fn save_to_path(&self, path: &PathBuf) -> Result<()> {
+    pub fn save_to_path(&self, path: &PathBuf) -> Result<PathBuf> {
         // println!("Saving...");
         let mut path = path.clone(); //std::fs::canonicalize(path)?;
         // println!("Canonicalized.");
         let mut dest_path = path.clone();
         dest_path.set_extension(OsString::from_str("bap")?);
+        // We save, then move, to ensure we don't accidentally delete if something bad happens.
         path.set_extension(OsString::from_str("bap.tmp")?);
         // println!("Saving tmp to {:?} and final to {:?}", &path, &dest_path);
 
@@ -328,7 +265,7 @@ impl Project {
         // println!("Synced...");
         std::fs::rename(&path, &dest_path)?;
         // println!("Renamed.");
-        Ok(())
+        Ok(dest_path)
     }
 
     pub fn load_from_path(path: &PathBuf) -> Result<Self> {
@@ -337,8 +274,11 @@ impl Project {
             // if let Ok(prj) = ron::de::from_reader(project_rdr) {
             //     return Ok(prj);
             // }
-            return match ron::de::from_reader(project_rdr) {
-                Ok(prj) => Ok(prj),
+            return match ron::de::from_reader::<File, Self>(project_rdr) {
+                Ok(mut prj) => {
+                    prj.file_path = Some(path);
+                    Ok(prj)
+                }
                 Err(err) => {
                     eprintln!("Failed to load due to: {:?}", &err);
                     Err(anyhow!(format!("Error was: {:?}", &err)))
@@ -543,6 +483,7 @@ impl Project {
             // );
             geometry.stroke = Some(new_stroke_pen);
 
+            /*
             if geometry.hatch.is_some() {
                 let new_hatch_pen = if let Some(hatch_detail) = geometry.hatch.clone() {
                     if let Some(current_hatch_pen) = hatch_detail.pen {
@@ -562,7 +503,18 @@ impl Project {
                 // );
                 geometry.hatch.as_mut().unwrap().pen = Some(new_hatch_pen);
             };
+            */
         }
+    }
+
+    pub fn load_pgf(&mut self, path: &PathBuf) -> Result<()> {
+        if let Ok(path) = std::fs::canonicalize(path) {
+            let pgf: PGF = PGF::from_file(&path)?;
+            self.geometry = pgf.geometries();
+
+            self.regenerate_extents();
+        }
+        Ok(())
     }
 
     pub fn import_svg(&mut self, path: &PathBuf, keepdown: bool) {
@@ -613,9 +565,12 @@ pub fn svg_to_geometries(
     // println!("Total geo size is: {:?}", multilines.bounding_rect());
     geometries.push(PlotGeometry {
         geometry: Geometry::MultiLineString(multilines),
-        hatch: Some(HatchDetail {
+        //hatch: None,
+        /*Some(HatchDetail {
             hatch_pattern: "".to_string(), //Hatches::none(),
             // TODO: This should in the future be copied from pen settings.
+            /* */
+            geometry: None,
             pen: Some(
                 pens.first()
                     .unwrap_or(&PenDetail {
@@ -628,14 +583,14 @@ pub fn svg_to_geometries(
                     })
                     .clone(),
             ),
-        }),
+        })*/
         stroke: Some(
             pens.first()
                 .unwrap_or(&PenDetail {
                     stroke_width: 0.5,
                     stroke_density: 1.0,
                     feed_rate: None,
-                    color: "black".to_string(),
+                    color: csscolorparser::Color::from_rgba8(0, 0, 0, 1),
                     tool_id: 1,
                     name: "PEN1".to_string(),
                 })
@@ -646,7 +601,7 @@ pub fn svg_to_geometries(
         } else {
             KeepdownStrategy::None
         },
-        meta: HashMap::new(),
+        // meta: HashMap::new(),
     });
 
     geometries

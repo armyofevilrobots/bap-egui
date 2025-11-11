@@ -15,8 +15,11 @@ use crate::core::commands::{ApplicationStateChangeMsg, ViewCommand};
 use crate::core::machine::MachineConfig;
 use crate::core::project::{Orientation, Paper, PaperSize, PenDetail};
 use crate::sender::{PlotterResponse, PlotterState};
+use crate::view_model::view_model_patch::ViewModelPatch;
 pub(crate) mod command_context;
+pub(crate) mod project_ops;
 pub(crate) mod view_model_eframe;
+pub(crate) mod view_model_patch;
 pub use command_context::CommandContext;
 
 pub const PIXELS_PER_MM: f32 = 4.; // This is also scaled by the PPP value, but whatever.
@@ -28,6 +31,15 @@ pub enum BAPDisplayMode {
     Plot,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum FileSelector {
+    ImportSVG(PathBuf),
+    LoadPGF(PathBuf),
+    OpenProject(PathBuf),
+    SaveProjectAs(PathBuf),
+    SaveProject,
+}
+
 pub struct BAPViewModel {
     pub docked: bool,
     display_mode: BAPDisplayMode,
@@ -35,7 +47,7 @@ pub struct BAPViewModel {
     pub cmd_out: Option<Sender<ViewCommand>>,
     pub status_msg: Option<String>,
     pub progress: Option<(String, usize)>,
-    pub svg_import_mpsc: Option<Receiver<PathBuf>>,
+    pub file_selector: Option<Receiver<FileSelector>>,
     pub source_image_handle: Option<Box<TextureHandle>>,
     pub source_image_extents: Option<Rect>, // Again, this is in mm, and needs conversion before display.
     pub timeout_for_source_image: Option<Instant>,
@@ -69,6 +81,7 @@ pub struct BAPViewModel {
     // pub scale_factor_temp: f64,
     pub cancel_render: Option<Sender<()>>,
     pub undo_available: bool,
+    pub file_path: Option<PathBuf>,
 }
 
 pub trait IsPos2Able {
@@ -91,6 +104,79 @@ impl BAPViewModel {
         "Bot-a-Plot"
     }
 
+    pub fn patch(&mut self, patch: ViewModelPatch) {
+        let mut redraw = false;
+        /*
+        pub pens: Option<Vec<PenDetail>>,
+        pub paper: Option<Paper>,
+        pub origin: Option<(f64, f64)>, // Target/center of the viewport
+        pub extents: Option<(f64, f64, f64, f64)>,
+        pub machine: Option<MachineConfig>,
+        pub program: Option<Box<Vec<String>>>,
+        pub file_path: Option<PathBuf>,
+        */
+        if let Some(pens) = patch.pens {
+            self.pen_crib = pens
+        }
+        if let Some(paper) = patch.paper {
+            self.paper_size = paper.size;
+            self.paper_color = Color32::from_rgb(
+                (255.0 * paper.rgb.0).max(0.).min(255.) as u8,
+                (255.0 * paper.rgb.1).max(0.).min(255.) as u8,
+                (255.0 * paper.rgb.2).max(0.).min(255.) as u8,
+            );
+            self.paper_orientation = paper.orientation
+        }
+        if let Some(origin) = patch.origin {
+            self.origin = pos2(origin.0 as f32, origin.1 as f32);
+        }
+        if let Some(extents) = patch.extents {
+            self.source_image_extents = Some(Rect::from_min_max(
+                pos2(extents.0 as f32, extents.1 as f32),
+                pos2(extents.2 as f32, extents.3 as f32),
+            ));
+        }
+        if let Some(machine) = patch.machine_config {
+            self.machine_config = machine;
+        }
+        if let Some(program) = patch.program {
+            // TODO: Have the program available for editing.
+        }
+        if let Some(file_path) = patch.file_path {
+            // A bit weird. A NONE value means don't patch, but None is also a valid path setting
+            // for a new project that hasn't been saved. The workaround is to just blank it out.
+            if file_path == PathBuf::new() {
+                self.file_path = None; // Reset to no path
+            } else {
+                self.file_path = Some(file_path);
+            }
+        }
+    }
+
+    pub fn yolo_view_command(&self, cmd: ViewCommand) {
+        if let Some(cmd_out) = &self.cmd_out {
+            cmd_out
+                .send(cmd.clone())
+                .expect(format!("Failed to send {:?} over MPSC.", &cmd).as_str());
+        }
+    }
+
+    pub fn save_project(&mut self, path: Option<PathBuf>) {
+        if let Some(cmd_out) = &self.cmd_out {
+            cmd_out
+                .send(ViewCommand::SaveProject(path))
+                .expect("Failed to send SaveProject command?");
+        }
+    }
+
+    pub fn load_project(&mut self, path: PathBuf) {
+        if let Some(cmd_out) = &self.cmd_out {
+            cmd_out
+                .send(ViewCommand::LoadProject(path))
+                .expect("Failed to send Loadt command?");
+        }
+    }
+
     pub fn paper_size(&self) -> PaperSize {
         self.paper_size.clone()
     }
@@ -104,7 +190,7 @@ impl BAPViewModel {
     }
 
     pub fn set_paper_color(&mut self, color: &Color32, create_history: bool) {
-        println!("Setting paper color to {:?}", color.clone());
+        // println!("Setting paper color to {:?}", color.clone());
         self.paper_color = color.clone();
         if let Some(cmd_out) = &self.cmd_out
             && create_history
@@ -733,7 +819,7 @@ impl Default for BAPViewModel {
             cmd_out: None,
             status_msg: None,
             progress: None,
-            svg_import_mpsc: None,
+            file_selector: None,
             source_image_handle: None,
             source_image_extents: None,
             timeout_for_source_image: None,
@@ -772,7 +858,7 @@ impl Default for BAPViewModel {
                     stroke_width: 1.0,
                     stroke_density: 1.0,
                     feed_rate: Some(2000.0),
-                    color: "#FF0000".to_string(),
+                    color: csscolorparser::Color::from_rgba8(1, 0, 0, 1),
                 },
                 PenDetail {
                     tool_id: 3,
@@ -780,10 +866,11 @@ impl Default for BAPViewModel {
                     stroke_width: 0.25,
                     stroke_density: 0.5, // It's runny
                     feed_rate: Some(1000.0),
-                    color: "#0000FF".to_string(),
+                    color: csscolorparser::Color::from_rgba8(0, 0, 1, 1),
                 },
             ],
             undo_available: false,
+            file_path: None,
         }
     }
 }

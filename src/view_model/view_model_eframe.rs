@@ -1,3 +1,4 @@
+use std::alloc::System;
 use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::process::exit;
@@ -20,15 +21,33 @@ use crate::sender::{PlotterResponse, PlotterState};
 
 impl eframe::App for BAPViewModel {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        if let Some(msg_in) = &self.svg_import_mpsc {
+        if let Some(handle) = &self.join_handle {
+            if handle.is_finished() {
+                eprintln!("Core thread died! Bailing out.");
+                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+            }
+        }
+        if let Some(msg_in) = &self.file_selector {
             match msg_in.try_recv() {
-                Ok(path) => {
-                    if let Some(cmd_out) = &self.cmd_out {
-                        self.svg_import_mpsc = None;
-                        cmd_out
-                            .send(ViewCommand::ImportSVG(path))
-                            .expect("Failed to send Import SVG command over MPSC.");
+                Ok(path_selector) => {
+                    match path_selector {
+                        super::FileSelector::ImportSVG(path_buf) => {
+                            self.yolo_view_command(ViewCommand::ImportSVG(path_buf))
+                        }
+                        super::FileSelector::OpenProject(path_buf) => {
+                            self.yolo_view_command(ViewCommand::LoadProject(path_buf))
+                        }
+                        super::FileSelector::SaveProjectAs(path_buf) => {
+                            self.yolo_view_command(ViewCommand::SaveProject(Some(path_buf)))
+                        }
+                        super::FileSelector::SaveProject => {
+                            self.yolo_view_command(ViewCommand::SaveProject(None))
+                        }
+                        super::FileSelector::LoadPGF(path_buf) => {
+                            self.yolo_view_command(ViewCommand::LoadPGF(path_buf))
+                        }
                     }
+                    self.file_selector = None; // Delete it now that the command is done.
                 }
                 Err(_) => (),
             }
@@ -169,6 +188,7 @@ impl eframe::App for BAPViewModel {
                     self.set_paper_orientation(&paper.orientation, false);
                     self.set_paper_size(&paper.size, false);
                 }
+                ApplicationStateChangeMsg::PatchViewModel(_) => todo!(),
             }
         }
 

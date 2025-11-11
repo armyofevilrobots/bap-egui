@@ -23,8 +23,8 @@ pub(crate) fn pen_crib_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                 .striped(true)
                 .show(ui, |ui| {
                     for (idx, pen) in pens.iter_mut().enumerate() {
-                        let color_code =
-                            csscolorparser::parse(pen.color.as_str()).unwrap_or_default();
+                        let color_code = pen.color.clone();
+                        // csscolorparser::parse(pen.color.as_str()).unwrap_or_default();
                         let [r, g, b, a] = color_code.to_rgba8();
                         let pen_drag_response = ui
                             .dnd_drag_source(
