@@ -188,7 +188,7 @@ impl eframe::App for BAPViewModel {
                     self.set_paper_orientation(&paper.orientation, false);
                     self.set_paper_size(&paper.size, false);
                 }
-                ApplicationStateChangeMsg::PatchViewModel(_) => todo!(),
+                ApplicationStateChangeMsg::PatchViewModel(patch) => self.patch(patch),
             }
         }
 

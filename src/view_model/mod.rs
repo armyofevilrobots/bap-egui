@@ -105,6 +105,7 @@ impl BAPViewModel {
     }
 
     pub fn patch(&mut self, patch: ViewModelPatch) {
+        // println!("Got patch: {:?}", patch);
         let mut redraw = false;
         /*
         pub pens: Option<Vec<PenDetail>>,
@@ -125,7 +126,7 @@ impl BAPViewModel {
                 (255.0 * paper.rgb.1).max(0.).min(255.) as u8,
                 (255.0 * paper.rgb.2).max(0.).min(255.) as u8,
             );
-            self.paper_orientation = paper.orientation
+            self.set_paper_orientation(&paper.orientation, false);
         }
         if let Some(origin) = patch.origin {
             self.origin = pos2(origin.0 as f32, origin.1 as f32);
@@ -237,6 +238,7 @@ impl BAPViewModel {
     }
 
     pub fn set_paper_orientation(&mut self, orientation: &Orientation, create_history: bool) {
+        // println!("Setting paper orientation: {:?}", orientation);
         self.paper_orientation = orientation.clone();
         if let Some(cmd_out) = &self.cmd_out
             && create_history
@@ -252,7 +254,7 @@ impl BAPViewModel {
                 size: self.paper_size.clone(),
                 orientation: self.paper_orientation.clone(),
             });
-            println!("ORIENTATION Paper out: {:?}", paper_out);
+            // println!("ORIENTATION Paper out: {:?}", paper_out);
             cmd_out
                 .send(paper_out)
                 .expect("Failed to send SetPaper command?");

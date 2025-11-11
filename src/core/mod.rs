@@ -19,6 +19,7 @@ use tera::Context as TeraContext;
 use crate::core::project::Project;
 use crate::core::render_plot::render_plot_preview;
 use crate::sender::{PlotterCommand, PlotterConnection, PlotterResponse, PlotterState};
+use crate::view_model::view_model_patch::ViewModelPatch;
 use machine::MachineConfig;
 
 /// The actual application core that does shit.
@@ -394,13 +395,46 @@ impl ApplicationCore {
                         println!("Setting project paper to: {:?}", paper);
                         self.project.paper = paper
                     },
-                    ViewCommand::LoadProject(path_buf) => todo!(),
-                    ViewCommand::SaveProject(path_buf) => todo!(),
+                    ViewCommand::LoadProject(path_buf) => {
+                        self.checkpoint();
+                        self.project = match Project::load_from_path(&path_buf){
+                            Ok(prj) => {
+                                prj
+                            },
+                            Err(err) => {
+                                self.state_change_out
+                                    .send(ApplicationStateChangeMsg::Error(
+                                        format!("Failed to load project file: {:?}", err).into())).expect("Failed to send error to viewmodel.");
+                                self.ctx.request_repaint();
+                                self.history.pop().unwrap()
+                            },
+                        };
+                        self.state_change_out
+                            .send(ApplicationStateChangeMsg::PatchViewModel(
+                                ViewModelPatch::from(self.project.clone())))
+                            .expect("Failed to send error to viewmodel.");
+                        self.ctx.request_repaint();
+                        self.force_reset_extents_in_view();
+
+                    },
+                    ViewCommand::SaveProject(path_buf) => {
+                        if let Ok(path) = match path_buf.clone() {
+                            Some(path)=> self.project.save_to_path(&path),
+                            None => self.project.save(),
+                        } {
+                            ()
+                        } {
+                            self.state_change_out
+                                .send(ApplicationStateChangeMsg::Error(
+                                    format!("Failed to load project file: {:?}", path_buf).into())).expect("Failed to send error to viewmodel.");
+                            self.ctx.request_repaint();
+
+                        }
+                    }
                     ViewCommand::LoadPGF(path_buf) => {
                         self.checkpoint();
                         self.project.load_pgf(&path_buf);
                         self.force_reset_extents_in_view();
-
                     },
                 },
             }

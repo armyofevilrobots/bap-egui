@@ -28,11 +28,33 @@ pub(crate) fn main_menu(model: &mut BAPViewModel, ctx: &egui::Context) -> Rect {
                         }
                     });
                 }
-                if ui.button("Save Project [spc-p-s]").clicked() {
+                if ui
+                    .add_enabled(
+                        model.file_path.is_some(),
+                        Button::new("Save Project [spc-p-s]"),
+                    )
+                    .clicked()
+                {
                     //functionality
+                    let (tx, rx) = mpsc::channel::<FileSelector>();
+                    model.file_selector = Some(rx);
+                    tx.send(FileSelector::SaveProject)
+                        .expect("failed to send project load signal");
                 }
                 if ui.button("Save Project As [spc-p-a]").clicked() {
                     //functionality
+                    let (tx, rx) = mpsc::channel::<FileSelector>();
+                    model.file_selector = Some(rx);
+                    spawn(move || {
+                        let file = FileDialog::new()
+                            .add_filter("bap2", &["bap2"])
+                            .set_directory("")
+                            .save_file();
+                        if let Some(path) = file {
+                            tx.send(FileSelector::SaveProjectAs(path.into()))
+                                .expect("Failed to e project");
+                        }
+                    });
                 }
                 ui.add(Separator::default());
                 if ui.button("Import SVG [spc f i]").clicked() {
@@ -62,7 +84,7 @@ pub(crate) fn main_menu(model: &mut BAPViewModel, ctx: &egui::Context) -> Rect {
                         if let Some(path) = file {
                             tx.send(FileSelector::LoadPGF(path.into()))
                                 .expect("Failed to send SVG import over MPSC.");
-                            eprintln!("Not implemented yet!");
+                            // eprintln!("Not implemented yet!");
                         }
                     });
                 };

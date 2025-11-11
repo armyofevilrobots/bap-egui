@@ -241,6 +241,13 @@ impl Project {
         self.regenerate_extents();
     }
 
+    pub fn save(&self) -> Result<PathBuf> {
+        match &self.file_path {
+            Some(path) => Ok(self.save_to_path(path)?),
+            None => Err(anyhow!("No path set, couldn't save to existing path.")),
+        }
+    }
+
     /// Saves to a destination path. Makes a new temp file and moves
     /// it to the destination after writing it.
     pub fn save_to_path(&self, path: &PathBuf) -> Result<PathBuf> {
@@ -248,7 +255,7 @@ impl Project {
         let mut path = path.clone(); //std::fs::canonicalize(path)?;
         // println!("Canonicalized.");
         let mut dest_path = path.clone();
-        dest_path.set_extension(OsString::from_str("bap")?);
+        dest_path.set_extension(OsString::from_str("bap2")?);
         // We save, then move, to ensure we don't accidentally delete if something bad happens.
         path.set_extension(OsString::from_str("bap.tmp")?);
         // println!("Saving tmp to {:?} and final to {:?}", &path, &dest_path);

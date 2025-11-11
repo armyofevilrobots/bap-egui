@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::core::{
     machine::MachineConfig,
-    project::{Paper, PenDetail, Project},
+    project::{Orientation, Paper, PenDetail, Project},
 };
 
 use super::BAPViewModel;
