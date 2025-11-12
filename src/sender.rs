@@ -476,7 +476,7 @@ impl TransportTypes {
         if url.scheme() == "serial" {
             let mut parts: Vec<&str> = url.path().split("@").collect();
             if parts.len() == 1 {
-                parts.push("115200"); // default to 115200 baud
+                parts.push("921600"); // default to 115200 baud
             }
             if parts.len() == 2 {
                 let path = parts[0].to_string();

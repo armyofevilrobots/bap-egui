@@ -14,6 +14,9 @@ pub(crate) fn main_menu(model: &mut BAPViewModel, ctx: &egui::Context) -> Rect {
     let tbp = egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
         egui::MenuBar::new().ui(ui, |ui| {
             ui.menu_button("File", |ui| {
+                if ui.button("New project [spc-p-n]").clicked() {
+                    model.yolo_view_command(ViewCommand::ResetProject);
+                }
                 if ui.button("Open Project [spc-p-o]").clicked() {
                     let (tx, rx) = mpsc::channel::<FileSelector>();
                     model.file_selector = Some(rx);

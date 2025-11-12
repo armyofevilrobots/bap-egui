@@ -1,6 +1,6 @@
 use crate::core::project::Orientation;
 use crate::sender::PlotterState;
-use crate::view_model::{BAPDisplayMode, BAPViewModel, CommandContext};
+use crate::view_model::{BAPDisplayMode, BAPViewModel, CommandContext, RulerOrigin};
 use eframe::egui;
 use egui::{ComboBox, Slider, TextEdit, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
@@ -200,6 +200,11 @@ pub(crate) fn floating_tool_window(
 
                     ui.end_row();
                 });
+            ui.add_space(16.);
+            ui.label("Ruler Origin");
+            ui.radio_value(&mut model.ruler_origin, RulerOrigin::Origin, "Origin");
+            // ui.radio_value(&mut model.ruler_origin, RulerOrigin::Machine, "Machine");
+            ui.radio_value(&mut model.ruler_origin, RulerOrigin::Source, "Geometry");
             // });
             ui.add_space(16.);
             ui.label("Display...");

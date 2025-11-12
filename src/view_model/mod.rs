@@ -82,6 +82,7 @@ pub struct BAPViewModel {
     pub cancel_render: Option<Sender<()>>,
     pub undo_available: bool,
     pub file_path: Option<PathBuf>,
+    pub ruler_origin: RulerOrigin,
 }
 
 pub trait IsPos2Able {
@@ -99,6 +100,12 @@ impl IsPos2Able for Vec2 {
     }
 }
 
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub enum RulerOrigin {
+    Origin,
+    Source,
+}
+
 impl BAPViewModel {
     pub fn name() -> &'static str {
         "Bot-a-Plot"
@@ -106,16 +113,7 @@ impl BAPViewModel {
 
     pub fn patch(&mut self, patch: ViewModelPatch) {
         // println!("Got patch: {:?}", patch);
-        let mut redraw = false;
-        /*
-        pub pens: Option<Vec<PenDetail>>,
-        pub paper: Option<Paper>,
-        pub origin: Option<(f64, f64)>, // Target/center of the viewport
-        pub extents: Option<(f64, f64, f64, f64)>,
-        pub machine: Option<MachineConfig>,
-        pub program: Option<Box<Vec<String>>>,
-        pub file_path: Option<PathBuf>,
-        */
+        // let mut redraw = false;
         if let Some(pens) = patch.pens {
             self.pen_crib = pens
         }
@@ -128,8 +126,11 @@ impl BAPViewModel {
             );
             self.set_paper_orientation(&paper.orientation, false);
         }
-        if let Some(origin) = patch.origin {
-            self.origin = pos2(origin.0 as f32, origin.1 as f32);
+        if let Some(opt_origin) = patch.origin {
+            self.origin = match opt_origin {
+                Some(origin) => pos2(origin.0 as f32, origin.1 as f32),
+                None => pos2(0., 0.),
+            }
         }
         if let Some(extents) = patch.extents {
             self.source_image_extents = Some(Rect::from_min_max(
@@ -137,20 +138,19 @@ impl BAPViewModel {
                 pos2(extents.2 as f32, extents.3 as f32),
             ));
         }
-        if let Some(machine) = patch.machine_config {
-            self.machine_config = machine;
+        if let Some(opt_machine) = patch.machine_config {
+            self.machine_config = match opt_machine {
+                Some(machine) => machine,
+                None => MachineConfig::default(),
+            };
         }
         if let Some(program) = patch.program {
             // TODO: Have the program available for editing.
         }
-        if let Some(file_path) = patch.file_path {
+        if let Some(opt_file_path) = patch.file_path {
             // A bit weird. A NONE value means don't patch, but None is also a valid path setting
             // for a new project that hasn't been saved. The workaround is to just blank it out.
-            if file_path == PathBuf::new() {
-                self.file_path = None; // Reset to no path
-            } else {
-                self.file_path = Some(file_path);
-            }
+            self.file_path = opt_file_path;
         }
     }
 
@@ -576,7 +576,10 @@ impl BAPViewModel {
                 self.cancel_render();
             }
         }
-        if self.dirty && self.timeout_for_source_image.is_none() {
+        if self.dirty && self.timeout_for_source_image.is_none()
+        // && ((contains_pointer && self.display_mode() == BAPDisplayMode::Plot)
+        //     || self.display_mode() == BAPDisplayMode::SVG)
+        {
             // println!("Requesting image for {:?}", self.display_mode);
             if let Some(extents) = self.source_image_extents {
                 let cmd_extents = (
@@ -873,6 +876,7 @@ impl Default for BAPViewModel {
             ],
             undo_available: false,
             file_path: None,
+            ruler_origin: RulerOrigin::Source,
         }
     }
 }

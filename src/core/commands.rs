@@ -49,6 +49,7 @@ pub enum ViewCommand {
     Quit,
     ApplyPens(Vec<PenDetail>),
     Undo,
+    ResetProject,
     LoadProject(PathBuf),
     LoadPGF(PathBuf),
     SaveProject(Option<PathBuf>),

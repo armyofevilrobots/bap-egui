@@ -3,7 +3,7 @@ use crate::ui::menu::main_menu;
 use crate::ui::paper_chooser::paper_chooser_window;
 use crate::ui::pen_crib::pen_crib_window;
 use crate::ui::pen_delete::pen_delete_window;
-use crate::view_model::{BAPViewModel, CommandContext};
+use crate::view_model::{BAPViewModel, CommandContext, RulerOrigin};
 use eframe::egui;
 use egui::Direction::BottomUp;
 use egui::epaint::PathStroke;
@@ -50,8 +50,17 @@ pub(crate) fn draw_rulers(
         } else {
             (100., 20., 4)
         };
-        let mut major_x = model.origin.x;
-        let mut major_y = model.origin.y;
+
+        let (mut major_x, mut major_y) = match model.ruler_origin {
+            RulerOrigin::Source => (0., 0.),
+            RulerOrigin::Origin => (model.origin.x, model.origin.y),
+        };
+
+        let rofs = match model.ruler_origin {
+            RulerOrigin::Origin => model.origin - pos2(0., 0.),
+            RulerOrigin::Source => vec2(0., 0.),
+        };
+
         let right_limit = painter_resp.rect.right();
         let left_limit = painter_resp.rect.left();
         let right_of_y_bar = painter_resp.rect.left();
@@ -90,7 +99,7 @@ pub(crate) fn draw_rulers(
             painter.text(
                 pos2(xpos + 2., top_limit),
                 Align2::LEFT_TOP,
-                format!("{:3.1}", major_x),
+                format!("{:3.1}", major_x - rofs.x),
                 FontId::proportional(6.),
                 color,
             );
@@ -110,7 +119,7 @@ pub(crate) fn draw_rulers(
             painter.text(
                 pos2(left_limit, ypos + 1.),
                 Align2::LEFT_TOP,
-                format!("{:3.1}", major_y),
+                format!("{:3.1}", major_y - rofs.y),
                 FontId::proportional(6.),
                 color,
             );
@@ -129,7 +138,11 @@ pub(crate) fn draw_rulers(
             major_y += ruler_major;
         }
 
-        major_x = model.origin.x - ruler_major;
+        let (mut major_x, mut major_y) = match model.ruler_origin {
+            RulerOrigin::Source => (0., 0.),
+            RulerOrigin::Origin => (model.origin.x, model.origin.y),
+        };
+        major_x = major_x - ruler_major;
         let mm_left = model.frame_coords_to_mm(pos2(left_limit, 0.)).x;
         while major_x > mm_left {
             let xpos = model.mm_to_frame_coords(pos2(major_x, 0.)).x;
@@ -155,7 +168,7 @@ pub(crate) fn draw_rulers(
             painter.text(
                 pos2(xpos + 2., top_limit),
                 Align2::LEFT_TOP,
-                format!("{:3.1}", major_x),
+                format!("{:3.1}", major_x - rofs.x),
                 FontId::proportional(6.),
                 color,
             );
@@ -163,7 +176,7 @@ pub(crate) fn draw_rulers(
         }
 
         // Y axis ruler negative
-        let mut major_y = model.origin.y - ruler_major;
+        let mut major_y = major_y - ruler_major;
         while major_y > mm_top {
             let ypos = model.mm_to_frame_coords(pos2(0., major_y)).y;
             painter.line_segment(
@@ -188,7 +201,7 @@ pub(crate) fn draw_rulers(
             painter.text(
                 pos2(left_limit, ypos + 1.),
                 Align2::LEFT_TOP,
-                format!("{:3.1}", major_y),
+                format!("{:3.1}", major_y - rofs.y),
                 FontId::proportional(6.),
                 color,
             );

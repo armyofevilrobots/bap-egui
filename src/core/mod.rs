@@ -436,6 +436,15 @@ impl ApplicationCore {
                         self.project.load_pgf(&path_buf);
                         self.force_reset_extents_in_view();
                     },
+                    ViewCommand::ResetProject => {
+                        self.checkpoint();
+                        self.project = Project::default();
+                        self.state_change_out
+                            .send(ApplicationStateChangeMsg::PatchViewModel(
+                                ViewModelPatch::from(self.project.clone())))
+                            .expect("Failed to send error to viewmodel.");
+                        self.force_reset_extents_in_view();
+                    },
                 },
             }
 

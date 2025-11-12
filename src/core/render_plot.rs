@@ -1,3 +1,4 @@
+use super::post::LastMove;
 use egui::{Color32, ColorImage};
 use gcode::GCode;
 use geo::{Coord, Geometry, Rect};
@@ -99,6 +100,7 @@ pub(crate) fn render_plot_preview(
     };
     let mut px = 0.;
     let mut py = 0.;
+    let mut last_move = LastMove::None;
     for (idx, line) in project
         .program()
         .unwrap_or_else(|| Box::new(Vec::new()))
@@ -126,18 +128,20 @@ pub(crate) fn render_plot_preview(
                     let xy = machine_coords_to_model_coords((px as f64, py as f64), origin);
                     let xy = (xy.0 as f32, xy.1 as f32);
 
-                    if gcode_item.major_number() == 0 {
+                    if gcode_item.major_number() == 0 || last_move == LastMove::Move {
                         paint.set_color(Color::RED);
                         path.line_to(xy);
+                        last_move = LastMove::Move;
                         // path.move_to(xy);
-                    } else if gcode_item.major_number() == 1 {
+                    } else if gcode_item.major_number() == 1 || last_move == LastMove::Feed {
                         paint.set_color(Color::BLUE.with_a(128));
                         path.line_to(xy);
+                        last_move = LastMove::Feed;
                     }
                 }
-                gcode::Mnemonic::Miscellaneous => (),
-                gcode::Mnemonic::ProgramNumber => (),
-                gcode::Mnemonic::ToolChange => (),
+                gcode::Mnemonic::Miscellaneous => last_move = LastMove::None,
+                gcode::Mnemonic::ProgramNumber => last_move = LastMove::None,
+                gcode::Mnemonic::ToolChange => last_move = LastMove::None,
             }
             surface.canvas().draw_path(&path, &paint);
         }
