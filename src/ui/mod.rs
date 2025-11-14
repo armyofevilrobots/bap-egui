@@ -3,6 +3,7 @@ use crate::ui::menu::main_menu;
 use crate::ui::paper_chooser::paper_chooser_window;
 use crate::ui::pen_crib::pen_crib_window;
 use crate::ui::pen_delete::pen_delete_window;
+use crate::view_model::command_context::SpaceCommandStatus;
 use crate::view_model::{BAPViewModel, CommandContext};
 use eframe::egui;
 use egui::Direction::BottomUp;
@@ -21,6 +22,7 @@ pub(crate) mod pen_editor;
 pub(crate) mod rulers;
 pub(crate) mod scale_window;
 pub(crate) mod scene_toggle;
+pub(crate) mod space_command_palette;
 pub(crate) mod themes;
 pub(crate) mod tool_button;
 pub(crate) mod tool_window;
@@ -49,12 +51,35 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, frame: &m
     let wtop = tbp.top();
     floating_tool_window(model, ctx, wtop, &mut toasts);
 
-    match model.command_context {
+    match &model.command_context {
         CommandContext::PaperChooser => paper_chooser_window(model, ctx),
         CommandContext::PenCrib => pen_crib_window(model, ctx),
-        CommandContext::PenEdit(pen_idx) => pen_editor::pen_editor_window(model, ctx, pen_idx),
+        CommandContext::PenEdit(pen_idx) => pen_editor::pen_editor_window(model, ctx, *pen_idx),
         CommandContext::Scale(_factor) => scale_window::scale_window(model, ctx),
-        CommandContext::PenDelete(pen_idx) => pen_delete_window(model, ctx, pen_idx),
+        CommandContext::PenDelete(pen_idx) => pen_delete_window(model, ctx, *pen_idx),
+        CommandContext::Space(keys) => {
+            let keys = keys.clone();
+            match CommandContext::dispatch_space_cmd(model, &keys) {
+                SpaceCommandStatus::Dispatched(dispatched) => {
+                    model.command_context = CommandContext::None;
+                    model.toast_info(dispatched);
+                }
+                SpaceCommandStatus::Ongoing => (),
+                SpaceCommandStatus::Invalid => {
+                    model.command_context = CommandContext::None;
+                    let msg = format!(
+                        "Invalid key sequence - {}",
+                        keys.clone()
+                            .iter()
+                            .map(|&k| k.symbol_or_name())
+                            .collect::<Vec<&str>>()
+                            .join("-")
+                            .to_string()
+                    );
+                    model.toast_error(msg);
+                }
+            }
+        }
         _ => (),
     }
 
@@ -351,38 +376,60 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, frame: &m
                             model.look_at = model.look_at + delta;
                         }
                     }
-                    egui::Event::Key {
-                        key: _,
-                        physical_key,
-                        pressed: _,
-                        repeat: _,
-                        modifiers: _,
-                    } => {
-                        if let Some(pkey) = physical_key {
-                            if *pkey == Key::Escape {
-                                if model.command_context != CommandContext::None {
-                                    toasts.add(Toast {
-                                        kind: ToastKind::Info,
-                                        text: format!(
-                                            "Exited command context {:?}",
-                                            model.command_context
-                                        )
-                                        .into(),
-                                        options: ToastOptions::default()
-                                            .duration_in_seconds(5.0)
-                                            .show_progress(true),
-                                        ..Default::default()
-                                    });
-                                    model.command_context = CommandContext::None;
-                                }
-                            }
-                        };
-                        // None
-                    }
                     _ => (),
                 });
             });
         }
+
+        ui.input(|i| {
+            i.events.iter().for_each(|e| match e {
+                egui::Event::Key {
+                    key: _,
+                    physical_key,
+                    pressed,
+                    repeat: _,
+                    modifiers: _,
+                } => {
+                    if let Some(pkey) = physical_key {
+                        if *pkey == Key::Escape && *pressed {
+                            // Only on depress, not release
+                            if model.command_context != CommandContext::None {
+                                toasts.add(Toast {
+                                    kind: ToastKind::Info,
+                                    text: format!(
+                                        "Exited command context {:?}",
+                                        model.command_context
+                                    )
+                                    .into(),
+                                    options: ToastOptions::default()
+                                        .duration_in_seconds(5.0)
+                                        .show_progress(true),
+                                    ..Default::default()
+                                });
+                                model.command_context = CommandContext::None;
+                            }
+                        } else if *pkey == Key::Space && *pressed {
+                            println!("SPACE MODE");
+                            if model.command_context == CommandContext::None {
+                                model.command_context = CommandContext::Space(vec![]);
+                            }
+                        } else if *pressed
+                            && let CommandContext::Space(keys) = &mut model.command_context
+                        {
+                            if *pkey == Key::Backspace || *pkey == Key::Delete {
+                                keys.pop();
+                            } else {
+                                keys.push(pkey.clone());
+                            }
+                        }
+                    };
+                    // None
+                }
+                _ => (),
+            });
+        });
+
+        space_command_palette::shortcut_panel(model, ctx);
 
         bottom_panel::bottom_panel(model, ctx);
         while !model.queued_toasts.is_empty() {

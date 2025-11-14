@@ -1,5 +1,5 @@
 use crate::core::project::Orientation;
-use crate::sender::PlotterState;
+use crate::core::sender::PlotterState;
 use crate::view_model::{BAPDisplayMode, BAPViewModel, CommandContext, RulerOrigin};
 use eframe::egui;
 use egui::{ComboBox, Slider, TextEdit, vec2};
@@ -21,8 +21,12 @@ pub(crate) fn floating_tool_window(
     let win = if !model.docked {
         win.title_bar(false)
     } else {
-        win.title_bar(false)
-            .anchor(egui::Align2::LEFT_TOP, (25.0, wtop + 49.))
+        let ofs = if model.show_rulers {
+            (25.0, wtop + 49.)
+        } else {
+            (0., wtop)
+        };
+        win.title_bar(false).anchor(egui::Align2::LEFT_TOP, ofs)
     };
 
     win.show(ctx, |ui| {

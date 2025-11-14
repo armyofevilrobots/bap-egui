@@ -5,8 +5,8 @@ use crate::{
     core::{
         machine::MachineConfig,
         project::{Paper, PenDetail},
+        sender::{PlotterResponse, PlotterState},
     },
-    sender::{PlotterResponse, PlotterState},
     view_model::view_model_patch::ViewModelPatch,
 };
 use serde::{Deserialize, Serialize};

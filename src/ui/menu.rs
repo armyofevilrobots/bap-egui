@@ -18,18 +18,7 @@ pub(crate) fn main_menu(model: &mut BAPViewModel, ctx: &egui::Context) -> Rect {
                     model.yolo_view_command(ViewCommand::ResetProject);
                 }
                 if ui.button("Open Project [spc-p-o]").clicked() {
-                    let (tx, rx) = mpsc::channel::<FileSelector>();
-                    model.file_selector = Some(rx);
-                    spawn(move || {
-                        let file = FileDialog::new()
-                            .add_filter("bap2", &["bap2"])
-                            .set_directory("")
-                            .pick_file();
-                        if let Some(path) = file {
-                            tx.send(FileSelector::OpenProject(path.into()))
-                                .expect("Failed to load project");
-                        }
-                    });
+                    model.open_project_with_dialog();
                 }
                 if ui
                     .add_enabled(
@@ -46,50 +35,14 @@ pub(crate) fn main_menu(model: &mut BAPViewModel, ctx: &egui::Context) -> Rect {
                 }
                 if ui.button("Save Project As [spc-p-a]").clicked() {
                     //functionality
-                    let (tx, rx) = mpsc::channel::<FileSelector>();
-                    model.file_selector = Some(rx);
-                    spawn(move || {
-                        let file = FileDialog::new()
-                            .add_filter("bap2", &["bap2"])
-                            .set_directory("")
-                            .save_file();
-                        if let Some(path) = file {
-                            tx.send(FileSelector::SaveProjectAs(path.into()))
-                                .expect("Failed to e project");
-                        }
-                    });
+                    model.save_project_with_dialog();
                 }
                 ui.add(Separator::default());
                 if ui.button("Import SVG [spc f i]").clicked() {
-                    let (tx, rx) = mpsc::channel::<FileSelector>();
-                    model.file_selector = Some(rx);
-                    spawn(move || {
-                        let file = FileDialog::new()
-                            .add_filter("svg", &["svg"])
-                            .add_filter("hpgl", &["hpgl"])
-                            .add_filter("wkt", &["wkt"])
-                            .set_directory("")
-                            .pick_file();
-                        if let Some(path) = file {
-                            tx.send(FileSelector::ImportSVG(path.into()))
-                                .expect("Failed to send SVG import over MPSC.");
-                        }
-                    });
+                    model.import_svg_with_dialog();
                 };
                 if ui.button("Load PGF [space f p]").clicked() {
-                    let (tx, rx) = mpsc::channel::<FileSelector>();
-                    model.file_selector = Some(rx);
-                    spawn(move || {
-                        let file = FileDialog::new()
-                            .add_filter("pgf", &["pgf"])
-                            .set_directory("")
-                            .pick_file();
-                        if let Some(path) = file {
-                            tx.send(FileSelector::LoadPGF(path.into()))
-                                .expect("Failed to send SVG import over MPSC.");
-                            // eprintln!("Not implemented yet!");
-                        }
-                    });
+                    model.load_pgf_with_dialog();
                 };
                 if ui.button("Quit [cmd-Q]").clicked() {
                     if let Some(cmd_out) = &model.cmd_out {

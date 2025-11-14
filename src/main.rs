@@ -5,7 +5,6 @@ use eframe::egui;
 use egui::{Color32, ColorImage, Vec2, pos2};
 
 pub(crate) mod core;
-pub(crate) mod sender;
 pub(crate) mod ui;
 pub(crate) mod view_model;
 

@@ -1,19 +1,15 @@
 use super::post::LastMove;
-use egui::{Color32, ColorImage};
+use egui::ColorImage;
+// TODO: I really need to write my own that has stateful G/M codes to remember the
+// previous move type, so that just coords can be used to reduce the outgoing bitrate
 use gcode::GCode;
 use geo::{Coord, Geometry, Rect};
 use skia_safe::paint::Style;
-use skia_safe::{
-    AlphaType, Bitmap, Color, Data, EncodedImageFormat, ImageInfo, Paint, PaintStyle, Path,
-    PathEffect, Surface, surfaces,
-};
-use std::mem;
+use skia_safe::{AlphaType, Bitmap, Color, ImageInfo, Paint, Path, PathEffect, surfaces};
 use std::sync::mpsc::{Receiver, Sender};
-use tiny_skia::Shader;
-use usvg::Tree;
 
 use crate::core::commands::ApplicationStateChangeMsg;
-use crate::core::project::{PenDetail, Project};
+use crate::core::project::Project;
 
 fn machine_coords_to_model_coords(xy: (f64, f64), origin: (f64, f64)) -> (f64, f64) {
     let x = xy.0 + origin.0;
@@ -23,11 +19,11 @@ fn machine_coords_to_model_coords(xy: (f64, f64), origin: (f64, f64)) -> (f64, f
 
 pub(crate) fn render_plot_preview(
     project: &Project,
-    gc_item: &Vec<GCode>,
+    // gc_item: &Vec<GCode>,
     extents: (f64, f64, f64, f64),
     progress: (usize, usize),
     resolution: (usize, usize),
-    state_change_out: &Sender<ApplicationStateChangeMsg>,
+    _state_change_out: &Sender<ApplicationStateChangeMsg>,
     cancel: &Receiver<()>,
 ) -> Result<ColorImage, anyhow::Error> {
     let extents = Rect::new(
@@ -121,6 +117,7 @@ pub(crate) fn render_plot_preview(
             paint.set_path_effect(PathEffect::dash(&[0.2, 0.5], 0.));
         }
         for gcode_item in gcodes {
+            // println!("GCODE: {:?}", gcode_item);
             match gcode_item.mnemonic() {
                 gcode::Mnemonic::General => {
                     px = gcode_item.value_for('X').unwrap_or(px);
@@ -128,20 +125,20 @@ pub(crate) fn render_plot_preview(
                     let xy = machine_coords_to_model_coords((px as f64, py as f64), origin);
                     let xy = (xy.0 as f32, xy.1 as f32);
 
-                    if gcode_item.major_number() == 0 || last_move == LastMove::Move {
+                    if gcode_item.major_number() == 0 {
                         paint.set_color(Color::RED);
                         path.line_to(xy);
                         last_move = LastMove::Move;
                         // path.move_to(xy);
-                    } else if gcode_item.major_number() == 1 || last_move == LastMove::Feed {
+                    } else if gcode_item.major_number() == 1 {
                         paint.set_color(Color::BLUE.with_a(128));
                         path.line_to(xy);
                         last_move = LastMove::Feed;
                     }
                 }
-                gcode::Mnemonic::Miscellaneous => last_move = LastMove::None,
-                gcode::Mnemonic::ProgramNumber => last_move = LastMove::None,
-                gcode::Mnemonic::ToolChange => last_move = LastMove::None,
+                gcode::Mnemonic::Miscellaneous => (), //last_move = LastMove::None,
+                gcode::Mnemonic::ProgramNumber => (), //last_move = LastMove::None,
+                gcode::Mnemonic::ToolChange => (),    //last_move = LastMove::None,
             }
             surface.canvas().draw_path(&path, &paint);
         }

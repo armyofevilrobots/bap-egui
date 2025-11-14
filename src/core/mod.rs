@@ -9,6 +9,7 @@ pub(crate) mod post;
 pub(crate) mod project;
 pub(crate) mod render_plot;
 pub(crate) mod render_source;
+pub(crate) mod sender;
 pub(crate) mod serial;
 
 use commands::{ApplicationStateChangeMsg, ViewCommand};
@@ -18,9 +19,9 @@ use tera::Context as TeraContext;
 
 use crate::core::project::Project;
 use crate::core::render_plot::render_plot_preview;
-use crate::sender::{PlotterCommand, PlotterConnection, PlotterResponse, PlotterState};
 use crate::view_model::view_model_patch::ViewModelPatch;
 use machine::MachineConfig;
+use sender::{PlotterCommand, PlotterConnection, PlotterResponse, PlotterState};
 
 /// The actual application core that does shit.
 ///
@@ -357,7 +358,7 @@ impl ApplicationCore {
                         };
                         let cimg = match render_plot_preview(
                             &self.project,
-                            gcode,
+                            // gcode,
                             extents,
                             (self.progress.0, self.progress.1),
                             resolution,
@@ -402,6 +403,7 @@ impl ApplicationCore {
                                 prj
                             },
                             Err(err) => {
+                                // println!("Failed to load due to {:?}", &err);
                                 self.state_change_out
                                     .send(ApplicationStateChangeMsg::Error(
                                         format!("Failed to load project file: {:?}", err).into())).expect("Failed to send error to viewmodel.");
@@ -422,11 +424,16 @@ impl ApplicationCore {
                             Some(path)=> self.project.save_to_path(&path),
                             None => self.project.save(),
                         } {
-                            ()
-                        } {
+                            self.state_change_out
+                                .send(ApplicationStateChangeMsg::ProgressMessage{
+                                    message: format!("Saved to {}", path.file_name().unwrap_or(path.as_os_str()).to_string_lossy()).into(),
+                                    percentage: 100,
+                                }).expect("Failed to send state change progress 100%");
+                            self.ctx.request_repaint();
+                        } else {
                             self.state_change_out
                                 .send(ApplicationStateChangeMsg::Error(
-                                    format!("Failed to load project file: {:?}", path_buf).into())).expect("Failed to send error to viewmodel.");
+                                    format!("Failed to save project file: {:?}", path_buf).into())).expect("Failed to send error to viewmodel.");
                             self.ctx.request_repaint();
 
                         }

@@ -10,6 +10,8 @@ use std::ops::DerefMut;
 use std::sync::mpsc::{self, TryRecvError};
 use std::time::Duration;
 const DEFAULT_TIMEOUT: u64 = 30000;
+const DEFAULT_BAUDRATE: u64 = 115200 * 2;
+const MAX_OKS_BACKLOG: usize = 3;
 
 #[derive(Debug)]
 pub enum PlotterConnectionError {
@@ -362,7 +364,8 @@ impl PlotterConnection {
                     std::thread::sleep(std::time::Duration::from_millis(100))
                 }
                 PlotterState::Running(current_line, total_lines, _oks) => {
-                    if self.oks < 5 {
+                    if self.oks < MAX_OKS_BACKLOG {
+                        // Used to be 5. Reducing for less choking?
                         match &mut self.transport {
                             Some(transport) => {
                                 // println!("Transport: {:?}", &transport);
@@ -391,6 +394,11 @@ impl PlotterConnection {
                                                 self.oks += 1;
                                             }
                                             Err(err) => {
+                                                eprintln!(
+                                                    "Plotter serial failed. Error: {:?}",
+                                                    err
+                                                );
+                                                eprintln!("\tline: {}", line);
                                                 self.set_state(PlotterState::Failed(format!(
                                                     "Failed to plot: {:?}",
                                                     err
@@ -476,7 +484,7 @@ impl TransportTypes {
         if url.scheme() == "serial" {
             let mut parts: Vec<&str> = url.path().split("@").collect();
             if parts.len() == 1 {
-                parts.push("921600"); // default to 115200 baud
+                parts.push("115200"); // default to 115200 baud
             }
             if parts.len() == 2 {
                 let path = parts[0].to_string();

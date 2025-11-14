@@ -165,22 +165,22 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
                 context.insert("ymm", &point.y);
                 // context.insert("feedrate", &machine.feedrate());
                 context.insert("feedrate", &feedrate);
-                if last_move == LastMove::Feed {
-                    program.extend(
-                        post_template
-                            .render("coords", &context)?
-                            .split("\n")
-                            .map(|s| s.to_string()),
-                    );
-                } else {
-                    program.extend(
-                        post_template
-                            .render("lineto", &context)?
-                            .split("\n")
-                            .map(|s| s.to_string()),
-                    );
-                    last_move = LastMove::Feed;
-                }
+                // if last_move == LastMove::Feed {
+                //     program.extend(
+                //         post_template
+                //             .render("coords", &context)?
+                //             .split("\n")
+                //             .map(|s| s.to_string()),
+                //     );
+                // } else {
+                program.extend(
+                    post_template
+                        .render("lineto", &context)?
+                        .split("\n")
+                        .map(|s| s.to_string()),
+                );
+                last_move = LastMove::Feed;
+                // }
                 // This should really be configurable.
                 if !pen_up && distance_down > 1500.0 {
                     distance_down = 0.;

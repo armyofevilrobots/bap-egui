@@ -2,19 +2,20 @@ use std::collections::VecDeque;
 use std::f32;
 use std::path::PathBuf;
 use std::process::exit;
-use std::sync::mpsc::{Receiver, Sender};
-use std::thread::JoinHandle;
+use std::sync::mpsc::{self, Receiver, Sender};
+use std::thread::{JoinHandle, sleep, spawn};
 use std::time::{Duration, Instant};
 
 use eframe::egui;
 use egui::{Color32, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
+use rfd::FileDialog;
 
 use crate::core::commands::{ApplicationStateChangeMsg, ViewCommand};
 
 use crate::core::machine::MachineConfig;
 use crate::core::project::{Orientation, Paper, PaperSize, PenDetail};
-use crate::sender::{PlotterResponse, PlotterState};
+use crate::core::sender::{PlotterResponse, PlotterState};
 use crate::view_model::view_model_patch::ViewModelPatch;
 pub(crate) mod command_context;
 pub(crate) mod project_ops;
@@ -316,8 +317,116 @@ impl BAPViewModel {
         }
     }
 
+    pub fn handle_file_selector(&mut self) {
+        if let Some(msg_in) = &self.file_selector {
+            match msg_in.try_recv() {
+                Ok(path_selector) => {
+                    match path_selector {
+                        FileSelector::ImportSVG(path_buf) => {
+                            self.yolo_view_command(ViewCommand::ImportSVG(path_buf))
+                        }
+                        FileSelector::OpenProject(path_buf) => {
+                            self.yolo_view_command(ViewCommand::LoadProject(path_buf))
+                        }
+                        FileSelector::SaveProjectAs(path_buf) => {
+                            self.yolo_view_command(ViewCommand::SaveProject(Some(path_buf)))
+                        }
+                        FileSelector::SaveProject => {
+                            self.yolo_view_command(ViewCommand::SaveProject(None))
+                        }
+                        FileSelector::LoadPGF(path_buf) => {
+                            self.yolo_view_command(ViewCommand::LoadPGF(path_buf))
+                        }
+                    }
+                    self.file_selector = None; // Delete it now that the command is done.
+                }
+                Err(_) => (),
+            }
+        }
+    }
+
     pub fn set_join_handle(&mut self, handle: JoinHandle<()>) {
         self.join_handle = Some(handle);
+    }
+
+    pub fn load_pgf_with_dialog(&mut self) {
+        let (tx, rx) = mpsc::channel::<FileSelector>();
+        self.file_selector = Some(rx);
+        spawn(move || {
+            let file = FileDialog::new()
+                .add_filter("pgf", &["pgf"])
+                .set_directory("")
+                .pick_file();
+            if let Some(path) = file {
+                tx.send(FileSelector::LoadPGF(path.into()))
+                    .expect("Failed to send SVG import over MPSC.");
+            }
+        });
+    }
+
+    pub fn import_svg_with_dialog(&mut self) {
+        let (tx, rx) = mpsc::channel::<FileSelector>();
+        self.file_selector = Some(rx);
+        spawn(move || {
+            let file = FileDialog::new()
+                .add_filter("svg", &["svg"])
+                .add_filter("hpgl", &["hpgl"])
+                .add_filter("wkt", &["wkt"])
+                .set_directory("")
+                .pick_file();
+            if let Some(path) = file {
+                tx.send(FileSelector::ImportSVG(path.into()))
+                    .expect("Failed to send SVG import over MPSC.");
+            }
+        });
+    }
+
+    pub fn save_project_with_dialog(&mut self) {
+        let (tx, rx) = mpsc::channel::<FileSelector>();
+        self.file_selector = Some(rx);
+        spawn(move || {
+            let file = FileDialog::new()
+                .add_filter("bap2", &["bap2"])
+                .set_directory("")
+                .save_file();
+            if let Some(path) = file {
+                tx.send(FileSelector::SaveProjectAs(path.into()))
+                    .expect("Failed to e project");
+            }
+        });
+    }
+
+    pub fn open_project_with_dialog(&mut self) {
+        let (tx, rx) = mpsc::channel::<FileSelector>();
+        self.file_selector = Some(rx);
+        spawn(move || {
+            let file = FileDialog::new()
+                .add_filter("bap2", &["bap2"])
+                .set_directory("")
+                .pick_file();
+            if let Some(path) = file {
+                tx.send(FileSelector::OpenProject(path.into()))
+                    .expect("Failed to load project");
+            }
+        });
+    }
+
+    pub fn quit(&mut self) {
+        if let Some(cmd_out) = &self.cmd_out {
+            cmd_out.send(ViewCommand::Quit).unwrap_or_else(|err| {
+                eprintln!("Failed to quit due to: {:?}. Terminating.", err);
+            })
+        };
+        if let Some(handle) = &self.join_handle {
+            let now = Instant::now();
+            while !handle.is_finished() && Instant::now() - now < Duration::from_secs(5) {
+                sleep(Duration::from_millis(200));
+                eprintln!("Waiting for CORE thread to exit...");
+            }
+        }
+
+        eprintln!("Terminating BAP.");
+        exit(-1);
     }
 
     pub fn ppp(&self) -> f32 {
@@ -769,17 +878,17 @@ impl BAPViewModel {
 
     pub fn handle_plotter_response(&mut self, plotter_response: PlotterResponse) {
         match plotter_response {
-            crate::sender::PlotterResponse::Ok(_plotter_command, _) => (),
-            crate::sender::PlotterResponse::Loaded(_msg) => self.queued_toasts.push_back(Toast {
+            PlotterResponse::Ok(_plotter_command, _) => (),
+            PlotterResponse::Loaded(_msg) => self.queued_toasts.push_back(Toast {
                 kind: ToastKind::Success,
                 text: "GCODE ready to run.".into(),
                 options: ToastOptions::default().duration_in_seconds(15.),
                 ..Default::default()
             }),
-            crate::sender::PlotterResponse::Err(plotter_command, msg) => {
+            PlotterResponse::Err(plotter_command, msg) => {
                 self.toast_error(format!("{:?} : {}", plotter_command, msg).to_string())
             }
-            crate::sender::PlotterResponse::State(plotter_state) => {
+            PlotterResponse::State(plotter_state) => {
                 self.plotter_state = plotter_state.clone();
                 // println!("Got plotter state: {:?}", plotter_state);
                 match &plotter_state {

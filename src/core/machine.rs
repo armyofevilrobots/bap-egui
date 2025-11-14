@@ -99,12 +99,12 @@ impl MachineConfig {
                 "lineto".into(),
                 "G01 F{{feedrate|round(precision=2)}} X{{xmm|round(precision=2)}} Y{{ymm|round(precision=2)}}".to_string(),
             ),
-            ("coords".into(),
-                "X{{xmm|round(precision=2)}} Y{{ymm|round(precision=2)}}".to_string()),
+            // ("coords".into(),
+            //     "X{{xmm|round(precision=2)}} Y{{ymm|round(precision=2)}}".to_string()),
             ("toolchange".into(),
                 "M600 ; Pause for change to tool {{tool_id}}".to_string()),
         ];
-        println!("Template is: {:?}", bap_post_template);
+        // println!("Template is: {:?}", bap_post_template);
         Self {
             name: "BAPv1".into(),
             post_template: Box::new(bap_post_template.clone()),

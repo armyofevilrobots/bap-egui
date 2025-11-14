@@ -17,7 +17,7 @@ use super::BAPViewModel;
 pub use super::command_context::CommandContext;
 use crate::core::machine::MachineConfig;
 use crate::core::project::{Orientation, PaperSize, PenDetail};
-use crate::sender::{PlotterResponse, PlotterState};
+use crate::core::sender::{PlotterResponse, PlotterState};
 
 impl eframe::App for BAPViewModel {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
@@ -27,31 +27,8 @@ impl eframe::App for BAPViewModel {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
         }
-        if let Some(msg_in) = &self.file_selector {
-            match msg_in.try_recv() {
-                Ok(path_selector) => {
-                    match path_selector {
-                        super::FileSelector::ImportSVG(path_buf) => {
-                            self.yolo_view_command(ViewCommand::ImportSVG(path_buf))
-                        }
-                        super::FileSelector::OpenProject(path_buf) => {
-                            self.yolo_view_command(ViewCommand::LoadProject(path_buf))
-                        }
-                        super::FileSelector::SaveProjectAs(path_buf) => {
-                            self.yolo_view_command(ViewCommand::SaveProject(Some(path_buf)))
-                        }
-                        super::FileSelector::SaveProject => {
-                            self.yolo_view_command(ViewCommand::SaveProject(None))
-                        }
-                        super::FileSelector::LoadPGF(path_buf) => {
-                            self.yolo_view_command(ViewCommand::LoadPGF(path_buf))
-                        }
-                    }
-                    self.file_selector = None; // Delete it now that the command is done.
-                }
-                Err(_) => (),
-            }
-        }
+
+        self.handle_file_selector();
 
         loop {
             let received = if let Some(msg_in) = &self.state_in {
