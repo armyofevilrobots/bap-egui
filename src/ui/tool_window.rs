@@ -24,7 +24,7 @@ pub(crate) fn floating_tool_window(
         let ofs = if model.show_rulers {
             (25.0, wtop + 49.)
         } else {
-            (0., wtop)
+            (2., wtop)
         };
         win.title_bar(false).anchor(egui::Align2::LEFT_TOP, ofs)
     };
