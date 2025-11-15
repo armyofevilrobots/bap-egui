@@ -57,6 +57,7 @@ pub enum ViewCommand {
 }
 
 #[derive(Debug, PartialEq, Default)]
+#[allow(dead_code)]
 pub enum ApplicationStateChangeMsg {
     #[default]
     Pong,

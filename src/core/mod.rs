@@ -439,7 +439,13 @@ impl ApplicationCore {
                     }
                     ViewCommand::LoadPGF(path_buf) => {
                         self.checkpoint();
-                        self.project.load_pgf(&path_buf);
+                        self.project.load_pgf(&path_buf).unwrap_or_else(|err|{
+                            self.state_change_out
+                                .send(ApplicationStateChangeMsg::Error(
+                                    format!("Failed to load project file: {:?} due to {}", path_buf, err).into())).expect("Failed to send error to viewmodel.");
+                            self.ctx.request_repaint();
+
+                        });
                         self.force_reset_extents_in_view();
                     },
                     ViewCommand::ResetProject => {

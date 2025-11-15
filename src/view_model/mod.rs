@@ -18,7 +18,7 @@ use crate::core::project::{Orientation, Paper, PaperSize, PenDetail};
 use crate::core::sender::{PlotterResponse, PlotterState};
 use crate::view_model::view_model_patch::ViewModelPatch;
 pub(crate) mod command_context;
-pub(crate) mod project_ops;
+// pub(crate) mod project_ops;
 pub(crate) mod view_model_eframe;
 pub(crate) mod view_model_patch;
 pub use command_context::CommandContext;
@@ -171,6 +171,7 @@ impl BAPViewModel {
         }
     }
 
+    #[allow(unused)]
     pub fn load_project(&mut self, path: PathBuf) {
         if let Some(cmd_out) = &self.cmd_out {
             cmd_out
@@ -512,6 +513,7 @@ impl BAPViewModel {
         }
     }
 
+    #[allow(unused)]
     pub fn set_ppp(&mut self, ppp: f32) {
         self.ppp = ppp;
         // TODO: Reload the svg preview.
@@ -810,16 +812,6 @@ impl BAPViewModel {
         let min: Pos2 = self.mm_to_frame_coords(rect.min);
         let max: Pos2 = self.mm_to_frame_coords(rect.max);
         Rect::from_min_max(min, max)
-    }
-
-    // Send a quit request to the application core.
-    pub fn request_quit(&self) {
-        if let Some(cmd_out) = &self.cmd_out {
-            cmd_out.send(ViewCommand::Quit).unwrap_or_else(|err| {
-                eprintln!("Failed to send request for updated image to core.");
-                eprintln!("ERR: {:?}", err);
-            });
-        };
     }
 
     pub fn mm_to_frame_coords(&self, mm: Pos2) -> Pos2 {

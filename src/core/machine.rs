@@ -35,6 +35,7 @@ impl MachineConfig {
         self.feedrate
     }
 
+    #[allow(dead_code)]
     pub fn set_feedrate(&mut self, feedrate: f64) {
         self.feedrate = feedrate;
     }

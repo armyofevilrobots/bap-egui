@@ -5,10 +5,8 @@ use std::sync::Mutex;
 use eframe::egui;
 use egui::{Key, Pos2};
 
-use crate::core::commands::ViewCommand;
-
 use crate::view_model::BAPViewModel;
-use crate::view_model::project_ops::project_ops;
+// use crate::view_model::project_ops::project_ops;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum CommandContext {
@@ -17,6 +15,7 @@ pub enum CommandContext {
     PenCrib,
     PenEdit(usize),   // The pen index in Vec<Pens>
     PenDelete(usize), // Delete the pen at IDX via modal confirmation
+    #[allow(unused)]
     Clip(Option<Pos2>, Option<Pos2>),
     Rotate(Option<Pos2>, Option<Pos2>, Option<Pos2>), // center, reference, angle
     Scale(f64),
@@ -48,16 +47,9 @@ impl std::fmt::Debug for SpaceCommandBranch {
         }
     }
 }
-// unsafe impl Sync for SpaceCommandBranch {}
-type SCB = SpaceCommandBranch;
 
 fn quit_fn(model: &mut BAPViewModel) {
-    if let Some(cmd_out) = &model.cmd_out {
-        cmd_out.send(ViewCommand::Quit).unwrap_or_else(|err| {
-            eprintln!("Failed to quit due to: {:?}. Terminating.", err);
-        });
-        model.quit();
-    };
+    model.quit();
 }
 
 pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {

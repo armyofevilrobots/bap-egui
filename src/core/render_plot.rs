@@ -1,4 +1,4 @@
-use super::post::LastMove;
+// use super::post::LastMove;
 use egui::ColorImage;
 // TODO: I really need to write my own that has stateful G/M codes to remember the
 // previous move type, so that just coords can be used to reduce the outgoing bitrate
@@ -65,17 +65,8 @@ pub(crate) fn render_plot_preview(
             let _line_count = mls.0.len();
             for (_idx, line) in mls.0.clone().iter().enumerate() {
                 let mut path = Path::new();
-                let mut exit = false;
-                loop {
-                    match cancel.try_recv() {
-                        Ok(_) => {
-                            exit = true;
-                        }
-                        Err(_) => break,
-                    }
-                    if exit {
-                        return Err(anyhow::anyhow!("Got a cancel on render."));
-                    }
+                if let Ok(_msg) = cancel.try_recv() {
+                    return Err(anyhow::anyhow!("Got a cancel on render."));
                 }
                 if let Some(p0) = line.0.first() {
                     path.move_to((p0.x as f32, p0.y as f32));
@@ -95,7 +86,7 @@ pub(crate) fn render_plot_preview(
     };
     let mut px = 0.;
     let mut py = 0.;
-    let mut last_move = LastMove::None;
+    // let mut last_move = LastMove::None;
     for (idx, line) in project
         .program()
         .unwrap_or_else(|| Box::new(Vec::new()))
@@ -127,12 +118,12 @@ pub(crate) fn render_plot_preview(
                     if gcode_item.major_number() == 0 {
                         paint.set_color(Color::RED);
                         path.line_to(xy);
-                        last_move = LastMove::Move;
+                        // last_move = LastMove::Move;
                         // path.move_to(xy);
                     } else if gcode_item.major_number() == 1 {
                         paint.set_color(Color::BLUE.with_a(128));
                         path.line_to(xy);
-                        last_move = LastMove::Feed;
+                        // last_move = LastMove::Feed;
                     }
                 }
                 gcode::Mnemonic::Miscellaneous => (), //last_move = LastMove::None,

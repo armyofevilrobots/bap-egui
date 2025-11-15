@@ -35,6 +35,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
             let mut pen_color32 = Color32::from_rgba_premultiplied(r, g, b, a);
 
             // Editor for the TOOL ID (this is a tracking ID, not the machine ID)
+            #[allow(deprecated)]
             ui.allocate_ui_at_rect(
                 Rect::from_min_max(pos2(0., 0.) + ofs, prect.min + vec2(250., 20.)),
                 |ui| {
@@ -55,6 +56,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
             //     },
             // );
 
+            #[allow(deprecated)]
             ui.allocate_ui_at_rect(
                 Rect::from_min_max(pos2(0., 80.) + ofs, prect.min + vec2(200., 120.)),
                 |ui| {
@@ -81,6 +83,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
             );
 
             // Create the pen color picker
+            #[allow(deprecated)]
             let _pen_color_response = ui.allocate_ui_at_rect(
                 Rect::from_min_max(pos2(0., 150.) + ofs, pos2(300.0, 250.0) + ofs),
                 |ui| {
@@ -104,6 +107,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
             );
 
             // The input for the pen width
+            #[allow(deprecated)]
             let pen_width_slider_response = ui.allocate_ui_at_rect(
                 Rect::from_min_max(pos2(0., 240.) + ofs, pos2(300.0, 270.0) + ofs),
                 |ui| {
@@ -116,6 +120,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
             );
 
             // The input for the pen density
+            #[allow(deprecated)]
             let pen_density_slider_response = ui.allocate_ui_at_rect(
                 Rect::from_min_max(pos2(0., 350.) + ofs, pos2(300.0, 380.0) + ofs),
                 |ui| {
@@ -127,6 +132,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                 },
             );
 
+            #[allow(deprecated)]
             let _ok_clicked_response = ui.allocate_ui_at_rect(
                 Rect::from_min_max(pos2(0., 400.) + ofs, pos2(390.0, 420.0) + ofs),
                 |ui| {

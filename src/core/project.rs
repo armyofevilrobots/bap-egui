@@ -197,6 +197,7 @@ pub struct Project {
 }
 
 impl Paper {
+    #[allow(unused)]
     pub fn dimensions(&self) -> (f64, f64) {
         let dims = self.size.dimensions();
         match self.orientation {
@@ -305,10 +306,12 @@ impl Project {
         self.machine.clone()
     }
 
+    #[allow(unused)]
     pub fn set_machine(&mut self, machine: Option<MachineConfig>) {
         self.machine = machine.clone()
     }
 
+    #[allow(unused)]
     pub fn valid_project(&self) -> bool {
         !(self.svg == None)
     }
@@ -322,6 +325,7 @@ impl Project {
         self.origin = origin.clone();
     }
 
+    #[allow(unused)]
     pub fn svg(&self) -> Option<String> {
         self.svg.clone()
     }
@@ -371,6 +375,7 @@ impl Project {
         self.extents = self.calc_extents();
     }
 
+    #[allow(unused)]
     fn scale_native_units(units: &str) -> f64 {
         if units == "mm" {
             1.
@@ -638,7 +643,7 @@ pub mod test {
 
     #[test]
     pub fn test_load_svg_scale_mm() {
-        if let Ok((rtree, scale_x, scale_y)) =
+        if let Ok((_rtree, scale_x, scale_y)) =
             Project::load_svg(&PathBuf::from_str("resources/test_groups_simple.svg").unwrap())
         {
             println!("SX,SY: {},{}", scale_x, scale_y);
@@ -649,7 +654,7 @@ pub mod test {
 
     #[test]
     pub fn test_load_svg_scale_default() {
-        if let Ok((rtree, scale_x, scale_y)) =
+        if let Ok((_rtree, scale_x, scale_y)) =
             Project::load_svg(&PathBuf::from_str("resources/plotter_sign_better.svg").unwrap())
         {
             println!("SX,SY: {},{}", scale_x, scale_y);

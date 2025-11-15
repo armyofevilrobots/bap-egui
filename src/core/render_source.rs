@@ -60,17 +60,8 @@ pub(crate) fn render_svg_preview(
             let _line_count = mls.0.len();
             for (_idx, line) in mls.0.clone().iter().enumerate() {
                 let mut path = Path::new();
-                let mut exit = false;
-                loop {
-                    match cancel.try_recv() {
-                        Ok(_) => {
-                            exit = true;
-                        }
-                        Err(_) => break,
-                    }
-                    if exit {
-                        return Err(anyhow::anyhow!("Got a cancel on render."));
-                    }
+                if let Ok(_msg) = cancel.try_recv() {
+                    return Err(anyhow::anyhow!("Got a cancel on render."));
                 }
                 if let Some(p0) = line.0.first() {
                     path.move_to((p0.x as f32, p0.y as f32));

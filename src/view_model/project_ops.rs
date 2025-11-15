@@ -1,6 +1,6 @@
 use super::BAPViewModel;
 
-pub trait project_ops {
+pub trait ProjectOps {
     fn save_project(&mut self); // Saves to known filename
     fn save_project_as_new(&mut self); // Save to a new file
     fn open_project(&mut self); // Open an existing project... Why the fuck am I commenting this obvious shit?!

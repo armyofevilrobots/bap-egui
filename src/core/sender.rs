@@ -14,8 +14,8 @@ const DEFAULT_BAUDRATE: u64 = 115200 * 2;
 const MAX_OKS_BACKLOG: usize = 3;
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum PlotterConnectionError {
-    #[allow(dead_code)]
     IOError(i32),
     DeviceError(String),
     ParseError(String),
@@ -50,6 +50,7 @@ pub enum PlotterCommand {
     Reset,
     Command(String),
     Shutdown,
+    #[allow(dead_code)]
     Ping,
 }
 
@@ -481,10 +482,11 @@ impl TransportTypes {
     /// open up a serial connection on the /dev/ttySomethingOrOther at 115200 bps.
     pub fn from_uri(uri: &str) -> Result<TransportTypes, PlotterConnectionError> {
         let url = url::Url::parse(uri)?;
+        let default_baudrate = format!("{}", DEFAULT_BAUDRATE).to_string();
         if url.scheme() == "serial" {
             let mut parts: Vec<&str> = url.path().split("@").collect();
             if parts.len() == 1 {
-                parts.push("115200"); // default to 115200 baud
+                parts.push(default_baudrate.as_str()); // default to 115200 baud
             }
             if parts.len() == 2 {
                 let path = parts[0].to_string();
@@ -545,7 +547,7 @@ impl PlotterTransport for TransportTypes {
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::time::Duration;
+    // use std::time::Duration;
 
     /*
     #[tests]
@@ -567,10 +569,12 @@ mod test {
         let (cmdsend, resprecv) = PlotterConnection::spawn().unwrap();
 
         // println!("Spawned");
-        cmdsend.send(PlotterCommand::Connect(
-            "serial:///dev/ttyACM0@1000000".to_string(),
-        ));
-        std::thread::sleep_ms(1000);
+        cmdsend
+            .send(PlotterCommand::Connect(
+                "serial:///dev/ttyACM0@1000000".to_string(),
+            ))
+            .unwrap();
+        std::thread::sleep(Duration::from_millis(1000));
         let program = Box::new(vec![
             "G28 X Y".to_string(),
             "M280 S5".to_string(),
@@ -587,14 +591,14 @@ mod test {
             "G0 X0 Y0".to_string(),
             "M400".to_string(),
         ]);
-        cmdsend.send(PlotterCommand::Program(program));
-        cmdsend.send(PlotterCommand::Run);
+        cmdsend.send(PlotterCommand::Program(program)).unwrap();
+        cmdsend.send(PlotterCommand::Run).unwrap();
 
         loop {
             if let Ok(resp) = resprecv.recv() {
                 // println!("Response:");
                 // println!("\t{:?}", &resp);
-                match (resp) {
+                match resp {
                     PlotterResponse::Ok(_, _) => (),
                     PlotterResponse::Loaded(_) => println!("Program loaded."),
                     PlotterResponse::Err(_, _) => break,
@@ -602,20 +606,24 @@ mod test {
                 }
             }
         }
-        cmdsend.send(PlotterCommand::Shutdown);
+        cmdsend.send(PlotterCommand::Shutdown).unwrap();
     }
 
     #[test]
     fn test_early_termination() {
         let (cmdsend, resprecv) = PlotterConnection::spawn().unwrap();
         println!("Spawned");
-        cmdsend.send(PlotterCommand::Connect(
-            "serial:///dev/ttyACM0@1000000".to_string(),
-        ));
-        std::thread::sleep_ms(1000);
-        cmdsend.send(PlotterCommand::Command("G28 X Y ;".to_string()));
+        cmdsend
+            .send(PlotterCommand::Connect(
+                "serial:///dev/ttyACM0@1000000".to_string(),
+            ))
+            .unwrap();
+        std::thread::sleep(Duration::from_millis(1000));
+        cmdsend
+            .send(PlotterCommand::Command("G28 X Y ;".to_string()))
+            .unwrap();
 
-        cmdsend.send(PlotterCommand::Shutdown);
+        cmdsend.send(PlotterCommand::Shutdown).unwrap();
         for response in resprecv {
             println!("Response:");
             println!("\t{:?}", &response);

@@ -5,12 +5,14 @@ use anyhow::Result as AnyResult;
 use anyhow::anyhow;
 use aoer_plotty_rs::optimizer::*;
 use geo::Coord;
+#[allow(deprecated)]
 use geo::EuclideanDistance;
 use geo::{Geometry, LineString, MultiLineString};
 use nalgebra::{Affine2, Matrix3};
 use tera::Context;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
+#[allow(unused)]
 pub enum LastMove {
     Move,
     Feed,
@@ -22,7 +24,8 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
     let post_template = &machine.post_template()?;
     let mut pen_up = false;
     let mut distance_down = 0.0f64; // Used to ensure we do an extra pen down periodically?
-    let mut last_move = LastMove::None;
+    // #[allow(unused)]
+    // let mut last_move = LastMove::None;
 
     let mut program: Vec<String> = Vec::new();
     program.extend(
@@ -118,7 +121,7 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
                     .split("\n")
                     .map(|s| s.to_string()),
             );
-            last_move = LastMove::Move;
+            // last_move = LastMove::Move;
 
             // Only do a pendown if we actually did a penup.
             // if machine.keepdown().is_some()
@@ -151,6 +154,7 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
             }
 
             for point in &line.0[1..] {
+                #[allow(deprecated)]
                 if pen_up == false {
                     distance_down += point.euclidean_distance(&Coord {
                         x: last_x,
@@ -179,7 +183,7 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
                         .split("\n")
                         .map(|s| s.to_string()),
                 );
-                last_move = LastMove::Feed;
+                // last_move = LastMove::Feed;
                 // }
                 // This should really be configurable.
                 if !pen_up && distance_down > 1500.0 {
@@ -267,7 +271,7 @@ mod tests {
     use super::*;
     use crate::core::project::{PenDetail, svg_to_geometries};
     use std::include_bytes;
-    use usvg::{Options, Tree};
+    // use usvg::{Options, Tree};
 
     #[test]
     fn flatten_svg_geom() {
@@ -277,7 +281,7 @@ mod tests {
         if let Ok(rtree) = usvg::Tree::from_data(svg_data, &opt) {
             let geometry = svg_to_geometries(&rtree, 1., 1., true, &vec![PenDetail::default()]);
             for geo in geometry {
-                let lines = geo.geometry.to_multi_line_strings();
+                let _lines = geo.geometry.to_multi_line_strings();
                 // println!("Lines are: {:?}", lines);
             }
         }
