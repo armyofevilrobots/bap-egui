@@ -92,17 +92,13 @@ pub(crate) fn paper_chooser_window(
                 model.command_context = crate::view_model::CommandContext::None;
             }
 
+            let mut orientation = model.paper_orientation();
             paper_chooser_combobox(model, ui);
-            ui.radio_value(
-                &mut model.paper_orientation(),
-                Orientation::Landscape,
-                "Landscape",
-            );
-            ui.radio_value(
-                &mut model.paper_orientation(),
-                Orientation::Portrait,
-                "Portrait",
-            );
+            ui.radio_value(&mut orientation, Orientation::Landscape, "Landscape");
+            ui.radio_value(&mut orientation, Orientation::Portrait, "Portrait");
+            if orientation != model.paper_orientation() {
+                model.set_paper_orientation(&orientation, true);
+            }
             let mut color_tmp = model.paper_color();
             ui.color_edit_button_srgba(&mut color_tmp);
             if color_tmp != model.paper_color() {

@@ -6,38 +6,46 @@ use crate::view_model::{BAPViewModel, CommandContext};
 // Let's try this again from scratch
 pub fn shortcut_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
     if let CommandContext::Space(mut keys) = model.command_context.clone() {
-        let mut coldata: Vec<Vec<(Key, String, bool)>> = Vec::new(); // Key, name, current?
+        let mut coldata: Vec<Vec<(Key, Vec<Key>, String, bool)>> = Vec::new(); // Key, name, current?
         let mut tree = &*SPACE_CMDS.lock().expect("Couldn't take over CMDS list");
         let pressed_keys = keys.clone();
         keys.reverse();
+        let mut stack: Vec<Key> = Vec::new();
         loop {
             let key = keys.pop();
             let mut next: Option<&SpaceCommandBranch> = None;
-            let subtree: Vec<(Key, String, bool)> = match tree {
+            let subtree: Vec<(Key, Vec<Key>, String, bool)> = match tree {
                 SpaceCommandBranch::Branch(cmds) => {
                     let ccmds = cmds;
                     ccmds
                         .iter()
                         .map(|(ckey, cmd)| {
+                            let mut stackc = stack.clone();
+                            stackc.push(ckey.clone());
                             if Some(*ckey) == key {
                                 next = Some(&cmd.1);
-                                (ckey.clone(), cmd.0.clone(), true)
+                                (ckey.clone(), stackc.clone(), cmd.0.clone(), true)
                             } else {
-                                (ckey.clone(), cmd.0.clone(), false)
+                                (ckey.clone(), stackc.clone(), cmd.0.clone(), false)
                             }
                         })
                         .collect()
                 }
                 SpaceCommandBranch::Leaf(name, _) => {
-                    vec![(Key::Pipe, name.clone(), true)]
+                    vec![(Key::Pipe, stack.clone(), name.clone(), true)]
                 }
-                SpaceCommandBranch::Stub(name) => vec![(Key::Pipe, name.clone(), true)],
+                SpaceCommandBranch::Stub(name) => {
+                    vec![(Key::Pipe, stack.clone(), name.clone(), true)]
+                }
             };
             coldata.push(subtree);
             if key.is_none() || next.is_none() {
                 break;
             } else if next.is_some() {
                 tree = next.unwrap();
+            }
+            if let Some(key) = key {
+                stack.push(key.clone());
             }
         }
         // println!("The output columns are: {:?}", coldata);
@@ -78,17 +86,22 @@ pub fn shortcut_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
                     ui.horizontal(|ui| {
                         for (idx, col) in coldata.iter().enumerate() {
                             ui.vertical(|ui| {
-                                for (key, name, selected) in col {
+                                for (key, stack, name, selected) in col {
                                     let rt = WidgetText::from(format!(
                                         "{}-{}",
                                         key.symbol_or_name(),
                                         name
                                     ));
                                     let rt = if *selected { rt.strong() } else { rt };
-                                    let _response = ui.add_enabled(
+                                    let response = ui.add_enabled(
                                         *selected || idx == (coldata.len() - 1),
                                         Link::new(rt),
                                     );
+                                    if response.clicked() {
+                                        model.command_context =
+                                            CommandContext::Space(stack.clone());
+                                        // println!("STACK: {:?}", stack);
+                                    }
                                 }
                             });
                         }

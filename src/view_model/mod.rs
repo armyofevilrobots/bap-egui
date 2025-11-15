@@ -112,6 +112,15 @@ impl BAPViewModel {
         "Bot-a-Plot"
     }
 
+    pub fn undo(&self) {
+        if let Some(cmd_out) = &self.cmd_out {
+            cmd_out.send(ViewCommand::Undo).unwrap_or_else(|err| {
+                eprintln!("Failed to undo due to: {:?}. Terminating.", err);
+                exit(-1);
+            })
+        };
+    }
+
     pub fn patch(&mut self, patch: ViewModelPatch) {
         // println!("Got patch: {:?}", patch);
         // let mut redraw = false;
@@ -964,7 +973,7 @@ impl Default for BAPViewModel {
                     stroke_width: 1.0,
                     stroke_density: 1.0,
                     feed_rate: Some(2000.0),
-                    color: csscolorparser::Color::from_rgba8(1, 0, 0, 1),
+                    color: csscolorparser::Color::from_rgba8(255, 0, 0, 255),
                 },
                 PenDetail {
                     tool_id: 3,
@@ -972,7 +981,7 @@ impl Default for BAPViewModel {
                     stroke_width: 0.25,
                     stroke_density: 0.5, // It's runny
                     feed_rate: Some(1000.0),
-                    color: csscolorparser::Color::from_rgba8(0, 0, 1, 1),
+                    color: csscolorparser::Color::from_rgba8(0, 0, 255, 255),
                 },
             ],
             undo_available: false,

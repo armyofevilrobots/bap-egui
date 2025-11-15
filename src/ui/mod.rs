@@ -58,7 +58,10 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
             let keys = keys.clone();
             match CommandContext::dispatch_space_cmd(model, &keys) {
                 SpaceCommandStatus::Dispatched(dispatched) => {
-                    model.command_context = CommandContext::None;
+                    // Special case handling for when we trigger a new command context
+                    if let CommandContext::Space(_) = model.command_context {
+                        model.command_context = CommandContext::None;
+                    }
                     model.toast_info(dispatched);
                 }
                 SpaceCommandStatus::Ongoing => (),

@@ -64,12 +64,7 @@ pub(crate) fn main_menu(model: &mut BAPViewModel, ctx: &egui::Context) -> Rect {
                     .add_enabled(model.undo_available, Button::new("Undo [u]"))
                     .clicked()
                 {
-                    if let Some(cmd_out) = &model.cmd_out {
-                        cmd_out.send(ViewCommand::Undo).unwrap_or_else(|err| {
-                            eprintln!("Failed to undo due to: {:?}. Terminating.", err);
-                            exit(-1);
-                        })
-                    };
+                    model.undo();
                 };
             });
 

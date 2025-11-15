@@ -5,6 +5,7 @@ use std::sync::Mutex;
 use eframe::egui;
 use egui::{Key, Pos2};
 
+use crate::core::project::Orientation;
 use crate::view_model::BAPViewModel;
 // use crate::view_model::project_ops::project_ops;
 
@@ -50,6 +51,16 @@ impl std::fmt::Debug for SpaceCommandBranch {
 
 fn quit_fn(model: &mut BAPViewModel) {
     model.quit();
+}
+
+fn scb_separator() -> (Key, (String, SpaceCommandBranch)) {
+    (
+        Key::Minus,
+        (
+            "--------".to_string(),
+            SpaceCommandBranch::Stub("--------".to_string()),
+        ),
+    )
 }
 
 pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
@@ -182,11 +193,55 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         ),
     );
 
-    let cmd_project = (
+    let cmd_smart_arrange = (
+        Key::S,
+        (
+            "Smart Arrange".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Smart Arrange".to_string(),
+                Box::new(|model| model.center_smart()),
+            ),
+        ),
+    );
+
+    let cmd_arrange_paper = (
         Key::P,
         (
-            "Project".to_string(),
-            SpaceCommandBranch::Branch(IndexMap::from([])),
+            "Align to paper".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Align to paper".to_string(),
+                Box::new(|model| model.center_paper()),
+            ),
+        ),
+    );
+
+    let cmd_arrange_machine = (
+        Key::M,
+        (
+            "Align to machine".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Align to machine".to_string(),
+                Box::new(|model| model.center_machine()),
+            ),
+        ),
+    );
+
+    let cmd_set_origin = (
+        Key::O,
+        (
+            "Set Origin".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Set Origin".to_string(),
+                Box::new(|model| model.command_context = CommandContext::Origin),
+            ),
+        ),
+    );
+
+    let cmd_project_undo = (
+        Key::U,
+        (
+            "Undo".to_string(),
+            SpaceCommandBranch::Leaf("Undo".to_string(), Box::new(|model| model.undo())),
         ),
     );
 
@@ -194,25 +249,97 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         Key::A,
         (
             "Arrange".to_string(),
-            SpaceCommandBranch::Branch(IndexMap::from([])),
+            SpaceCommandBranch::Branch(IndexMap::from([
+                cmd_smart_arrange,
+                cmd_arrange_machine,
+                cmd_arrange_paper,
+                scb_separator(),
+                cmd_set_origin,
+            ])),
         ),
     );
 
-    fn scb_separator() -> (Key, (String, SpaceCommandBranch)) {
+    let cmd_media_edit_paper = (
+        Key::P,
         (
-            Key::Minus,
-            (
-                "--------".to_string(),
-                SpaceCommandBranch::Stub("--------".to_string()),
+            "Edit Paper".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Edit Paper".to_string(),
+                Box::new(|model| model.command_context = CommandContext::PaperChooser),
             ),
-        )
-    }
+        ),
+    );
+
+    let cmd_media_edit_pencrib = (
+        Key::C,
+        (
+            "Pen (C)rib".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Pen (C)rib".to_string(),
+                Box::new(|model| model.command_context = CommandContext::PenCrib),
+            ),
+        ),
+    );
+
+    let cmd_media_swap_orientation = (
+        Key::O,
+        (
+            "Swap Paper Orientation".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Swap Paper Orientation".to_string(),
+                Box::new(|model| {
+                    model.paper_orientation = match model.paper_orientation {
+                        Orientation::Landscape => Orientation::Portrait,
+                        Orientation::Portrait => Orientation::Landscape,
+                    }
+                }),
+            ),
+        ),
+    );
+
+    let cmd_project_post_to_plotter = (
+        Key::O,
+        (
+            "Send to plotter".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Send to plotter".to_string(),
+                Box::new(|model| {
+                    model.request_post();
+                }),
+            ),
+        ),
+    );
+    let cmd_media = (
+        Key::M,
+        (
+            "Media".to_string(),
+            SpaceCommandBranch::Branch(IndexMap::from([
+                cmd_media_edit_paper,
+                cmd_media_edit_pencrib,
+                cmd_media_swap_orientation,
+                scb_separator(),
+            ])),
+        ),
+    );
+
+    let cmd_project = (
+        Key::P,
+        (
+            "Project".to_string(),
+            SpaceCommandBranch::Branch(IndexMap::from([
+                cmd_project_undo,
+                scb_separator(),
+                cmd_project_post_to_plotter,
+            ])),
+        ),
+    );
 
     Mutex::new(SpaceCommandBranch::Branch(IndexMap::from([
         cmd_file,
         cmd_project,
-        cmd_view,
+        cmd_media,
         cmd_arrange,
+        cmd_view,
         scb_separator(),
         cmd_quit,
     ])))
@@ -245,15 +372,6 @@ impl CommandContext {
                 SpaceCommandBranch::Leaf(_name, cmd) => {
                     cmd(model);
                     return SpaceCommandStatus::Dispatched(cmd_display);
-                    /*
-                    allkeys
-                        .clone()
-                        .iter()
-                        .map(|&k| k.symbol_or_name())
-                        .collect::<Vec<&str>>()
-                        .join("-")
-                        .to_string(),
-                        */
                 }
                 SpaceCommandBranch::Stub(_name) => {
                     break;
