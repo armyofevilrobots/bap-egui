@@ -1,14 +1,11 @@
-use std::path::PathBuf;
 use std::process::exit;
 use std::sync::mpsc::{self};
-use std::thread::spawn;
 
 use crate::BAPViewModel;
 use crate::core::commands::ViewCommand;
 use crate::view_model::FileSelector;
 use eframe::egui;
 use egui::{Button, Rect, Separator, Visuals};
-use rfd::FileDialog;
 
 pub(crate) fn main_menu(model: &mut BAPViewModel, ctx: &egui::Context) -> Rect {
     let tbp = egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {

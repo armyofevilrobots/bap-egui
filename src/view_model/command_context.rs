@@ -1,28 +1,13 @@
 use indexmap::IndexMap;
-use std::collections::HashMap;
-use std::collections::VecDeque;
-use std::path::PathBuf;
-use std::process::exit;
 use std::sync::LazyLock;
 use std::sync::Mutex;
-use std::sync::mpsc::{self};
-use std::sync::mpsc::{Receiver, Sender};
-use std::thread::JoinHandle;
-use std::thread::spawn;
-use std::time::{Duration, Instant};
 
 use eframe::egui;
-use egui::{Color32, Key, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
-use egui_toast::{Toast, ToastKind, ToastOptions};
-use rfd::FileDialog;
+use egui::{Key, Pos2};
 
-use crate::core::commands::{ApplicationStateChangeMsg, ViewCommand};
+use crate::core::commands::ViewCommand;
 
-use crate::core::machine::MachineConfig;
-use crate::core::project::{Orientation, PaperSize, PenDetail};
-use crate::core::sender::{PlotterResponse, PlotterState};
 use crate::view_model::BAPViewModel;
-use crate::view_model::FileSelector;
 use crate::view_model::project_ops::project_ops;
 
 #[derive(PartialEq, Clone, Debug)]
@@ -247,7 +232,7 @@ impl CommandContext {
     /// Returns a bool to tell the parent to either
     pub fn dispatch_space_cmd(model: &mut BAPViewModel, keys: &Vec<Key>) -> SpaceCommandStatus {
         let mut tree = &*SPACE_CMDS.lock().expect("Failed to lock space commands!");
-        let allkeys = keys.clone();
+        let _allkeys = keys.clone();
         let mut keys = keys.clone();
         let mut cmd_display = String::new();
         keys.reverse();
@@ -265,7 +250,7 @@ impl CommandContext {
                         }
                     });
                 }
-                SpaceCommandBranch::Leaf(name, cmd) => {
+                SpaceCommandBranch::Leaf(_name, cmd) => {
                     cmd(model);
                     return SpaceCommandStatus::Dispatched(cmd_display);
                     /*
@@ -278,12 +263,12 @@ impl CommandContext {
                         .to_string(),
                         */
                 }
-                SpaceCommandBranch::Stub(name) => {
+                SpaceCommandBranch::Stub(_name) => {
                     break;
                 }
             };
             // println!("KEY: {:?} NEXT: {:?}", key, next);
-            if (key.is_some() && next.is_none()) {
+            if key.is_some() && next.is_none() {
                 return SpaceCommandStatus::Invalid;
             } else if next.is_none() {
                 return SpaceCommandStatus::Ongoing;

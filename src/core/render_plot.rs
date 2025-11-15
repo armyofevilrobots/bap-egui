@@ -2,7 +2,6 @@ use super::post::LastMove;
 use egui::ColorImage;
 // TODO: I really need to write my own that has stateful G/M codes to remember the
 // previous move type, so that just coords can be used to reduce the outgoing bitrate
-use gcode::GCode;
 use geo::{Coord, Geometry, Rect};
 use skia_safe::paint::Style;
 use skia_safe::{AlphaType, Bitmap, Color, ImageInfo, Paint, Path, PathEffect, surfaces};
@@ -55,7 +54,7 @@ pub(crate) fn render_plot_preview(
     // canvas.draw_circle((0., 0.), 25., &paint);
     canvas.translate((-xofs as f32 * sx, -yofs as f32 * sy));
     canvas.scale((sx, sy));
-    let mid = extents.center();
+    let _mid = extents.center();
     for pg in &project.geometry {
         paint.set_stroke_width(0.);
         paint.set_alpha_f(0.5);
@@ -63,8 +62,8 @@ pub(crate) fn render_plot_preview(
         paint.set_path_effect(PathEffect::dash(&[0.2, 0.5], 0.));
 
         if let Geometry::MultiLineString(mls) = &pg.geometry {
-            let line_count = mls.0.len();
-            for (idx, line) in mls.0.clone().iter().enumerate() {
+            let _line_count = mls.0.len();
+            for (_idx, line) in mls.0.clone().iter().enumerate() {
                 let mut path = Path::new();
                 let mut exit = false;
                 loop {
@@ -144,10 +143,10 @@ pub(crate) fn render_plot_preview(
         }
     }
 
-    let mut context = surface.direct_context();
+    let _context = surface.direct_context();
     let mut bmap = Bitmap::new();
-    let dims = surface.image_info().dimensions().clone();
-    let result = bmap.set_info(
+    let _dims = surface.image_info().dimensions().clone();
+    let _result = bmap.set_info(
         &ImageInfo::new(
             surface.image_info().dimensions().clone(),
             skia_safe::ColorType::RGBA8888,
@@ -157,7 +156,7 @@ pub(crate) fn render_plot_preview(
         None,
     );
     bmap.alloc_pixels();
-    let result = surface.read_pixels_to_bitmap(&bmap, (0, 0));
+    let _result = surface.read_pixels_to_bitmap(&bmap, (0, 0));
     let pixels = bmap.peek_pixels().unwrap();
     let cimg: ColorImage = ColorImage::from_rgba_premultiplied(
         [pixels.width() as usize, pixels.height() as usize],

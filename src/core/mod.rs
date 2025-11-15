@@ -14,7 +14,6 @@ pub(crate) mod serial;
 
 use commands::{ApplicationStateChangeMsg, ViewCommand};
 use gcode::GCode;
-use nalgebra::{Affine2, Matrix3, Scale2, Transform2};
 use tera::Context as TeraContext;
 
 use crate::core::project::Project;
@@ -352,7 +351,7 @@ impl ApplicationCore {
                     },
                     ViewCommand::RequestPlotPreviewImage { extents, resolution } => {
                         let empty = Vec::new();
-                        let gcode = match &self.gcode{
+                        let _gcode = match &self.gcode{
                             Some(gcode)=>gcode,
                             None=>&empty,
                         };
@@ -474,7 +473,7 @@ impl ApplicationCore {
                             };
                             self.state = plotter_state.clone();
                         }
-                        PlotterResponse::Loaded(msg) => {
+                        PlotterResponse::Loaded(_msg) => {
                             // println!("MSG ON PLOTTER REPONSE LOADED: {:?}", msg);
                             self.state_change_out
                                 .send(ApplicationStateChangeMsg::PlotterResponse(

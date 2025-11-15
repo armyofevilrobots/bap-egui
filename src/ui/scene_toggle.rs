@@ -1,6 +1,6 @@
 use crate::view_model::{BAPDisplayMode, BAPViewModel};
 use eframe::egui;
-use egui::{Align, CornerRadius, FontId, Layout, RadioButton, Vec2, vec2};
+use egui::{Align, FontId, Layout, Vec2, vec2};
 
 pub(crate) fn scene_toggle(model: &mut BAPViewModel, ctx: &egui::Context) {
     egui::TopBottomPanel::top("scenechanger")

@@ -1,17 +1,7 @@
 // use crate::ui::bottom_panel::bottom_panel;
-use crate::ui::menu::main_menu;
-use crate::ui::paper_chooser::paper_chooser_window;
-use crate::ui::pen_crib::pen_crib_window;
-use crate::ui::pen_delete::pen_delete_window;
-use crate::view_model::{BAPViewModel, CommandContext, RulerOrigin};
+use crate::view_model::{BAPViewModel, RulerOrigin};
 use eframe::egui;
-use egui::Direction::BottomUp;
-use egui::epaint::PathStroke;
-use egui::{
-    Align2, Color32, FontId, Id, Key, Layout, Painter, Rect, Response, Slider, Stroke, StrokeKind,
-    Ui, pos2, vec2,
-};
-use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
+use egui::{Align2, Color32, FontId, Painter, Rect, Response, Stroke, StrokeKind, Ui, pos2, vec2};
 
 pub(crate) fn draw_rulers(
     model: &mut BAPViewModel,
@@ -63,14 +53,14 @@ pub(crate) fn draw_rulers(
 
         let right_limit = painter_resp.rect.right();
         let left_limit = painter_resp.rect.left();
-        let right_of_y_bar = painter_resp.rect.left();
+        let _right_of_y_bar = painter_resp.rect.left();
         let top_limit = painter_resp.rect.top();
         let bottom_limit = painter_resp.rect.bottom();
         let bottom_of_x_bar = painter_resp.rect.top() + 16.;
         let color = ui.visuals().text_color();
         let mm_right = model.frame_coords_to_mm(pos2(right_limit, 0.)).x;
-        let mm_left = model.frame_coords_to_mm(pos2(left_limit, 0.)).x;
-        let mm_bottom = model.frame_coords_to_mm(pos2(0., bottom_limit)).y;
+        let _mm_left = model.frame_coords_to_mm(pos2(left_limit, 0.)).x;
+        let _mm_bottom = model.frame_coords_to_mm(pos2(0., bottom_limit)).y;
         let mm_top = model.frame_coords_to_mm(pos2(0., top_limit + 16.)).y;
         let minor_inc = model.scale_mm_to_screen(vec2(ruler_minor, 0.)).x;
 
@@ -138,7 +128,7 @@ pub(crate) fn draw_rulers(
             major_y += ruler_major;
         }
 
-        let (mut major_x, mut major_y) = match model.ruler_origin {
+        let (mut major_x, major_y) = match model.ruler_origin {
             RulerOrigin::Source => (0., 0.),
             RulerOrigin::Origin => (model.origin.x, model.origin.y),
         };
@@ -209,7 +199,7 @@ pub(crate) fn draw_rulers(
         }
 
         // Done the ruler, now just an overlay in red with current position.
-        let color = ui.visuals().strong_text_color();
+        let _color = ui.visuals().strong_text_color();
         if let Some(lpos) = ctx.pointer_latest_pos() {
             painter.line_segment(
                 [pos2(lpos.x, top_limit), pos2(lpos.x, bottom_of_x_bar)],

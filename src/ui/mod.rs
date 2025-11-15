@@ -7,10 +7,7 @@ use crate::view_model::command_context::SpaceCommandStatus;
 use crate::view_model::{BAPViewModel, CommandContext};
 use eframe::egui;
 use egui::Direction::BottomUp;
-use egui::epaint::PathStroke;
-use egui::{
-    Align2, Color32, FontId, Id, Key, Layout, Rect, Slider, Stroke, StrokeKind, pos2, vec2,
-};
+use egui::{Align2, Color32, Key, Rect, Stroke, StrokeKind, pos2};
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 
 pub(crate) mod bottom_panel;
@@ -36,7 +33,7 @@ use tool_window::floating_tool_window;
 //     (mm * zoom) / PIXELS_PER_MM
 // }
 
-pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, frame: &mut eframe::Frame) {
+pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &mut eframe::Frame) {
     // Looks better on 4k montior
     ctx.set_pixels_per_point(model.ppp());
 
@@ -177,7 +174,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, frame: &m
         }
 
         // The rotation tool.
-        if let CommandContext::Rotate(center, ref1, ref2) = model.command_context {
+        if let CommandContext::Rotate(center, ref1, _ref2) = model.command_context {
             if let Some(pos) = ctx.pointer_latest_pos() {
                 let p1 = painter_resp.rect.min.clone();
                 let p2 = painter_resp.rect.max.clone();

@@ -1,23 +1,13 @@
-use std::alloc::System;
-use std::collections::VecDeque;
-use std::path::PathBuf;
 use std::process::exit;
-use std::sync::mpsc::{Receiver, Sender};
-use std::thread::JoinHandle;
-use std::time::{Duration, Instant};
 
 use eframe::egui;
-use egui::{Color32, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
+use egui::{Color32, Rect, pos2, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
 
-use crate::core::commands::{ApplicationStateChangeMsg, ViewCommand};
+use crate::core::commands::ApplicationStateChangeMsg;
 
 use super::BAPDisplayMode;
 use super::BAPViewModel;
-pub use super::command_context::CommandContext;
-use crate::core::machine::MachineConfig;
-use crate::core::project::{Orientation, PaperSize, PenDetail};
-use crate::core::sender::{PlotterResponse, PlotterState};
 
 impl eframe::App for BAPViewModel {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
@@ -54,7 +44,7 @@ impl eframe::App for BAPViewModel {
                 ApplicationStateChangeMsg::ResetDisplay => todo!(),
                 ApplicationStateChangeMsg::UpdateSourceImage {
                     image,
-                    extents: (x, y, width, height),
+                    extents: (_x, _y, _width, _height),
                 } => {
                     if let Some(handle) = &mut self.source_image_handle {
                         // println!(
@@ -142,8 +132,11 @@ impl eframe::App for BAPViewModel {
                 ApplicationStateChangeMsg::PlotterResponse(plotter_response) => {
                     self.handle_plotter_response(plotter_response);
                 }
-                ApplicationStateChangeMsg::PlotPreviewChanged { extents } => todo!(),
-                ApplicationStateChangeMsg::TransformPreviewImage { image, extents } => todo!(),
+                ApplicationStateChangeMsg::PlotPreviewChanged { extents: _ } => todo!(),
+                ApplicationStateChangeMsg::TransformPreviewImage {
+                    image: _,
+                    extents: _,
+                } => todo!(),
                 ApplicationStateChangeMsg::OriginChanged(x, y) => {
                     println!("Got new origin: {},{}", x, y);
                     self.set_origin(pos2(x as f32, y as f32), false)

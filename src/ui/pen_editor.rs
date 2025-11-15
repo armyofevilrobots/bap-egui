@@ -81,7 +81,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
             );
 
             // Create the pen color picker
-            let pen_color_response = ui.allocate_ui_at_rect(
+            let _pen_color_response = ui.allocate_ui_at_rect(
                 Rect::from_min_max(pos2(0., 150.) + ofs, pos2(300.0, 250.0) + ofs),
                 |ui| {
                     ui.horizontal(|ui| {
@@ -143,7 +143,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                 -25. + 5.0 * pen.stroke_width as f32 / 2.,
                 100.0 - (10.0 * pen.stroke_width as f32) * (15. * PI / 180.).cos() as f32,
             ); // -25. is sin(15)*100;
-            let pen_slope_left = vec2(
+            let _pen_slope_left = vec2(
                 -25. - 5.0 * pen.stroke_width as f32 / 2.,
                 -100.0 - (10.0 * pen.stroke_width as f32) * (15. * PI / 180.).cos() as f32,
             ); // -25. is sin(15)*100;
@@ -213,7 +213,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                 PathStroke::new(1., ui.visuals().text_color()),
             );
 
-            let paper_top = pen_left_tip.y + 5.;
+            let _paper_top = pen_left_tip.y + 5.;
 
             // Draw the paper.
             painter.rect(
@@ -234,7 +234,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                         pen_left_tip + vec2(0. + i as f32 * 10. / 8., 30.),
                         pen_left_tip + vec2(0. + i as f32 * 10. / 8., 80.),
                     ],
-                    PathStroke::new((11. / 8. * pen.stroke_density as f32), pen_color32.clone()),
+                    PathStroke::new(11. / 8. * pen.stroke_density as f32, pen_color32.clone()),
                 );
             }
 

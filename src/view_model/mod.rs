@@ -145,7 +145,7 @@ impl BAPViewModel {
                 None => MachineConfig::default(),
             };
         }
-        if let Some(program) = patch.program {
+        if let Some(_program) = patch.program {
             // TODO: Have the program available for editing.
         }
         if let Some(opt_file_path) = patch.file_path {
@@ -643,7 +643,7 @@ impl BAPViewModel {
     }
 
     fn cancel_render(&mut self) {
-        if let Some(timeout) = &self.timeout_for_source_image {
+        if let Some(_timeout) = &self.timeout_for_source_image {
             if let Some(cancel) = &self.cancel_render {
                 // println!("Sending cancel, dirty is... {}", self.dirty);
                 self.timeout_for_source_image = None;

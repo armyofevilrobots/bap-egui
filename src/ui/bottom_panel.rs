@@ -1,4 +1,4 @@
-use crate::{BAPViewModel, view_model::CommandContext};
+use crate::BAPViewModel;
 use eframe::egui;
 use egui::{Layout, ProgressBar};
 

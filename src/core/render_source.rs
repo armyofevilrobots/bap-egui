@@ -1,25 +1,18 @@
-use egui::{Color32, ColorImage};
-use gcode::GCode;
+use egui::ColorImage;
 use geo::{Coord, Geometry, Rect};
 use skia_safe::paint::Style;
-use skia_safe::{
-    AlphaType, Bitmap, Color, Data, EncodedImageFormat, ImageInfo, Paint, PaintStyle, Path,
-    PathEffect, Surface, surfaces,
-};
-use std::mem;
+use skia_safe::{AlphaType, Bitmap, Color, ImageInfo, Paint, Path, surfaces};
 use std::sync::mpsc::{Receiver, Sender};
-use tiny_skia::Shader;
-use usvg::Tree;
 
 use crate::core::commands::ApplicationStateChangeMsg;
 use crate::core::project::{PenDetail, Project};
-use tiny_skia::{LineCap, PathBuilder, Pixmap, Stroke, StrokeDash, Transform};
+use tiny_skia::{LineCap, PathBuilder, Pixmap, Stroke, Transform};
 
 pub(crate) fn render_svg_preview(
     project: &Project,
     extents: (f64, f64, f64, f64),
     resolution: (usize, usize),
-    state_change_out: &Sender<ApplicationStateChangeMsg>,
+    _state_change_out: &Sender<ApplicationStateChangeMsg>,
     cancel: &Receiver<()>,
 ) -> Result<ColorImage, anyhow::Error> {
     // println!("Rendering.");
@@ -52,7 +45,7 @@ pub(crate) fn render_svg_preview(
     // canvas.draw_circle((0., 0.), 25., &paint);
     canvas.translate((-xofs as f32 * sx, -yofs as f32 * sy));
     canvas.scale((sx, sy));
-    let mid = extents.center();
+    let _mid = extents.center();
     for pg in &project.geometry {
         let pen = pg.stroke.clone().unwrap_or(PenDetail::default());
         paint.set_stroke_width(pen.stroke_width as f32);
@@ -64,8 +57,8 @@ pub(crate) fn render_svg_preview(
         paint.set_path_effect(None);
 
         if let Geometry::MultiLineString(mls) = &pg.geometry {
-            let line_count = mls.0.len();
-            for (idx, line) in mls.0.clone().iter().enumerate() {
+            let _line_count = mls.0.len();
+            for (_idx, line) in mls.0.clone().iter().enumerate() {
                 let mut path = Path::new();
                 let mut exit = false;
                 loop {
@@ -89,10 +82,10 @@ pub(crate) fn render_svg_preview(
             }
         }
     }
-    let mut context = surface.direct_context();
+    let _context = surface.direct_context();
     let mut bmap = Bitmap::new();
-    let dims = surface.image_info().dimensions().clone();
-    let result = bmap.set_info(
+    let _dims = surface.image_info().dimensions().clone();
+    let _result = bmap.set_info(
         &ImageInfo::new(
             surface.image_info().dimensions().clone(),
             skia_safe::ColorType::RGBA8888,
@@ -102,7 +95,7 @@ pub(crate) fn render_svg_preview(
         None,
     );
     bmap.alloc_pixels();
-    let result = surface.read_pixels_to_bitmap(&bmap, (0, 0));
+    let _result = surface.read_pixels_to_bitmap(&bmap, (0, 0));
     let pixels = bmap.peek_pixels().unwrap();
     let cimg: ColorImage = ColorImage::from_rgba_premultiplied(
         [pixels.width() as usize, pixels.height() as usize],
@@ -136,7 +129,7 @@ pub(crate) fn _old_tiny_skia_render_svg_preview(
     );
     let mut pixmap =
         Pixmap::new(resolution.0 as u32, resolution.1 as u32).expect("Failed to create pixmap!");
-    let (xofs, yofs) = extents.min().x_y();
+    let (_xofs, _yofs) = extents.min().x_y();
     // let (_xofs, _yofs) = (xofs as f32, yofs as f32); // In case it's negative, which happens sometimes.
 
     let _stroke_width = (resolution.0 as f32 / extents.width() as f32) * 2.5;
@@ -155,7 +148,7 @@ pub(crate) fn _old_tiny_skia_render_svg_preview(
     let geo_count = &project.geometry.len();
     let mut i = 0;
     // let mut pb = PathBuilder::new();
-    let geo_len = project.geometry.len();
+    let _geo_len = project.geometry.len();
 
     for pg in &project.geometry {
         let mut pb = PathBuilder::new();

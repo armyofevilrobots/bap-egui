@@ -7,7 +7,7 @@ use egui::{Button, Color32, Frame, Grid, Id, Layout};
 pub(crate) fn pen_crib_window(model: &mut BAPViewModel, ctx: &egui::Context) {
     let mut drag_from: Option<Arc<usize>> = None;
     let mut drag_to: Option<Arc<usize>> = None;
-    let mut pen_delete: Option<usize> = None;
+    let _pen_delete: Option<usize> = None;
     egui::Modal::new(Id::new("Pen Crib")).show(ctx, |ui| {
         ui.set_width(400.);
 

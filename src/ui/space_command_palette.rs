@@ -1,4 +1,4 @@
-use egui::{Align2, Grid, Key, Link, WidgetText, Window, vec2};
+use egui::{Align2, Key, Link, WidgetText, Window, vec2};
 
 use crate::view_model::command_context::{SPACE_CMDS, SpaceCommandBranch};
 use crate::view_model::{BAPViewModel, CommandContext};
@@ -8,12 +8,12 @@ pub fn shortcut_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
     if let CommandContext::Space(mut keys) = model.command_context.clone() {
         let mut coldata: Vec<Vec<(Key, String, bool)>> = Vec::new(); // Key, name, current?
         let mut tree = &*SPACE_CMDS.lock().expect("Couldn't take over CMDS list");
-        let mut pressed_keys = keys.clone();
+        let pressed_keys = keys.clone();
         keys.reverse();
         loop {
             let key = keys.pop();
             let mut next: Option<&SpaceCommandBranch> = None;
-            let mut subtree: Vec<(Key, String, bool)> = match tree {
+            let subtree: Vec<(Key, String, bool)> = match tree {
                 SpaceCommandBranch::Branch(cmds) => {
                     let ccmds = cmds;
                     ccmds
@@ -85,7 +85,7 @@ pub fn shortcut_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
                                         name
                                     ));
                                     let rt = if *selected { rt.strong() } else { rt };
-                                    let response = ui.add_enabled(
+                                    let _response = ui.add_enabled(
                                         *selected || idx == (coldata.len() - 1),
                                         Link::new(rt),
                                     );

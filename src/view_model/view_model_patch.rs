@@ -2,10 +2,8 @@ use std::path::PathBuf;
 
 use crate::core::{
     machine::MachineConfig,
-    project::{Orientation, Paper, PenDetail, Project},
+    project::{Paper, PenDetail, Project},
 };
-
-use super::BAPViewModel;
 
 #[derive(Default, Clone, Debug, PartialEq)]
 pub(crate) struct ViewModelPatch {

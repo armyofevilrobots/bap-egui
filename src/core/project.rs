@@ -1,14 +1,12 @@
 use crate::core::machine::MachineConfig;
 use anyhow::{Result, anyhow};
 use aoer_plotty_rs::context::operation::OPLayer;
-use gcode::GCode;
 // use aoer_plotty_rs::geo_types::hatch::Hatches;
 pub use aoer_plotty_rs::context::pgf_file::*;
 pub use aoer_plotty_rs::plotter::pen::PenDetail;
 use geo::algorithm::bounding_rect::BoundingRect;
-use geo::prelude::MapCoords;
-use geo::{Coord, Geometry, LineString, MultiLineString, Point, Rect, Rotate, coord};
-use nalgebra::{Affine2, Matrix3, Point2};
+use geo::{Geometry, LineString, MultiLineString, Point, Rect, Rotate, coord};
+use nalgebra::{Affine2, Matrix3};
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 use std::ffi::OsString;
@@ -432,7 +430,7 @@ impl Project {
         ) {
             // println!("PARSED! {:?}", xmltree.root());
             let rtree = usvg::Tree::from_xmltree(&xmltree, &opt)?;
-            let rsize = rtree.size().clone();
+            let _rsize = rtree.size().clone();
             // let rsize = rtree.view_box.rect.clone();
             for child in xmltree
                 .root()
@@ -441,7 +439,7 @@ impl Project {
             {
                 if let Some(width) = child.attribute("width") {
                     // println!("WIDTH IS: {:?} and rsize is {:?}", width, rsize);
-                    if let Some((value, units)) = Self::dims_from_dimattr(width) {
+                    if let Some((_value, _units)) = Self::dims_from_dimattr(width) {
                         // println!("Values, Units: {},{}", &value, &units);
                         // scale_x = (value / rsize.width() as f64) * Self::scale_native_units(units);
                         // println!("ScaleX is now: {}", scale_x);
@@ -470,7 +468,7 @@ impl Project {
             Some(pen_detail) => pen_detail.clone(),
             None => PenDetail::default(),
         };
-        for (idx, geometry) in self.geometry.iter_mut().enumerate() {
+        for (_idx, geometry) in self.geometry.iter_mut().enumerate() {
             let new_stroke_pen = if geometry.stroke.is_some() {
                 if let Some(current_stroke_pen) = geometry.stroke.clone() {
                     match pen_crib.get(current_stroke_pen.tool_id - 1) {

@@ -1,12 +1,6 @@
-use std::f64::consts::PI;
+use egui::Id;
 
-use csscolorparser::Color;
-use egui::{Color32, Id, Layout, Rect, Slider, Stroke, StrokeKind, epaint::PathStroke, pos2, vec2};
-
-use crate::{
-    core::project::PenDetail,
-    view_model::{BAPViewModel, CommandContext},
-};
+use crate::view_model::{BAPViewModel, CommandContext};
 
 pub fn pen_delete_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx: usize) {
     egui::Modal::new(Id::new("DeletePen")).show(ctx, |ui| {

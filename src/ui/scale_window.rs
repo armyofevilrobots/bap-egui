@@ -1,12 +1,7 @@
 // use crate::ui::bottom_panel::bottom_panel;
-use crate::ui::menu::main_menu;
-use crate::ui::paper_chooser::paper_chooser_window;
-use crate::ui::pen_crib::pen_crib_window;
 use crate::view_model::{BAPViewModel, CommandContext};
 use eframe::egui;
-use egui::Direction::BottomUp;
-use egui::{Align2, Color32, Id, Key, Layout, Rect, Slider, Stroke, StrokeKind, pos2};
-use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
+use egui::{Id, Layout, Slider};
 
 pub(crate) fn scale_window(
     model: &mut BAPViewModel,
@@ -21,7 +16,7 @@ pub(crate) fn scale_window(
         if let CommandContext::Scale(factor) = &mut model.command_context {
             ui.add(
                 Slider::new(factor, 0.01..=100.0)
-                    .custom_formatter(|val, range| format!("{:0.1}%", val * 100.0))
+                    .custom_formatter(|val, _range| format!("{:0.1}%", val * 100.0))
                     .logarithmic(true)
                     .text("Percent"),
             );
