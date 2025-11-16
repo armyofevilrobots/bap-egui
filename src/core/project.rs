@@ -1,4 +1,5 @@
 use crate::core::machine::MachineConfig;
+use crate::core::post::GeometryToMultiLineString;
 use anyhow::{Result, anyhow};
 use aoer_plotty_rs::context::operation::OPLayer;
 // use aoer_plotty_rs::geo_types::hatch::Hatches;
@@ -520,7 +521,23 @@ impl Project {
     pub fn load_pgf(&mut self, path: &PathBuf) -> Result<()> {
         if let Ok(path) = std::fs::canonicalize(path) {
             let pgf: PGF = PGF::from_file(&path)?;
-            self.geometry = pgf.geometries();
+
+            let mut tmp_geo = pgf.geometries();
+            tmp_geo.sort_by(|item1, item2| {
+                let s1 = item1.stroke.clone().unwrap_or(PenDetail::default());
+                let s2 = item2.stroke.clone().unwrap_or(PenDetail::default());
+                s1.tool_id.cmp(&s2.tool_id)
+            });
+
+            for geo in &tmp_geo {
+                println!(
+                    "GEO- Tool: {:?}, Lines: {}",
+                    &geo.stroke,
+                    geo.geometry.to_multi_line_strings().0.len()
+                );
+            }
+
+            self.geometry = tmp_geo;
 
             self.regenerate_extents();
         }

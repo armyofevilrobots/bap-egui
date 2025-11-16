@@ -72,6 +72,7 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
         1.,
     ));
 
+    let mut last_tool: usize = 0;
     for geometry in &project.geometry {
         let geo_lines = geometry
             .transformed(&tx_affine2)
@@ -81,13 +82,26 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
             machine.keepdown().unwrap_or(1.0),
             OptimizationStrategy::Greedy,
         );
-        let feedrate = geometry
-            .stroke
-            .clone()
-            .unwrap_or(PenDetail::default())
-            .feed_rate
-            .unwrap_or(machine.feedrate());
+        let pen = geometry.stroke.clone().unwrap_or(PenDetail::default());
+        let feedrate = pen.feed_rate.unwrap_or(machine.feedrate());
         let geo_lines = opt.optimize(&geo_lines);
+        if pen.tool_id != last_tool {
+            last_tool = pen.tool_id;
+            let mut context = Context::new();
+            context.insert("tool_id", &pen.tool_id);
+            program.extend(
+                post_template
+                    .render("penup", &context)?
+                    .split("\n")
+                    .map(|s| s.to_string()),
+            );
+            program.extend(
+                post_template
+                    .render("toolchange", &context)?
+                    .split("\n")
+                    .map(|s| s.to_string()),
+            );
+        }
         for line in geo_lines {
             let mut context = Context::new();
             if let Some(height) = machine.skim() {
