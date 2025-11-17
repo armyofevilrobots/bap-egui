@@ -1,5 +1,4 @@
 use crate::core::machine::MachineConfig;
-use crate::core::post::GeometryToMultiLineString;
 use anyhow::{Result, anyhow};
 use aoer_plotty_rs::context::operation::OPLayer;
 // use aoer_plotty_rs::geo_types::hatch::Hatches;

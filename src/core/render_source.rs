@@ -1,5 +1,5 @@
 use egui::ColorImage;
-use geo::{BoundingRect, Coord, Geometry, Point, Rect, Rotate};
+use geo::{Coord, Geometry, Rect};
 use skia_safe::paint::Style;
 use skia_safe::{AlphaType, Bitmap, Color, ImageInfo, Paint, Path, surfaces};
 use std::sync::mpsc::{Receiver, Sender};

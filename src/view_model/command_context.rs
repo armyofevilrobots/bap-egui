@@ -131,7 +131,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         ),
     );
 
-    let cmd_file_project = (
+    let _cmd_file_project = (
         Key::P,
         (
             "Project".to_string(),

@@ -50,11 +50,11 @@ fn main() -> eframe::Result<()> {
                 tmp_svg_image,
                 egui::TextureOptions::NEAREST,
             );
-            let tex2 = tex.clone();
+            // let tex2 = tex.clone();
             model.source_image_handle = Some(Box::new(tex));
-            model.overlay_image_handle = Some(Box::new(tex2));
             model.source_image_extents = None;
-            model.overlay_image_extents = None;
+            // model.overlay_image_handle = Some(Box::new(tex2));
+            // model.overlay_image_extents = None;
             model.set_origin(pos2(0., 0.), false);
             model.update_pen_details();
             model.set_paper_color(&Color32::WHITE, false);

@@ -261,7 +261,7 @@ pub(crate) fn floating_tool_window(
                         }
                     });
                 if cb_resp.response.changed() {
-                    println!("Got a change on serial selector.");
+                    //println!("Got a change on serial selector.");
                     match model.plotter_state {
                         PlotterState::Disconnected => model.current_port = last_port.clone(),
                         _ => (),

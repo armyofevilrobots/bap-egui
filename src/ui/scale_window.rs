@@ -14,7 +14,7 @@ pub(crate) fn scale_window(
         ui.heading("Scale by factor");
 
         if let CommandContext::Scale(factor) = &mut model.command_context {
-            let mut tmp_factor = (*factor * 100.0f64);
+            let mut tmp_factor = *factor * 100.0f64;
             ui.add(
                 Slider::new(&mut tmp_factor, 0.1..=1000.0)
                     .custom_formatter(|val, _range| format!("{:0.1}%", val))

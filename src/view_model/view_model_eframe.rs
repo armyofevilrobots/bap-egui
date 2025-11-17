@@ -47,14 +47,14 @@ impl eframe::App for BAPViewModel {
                 ApplicationStateChangeMsg::UpdateSourceImage {
                     image,
                     extents: (x, y, width, height),
-                    rotation: opt_rot,
+                    rotation: _opt_rot,
                 } => {
                     if let Some(handle) = &mut self.source_image_handle {
                         //println!(
                         // "Got incoming extents with image: {},{},{}w,{}h",
                         // x, y, width, height
                         // );
-                        let tmp_source_image_extents = Some(Rect::from_min_size(
+                        let _tmp_source_image_extents = Some(Rect::from_min_size(
                             pos2(x as f32, y as f32),
                             vec2(width as f32, height as f32),
                         ));

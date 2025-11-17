@@ -7,7 +7,7 @@ use std::thread::{JoinHandle, sleep, spawn};
 use std::time::{Duration, Instant};
 
 use eframe::egui;
-use egui::{Color32, ColorImage, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
+use egui::{Color32, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
 use rfd::FileDialog;
 
@@ -50,11 +50,10 @@ pub struct BAPViewModel {
     pub progress: Option<(String, usize)>,
     pub file_selector: Option<Receiver<FileSelector>>,
     pub source_image_handle: Option<Box<TextureHandle>>,
-    pub overlay_image_handle: Option<Box<TextureHandle>>,
+    // pub overlay_image_handle: Option<Box<TextureHandle>>,
     pub source_image_extents: Option<Rect>, // Again, this is in mm, and needs conversion before display.
-    pub overlay_image_extents: Option<Rect>, // Again, this is in mm, and needs conversion before display.
+    // pub overlay_image_extents: Option<Rect>, // Again, this is in mm, and needs conversion before display.
     pub timeout_for_source_image: Option<Instant>,
-    pub timeout_for_overlay_image: Option<Instant>,
     dirty: bool, // If we request a new image while one is already rendering, we set this so that it retries right after.
     pub look_at: Pos2, // What coordinate is currently at the center of the screen
     pub center_coords: Pos2, // Where in the window (cursor) is the center of the view
@@ -141,8 +140,9 @@ impl BAPViewModel {
     }
 
     /// Takes a given bounding box (extents) and calculates how big it would be if rotated d degrees.
+    #[allow(unused)]
     pub fn calc_rotated_bounding_box(around: Pos2, angle: f32, r: Rect) -> Rect {
-        let points = vec![
+        let _points = vec![
             rotate_pos2_around_pos2(r.left_top(), around, angle),
             rotate_pos2_around_pos2(r.right_top(), around, angle),
             rotate_pos2_around_pos2(r.right_bottom(), around, angle),
@@ -151,17 +151,18 @@ impl BAPViewModel {
         todo!()
     }
 
+    #[allow(unused)]
     pub fn set_command_context(&mut self, ctx: CommandContext) {
         self.command_context = ctx;
-        if self.overlay_image_extents.is_some() {
-            // Do the clearing of any stateful crap.
-            if let Some(handle) = &mut self.overlay_image_handle {
-                let tmp_image = ColorImage::filled([2, 2], Color32::TRANSPARENT);
-                handle.set(tmp_image, egui::TextureOptions::LINEAR);
-            };
-            self.overlay_image_extents = None;
-            self.timeout_for_overlay_image = None;
-        }
+        // if self.overlay_image_extents.is_some() {
+        //     // Do the clearing of any stateful crap.
+        //     if let Some(handle) = &mut self.overlay_image_handle {
+        //         let tmp_image = ColorImage::filled([2, 2], Color32::TRANSPARENT);
+        //         handle.set(tmp_image, egui::TextureOptions::LINEAR);
+        //     };
+        //     self.overlay_image_extents = None;
+        //     self.timeout_for_overlay_image = None;
+        // }
     }
 
     pub fn undo(&self) {
@@ -1061,9 +1062,9 @@ impl Default for BAPViewModel {
             undo_available: false,
             file_path: None,
             ruler_origin: RulerOrigin::Source,
-            overlay_image_handle: None,
-            overlay_image_extents: None,
-            timeout_for_overlay_image: None,
+            // overlay_image_handle: None,
+            // overlay_image_extents: None,
+            // timeout_for_overlay_image: None,
             last_pointer_pos: None,
         }
     }
