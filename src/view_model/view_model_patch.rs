@@ -19,6 +19,7 @@ pub(crate) struct ViewModelPatch {
 impl From<Project> for ViewModelPatch {
     fn from(project: Project) -> Self {
         let extents = project.extents();
+        println!("Patching with extents: {:?}", extents);
         Self {
             pens: Some(project.pens.clone()),
             paper: Some(project.paper.clone()),

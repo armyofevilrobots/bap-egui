@@ -104,7 +104,7 @@ impl MachineConfig {
             //     "X{{xmm|round(precision=2)}} Y{{ymm|round(precision=2)}}".to_string()),
             ("toolchange".into(),
                 //"M600 ; Pause for change to tool {{tool_id}}".to_string()),
-                "M06 T{{tool_id}}".to_string())
+                format!("M280 S{}\nG0 X115 Y230\nM06 T{{tool_id}}", &bap_top).to_string())
         ];
         // println!("Template is: {:?}", bap_post_template);
         Self {

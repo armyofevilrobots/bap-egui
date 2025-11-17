@@ -2,6 +2,7 @@ use std::process::exit;
 
 use eframe::egui;
 use egui::{Color32, Rect, pos2, vec2};
+use egui::{Pos2, Vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
 
 use crate::core::commands::ApplicationStateChangeMsg;
@@ -11,6 +12,7 @@ use super::BAPViewModel;
 
 impl eframe::App for BAPViewModel {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        self.last_pointer_pos = ctx.pointer_hover_pos();
         if let Some(handle) = &self.join_handle {
             if handle.is_finished() {
                 eprintln!("Core thread died! Bailing out.");
@@ -44,22 +46,33 @@ impl eframe::App for BAPViewModel {
                 ApplicationStateChangeMsg::ResetDisplay => todo!(),
                 ApplicationStateChangeMsg::UpdateSourceImage {
                     image,
-                    extents: (_x, _y, _width, _height),
+                    extents: (x, y, width, height),
+                    rotation: opt_rot,
                 } => {
                     if let Some(handle) = &mut self.source_image_handle {
-                        // println!(
-                        //     "Got incoming extents with image: {},{},{}w,{}h",
-                        //     x, y, width, height
-                        // );
-                        // let tmp_source_image_extents = Some(Rect::from_min_size(
-                        //     pos2(x as f32, y as f32),
-                        //     vec2(width as f32, height as f32),
-                        // ));
-                        // println!(
-                        //     "Incoming extents are : {:?} and known extents are: {:?}",
-                        //     tmp_source_image_extents, self.source_image_extents
-                        // );
+                        println!(
+                            "Got incoming extents with image: {},{},{}w,{}h",
+                            x, y, width, height
+                        );
+                        let tmp_source_image_extents = Some(Rect::from_min_size(
+                            pos2(x as f32, y as f32),
+                            vec2(width as f32, height as f32),
+                        ));
+                        println!(
+                            "Incoming extents are : {:?} and known extents are: {:?}",
+                            tmp_source_image_extents, self.source_image_extents
+                        );
                         handle.set(image, egui::TextureOptions::LINEAR);
+                        self.source_image_extents = Some(Rect::from_min_size(
+                            Pos2 {
+                                x: x as f32,
+                                y: y as f32,
+                            },
+                            Vec2 {
+                                x: width as f32,
+                                y: height as f32,
+                            },
+                        ));
                     }
                     // self.dirty = false;
                     self.timeout_for_source_image = None;

@@ -231,7 +231,7 @@ impl Project {
     }
 
     /// Rotates all geometry around a given point.
-    pub fn rotate_geometry_around_point(&mut self, center: (f64, f64), degrees: f64) {
+    pub fn rotate_geometry_around_point_mut(&mut self, center: (f64, f64), degrees: f64) {
         for geometry in &mut self.geometry {
             geometry
                 .geometry
@@ -284,6 +284,8 @@ impl Project {
             return match ron::de::from_reader::<File, Self>(project_rdr) {
                 Ok(mut prj) => {
                     prj.file_path = Some(path);
+                    prj.calc_extents();
+                    println!("Calced extents are: {:?}", prj.extents());
                     Ok(prj)
                 }
                 Err(err) => {
@@ -322,7 +324,7 @@ impl Project {
     }
 
     pub fn set_origin(&mut self, origin: &Option<(f64, f64)>) {
-        println!("Setting origin.");
+        // println!("Setting origin.");
         self.origin = origin.clone();
     }
 
@@ -335,8 +337,64 @@ impl Project {
         self.extents.clone()
     }
 
+    pub fn rotate_geometry_around_point(
+        &self,
+        around: (f64, f64),
+        angle: f64,
+    ) -> Vec<PlotGeometry> {
+        let (xc, yc) = around;
+        self.geometry
+            .iter()
+            .map(|pg| {
+                let new_geo = pg.geometry.rotate_around_point(angle, Point::new(xc, yc));
+                PlotGeometry {
+                    geometry: new_geo,
+                    stroke: pg.stroke.clone(),
+                    keepdown_strategy: pg.keepdown_strategy.clone(),
+                }
+            })
+            .collect()
+    }
+
+    pub fn calc_extents_for_geometry(geometry: &Vec<PlotGeometry>) -> Rect {
+        if geometry.len() == 0 {
+            return Rect::new(coord! {x: -1., y: -1.}, coord! {x: 1., y: 1.});
+        }
+        let mut xmin = f64::MAX;
+        let mut xmax = f64::MIN;
+        let mut ymin = f64::MAX;
+        let mut ymax = f64::MIN;
+        for geo in geometry {
+            // Only update extents if the geometry is rational and non-empty.
+            if let Some(tmp_extents) = geo.geometry.bounding_rect() {
+                if tmp_extents.min().x < xmin {
+                    xmin = tmp_extents.min().x;
+                }
+                if tmp_extents.min().y < ymin {
+                    ymin = tmp_extents.min().y;
+                }
+                if tmp_extents.max().x > xmax {
+                    xmax = tmp_extents.max().x;
+                }
+                if tmp_extents.max().y > ymax {
+                    ymax = tmp_extents.max().y;
+                }
+            }
+        }
+        if xmax - xmin == 0. || ymax - ymin == 0. {
+            xmin = -1.;
+            ymin = -1.;
+            xmax = 1.;
+            ymax = 1.;
+        }
+        let extents = Rect::new(coord! {x: xmin, y:ymin}, coord! {x:xmax, y: ymax});
+        // println!("Returning calculated extents of {:?}", &extents);
+        extents
+    }
+
     /// Returns top left, bottom right as 4 f64s.
     pub fn calc_extents(&self) -> Rect {
+        /*
         if self.geometry.len() == 0 {
             return Rect::new(coord! {x: -1., y: -1.}, coord! {x: 1., y: 1.});
         }
@@ -370,6 +428,8 @@ impl Project {
         let extents = Rect::new(coord! {x: xmin, y:ymin}, coord! {x:xmax, y: ymax});
         // println!("Returning calculated extents of {:?}", &extents);
         extents
+        */
+        Self::calc_extents_for_geometry(&self.geometry)
     }
 
     pub fn regenerate_extents(&mut self) {
@@ -522,22 +582,12 @@ impl Project {
         if let Ok(path) = std::fs::canonicalize(path) {
             let pgf: PGF = PGF::from_file(&path)?;
 
-            let mut tmp_geo = pgf.geometries();
-            tmp_geo.sort_by(|item1, item2| {
+            self.geometry = pgf.geometries();
+            self.geometry.sort_by(|item1, item2| {
                 let s1 = item1.stroke.clone().unwrap_or(PenDetail::default());
                 let s2 = item2.stroke.clone().unwrap_or(PenDetail::default());
                 s1.tool_id.cmp(&s2.tool_id)
             });
-
-            for geo in &tmp_geo {
-                println!(
-                    "GEO- Tool: {:?}, Lines: {}",
-                    &geo.stroke,
-                    geo.geometry.to_multi_line_strings().0.len()
-                );
-            }
-
-            self.geometry = tmp_geo;
 
             self.regenerate_extents();
         }

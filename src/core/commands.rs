@@ -17,8 +17,10 @@ pub enum ViewCommand {
     Ping,
     // ZoomView(f64), // Measured in pixels per mm. The view will calculate exactly how big.
     RequestSourceImage {
-        extents: (f64, f64, f64, f64),
-        resolution: (usize, usize),
+        //     extents: (f64, f64, f64, f64),
+        zoom: f64,
+        // resolution: (usize, usize),
+        rotation: Option<((f64, f64), f64)>,
     },
     RequestPlotPreviewImage {
         extents: (f64, f64, f64, f64),
@@ -64,6 +66,7 @@ pub enum ApplicationStateChangeMsg {
     UpdateSourceImage {
         image: ColorImage,             // The image to draw.
         extents: (f64, f64, f64, f64), //Min.x, Min.y, width, height
+        rotation: Option<((f64, f64), f64)>,
     },
     TransformPreviewImage {
         image: ColorImage,

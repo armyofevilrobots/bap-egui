@@ -1,5 +1,5 @@
 use egui::ColorImage;
-use geo::{Coord, Geometry, Rect};
+use geo::{BoundingRect, Coord, Geometry, Point, Rect, Rotate};
 use skia_safe::paint::Style;
 use skia_safe::{AlphaType, Bitmap, Color, ImageInfo, Paint, Path, surfaces};
 use std::sync::mpsc::{Receiver, Sender};
@@ -10,26 +10,41 @@ use tiny_skia::{LineCap, PathBuilder, Pixmap, Stroke, Transform};
 
 pub(crate) fn render_svg_preview(
     project: &Project,
-    extents: (f64, f64, f64, f64),
-    resolution: (usize, usize),
+    // extents: (f64, f64, f64, f64),
+    // resolution: (usize, usize),
+    zoom: f64,
+    rotate: Option<((f64, f64), f64)>,
     _state_change_out: &Sender<ApplicationStateChangeMsg>,
     cancel: &Receiver<()>,
-) -> Result<ColorImage, anyhow::Error> {
+) -> Result<(ColorImage, Rect), anyhow::Error> {
     // println!("Rendering.");
-    let extents = Rect::new(
-        Coord {
-            x: extents.0,
-            y: extents.1,
-        },
-        Coord {
-            x: extents.2 + extents.0,
-            y: extents.3 + extents.1,
-        },
+    // let mut extents = Rect::new(
+    //     Coord {
+    //         x: extents.0,
+    //         y: extents.1,
+    //     },
+    //     Coord {
+    //         x: extents.2 + extents.0,
+    //         y: extents.3 + extents.1,
+    //     },
+    // );
+
+    let (extents, geo) = if let Some(((xc, yc), rot)) = &rotate {
+        let geo = project.rotate_geometry_around_point((*xc, *yc), *rot);
+        (Project::calc_extents_for_geometry(&geo), geo)
+    } else {
+        (project.extents(), project.geometry.clone())
+    };
+
+    let resolution = (
+        (zoom * extents.width().ceil()) as usize,
+        (zoom * extents.height().ceil()) as usize,
     );
+
     let (xofs, yofs) = extents.min().x_y();
-    // let (_xofs, _yofs) = (xofs as f32, yofs as f32); // In case it's negative, which happens sometimes.
 
     let _stroke_width = (resolution.0 as f32 / extents.width() as f32) * 2.5;
+    // TODO: This resolution needs to be scaled if we have rotated.
     let sx = resolution.0 as f32 / extents.width() as f32;
     let sy = resolution.1 as f32 / extents.height() as f32;
     let mut surface =
@@ -46,7 +61,7 @@ pub(crate) fn render_svg_preview(
     canvas.translate((-xofs as f32 * sx, -yofs as f32 * sy));
     canvas.scale((sx, sy));
     let _mid = extents.center();
-    for pg in &project.geometry {
+    for pg in &geo {
         let pen = pg.stroke.clone().unwrap_or(PenDetail::default());
         paint.set_stroke_width(pen.stroke_width as f32);
         paint.set_alpha_f(pen.stroke_density as f32);
@@ -57,6 +72,7 @@ pub(crate) fn render_svg_preview(
         paint.set_path_effect(None);
 
         if let Geometry::MultiLineString(mls) = &pg.geometry {
+            //&pg.geometry {
             let _line_count = mls.0.len();
             for (_idx, line) in mls.0.clone().iter().enumerate() {
                 let mut path = Path::new();
@@ -92,7 +108,7 @@ pub(crate) fn render_svg_preview(
         [pixels.width() as usize, pixels.height() as usize],
         pixels.bytes().expect("Failed to get pixels!"),
     );
-    Ok(cimg)
+    Ok((cimg, extents))
 }
 
 pub(crate) fn _old_tiny_skia_render_svg_preview(

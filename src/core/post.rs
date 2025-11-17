@@ -1,3 +1,5 @@
+use std::usize;
+
 use crate::core::project::PenDetail;
 
 use super::project::Project;
@@ -72,7 +74,7 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
         1.,
     ));
 
-    let mut last_tool: usize = 0;
+    let mut last_tool: usize = usize::MAX;
     for geometry in &project.geometry {
         let geo_lines = geometry
             .transformed(&tx_affine2)
@@ -83,6 +85,7 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
             OptimizationStrategy::Greedy,
         );
         let pen = geometry.stroke.clone().unwrap_or(PenDetail::default());
+        // println!("Geo with pen id {}", pen.tool_id);
         let feedrate = pen.feed_rate.unwrap_or(machine.feedrate());
         let geo_lines = opt.optimize(&geo_lines);
         if pen.tool_id != last_tool {

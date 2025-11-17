@@ -7,7 +7,7 @@ use std::thread::{JoinHandle, sleep, spawn};
 use std::time::{Duration, Instant};
 
 use eframe::egui;
-use egui::{Color32, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
+use egui::{Color32, ColorImage, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
 use rfd::FileDialog;
 
@@ -50,8 +50,11 @@ pub struct BAPViewModel {
     pub progress: Option<(String, usize)>,
     pub file_selector: Option<Receiver<FileSelector>>,
     pub source_image_handle: Option<Box<TextureHandle>>,
+    pub overlay_image_handle: Option<Box<TextureHandle>>,
     pub source_image_extents: Option<Rect>, // Again, this is in mm, and needs conversion before display.
+    pub overlay_image_extents: Option<Rect>, // Again, this is in mm, and needs conversion before display.
     pub timeout_for_source_image: Option<Instant>,
+    pub timeout_for_overlay_image: Option<Instant>,
     dirty: bool, // If we request a new image while one is already rendering, we set this so that it retries right after.
     pub look_at: Pos2, // What coordinate is currently at the center of the screen
     pub center_coords: Pos2, // Where in the window (cursor) is the center of the view
@@ -84,6 +87,7 @@ pub struct BAPViewModel {
     pub undo_available: bool,
     pub file_path: Option<PathBuf>,
     pub ruler_origin: RulerOrigin,
+    last_pointer_pos: Option<Pos2>,
 }
 
 pub trait IsPos2Able {
@@ -107,9 +111,57 @@ pub enum RulerOrigin {
     Source,
 }
 
+impl RulerOrigin {
+    pub fn toggle(&self) -> Self {
+        match self {
+            RulerOrigin::Origin => RulerOrigin::Source,
+            RulerOrigin::Source => RulerOrigin::Origin,
+        }
+    }
+}
+
+fn rotate_pos2(pos: Pos2, angle: f32) -> Pos2 {
+    Pos2::new(
+        pos.x * angle.cos() - pos.y * angle.sin(),
+        pos.y * angle.cos() + pos.x * angle.sin(),
+    )
+}
+
+/// Helper that rotates a point around another point.
+fn rotate_pos2_around_pos2(pos: Pos2, around: Pos2, angle: f32) -> Pos2 {
+    let tmp_pos = (pos - around).to_pos2();
+    let tmp_pos = rotate_pos2(tmp_pos, angle);
+    let tmp_pos = tmp_pos + around.to_vec2();
+    tmp_pos
+}
+
 impl BAPViewModel {
     pub fn name() -> &'static str {
         "Bot-a-Plot"
+    }
+
+    /// Takes a given bounding box (extents) and calculates how big it would be if rotated d degrees.
+    pub fn calc_rotated_bounding_box(around: Pos2, angle: f32, r: Rect) -> Rect {
+        let points = vec![
+            rotate_pos2_around_pos2(r.left_top(), around, angle),
+            rotate_pos2_around_pos2(r.right_top(), around, angle),
+            rotate_pos2_around_pos2(r.right_bottom(), around, angle),
+            rotate_pos2_around_pos2(r.left_bottom(), around, angle),
+        ];
+        todo!()
+    }
+
+    pub fn set_command_context(&mut self, ctx: CommandContext) {
+        self.command_context = ctx;
+        if self.overlay_image_extents.is_some() {
+            // Do the clearing of any stateful crap.
+            if let Some(handle) = &mut self.overlay_image_handle {
+                let tmp_image = ColorImage::filled([2, 2], Color32::TRANSPARENT);
+                handle.set(tmp_image, egui::TextureOptions::LINEAR);
+            };
+            self.overlay_image_extents = None;
+            self.timeout_for_overlay_image = None;
+        }
     }
 
     pub fn undo(&self) {
@@ -319,7 +371,7 @@ impl BAPViewModel {
         if let Some(cmd_out) = &self.cmd_out {
             self.origin = origin;
             if create_history {
-                println!("Sending vm origin {:?}", origin);
+                // println!("Sending vm origin {:?}", origin);
                 cmd_out
                     .send(ViewCommand::SetOrigin(origin.x as f64, origin.y as f64))
                     .expect("Failed to send ORIGIN command?");
@@ -696,11 +748,7 @@ impl BAPViewModel {
                 self.cancel_render();
             }
         }
-        if self.dirty && self.timeout_for_source_image.is_none()
-        // && ((contains_pointer && self.display_mode() == BAPDisplayMode::Plot)
-        //     || self.display_mode() == BAPDisplayMode::SVG)
-        {
-            // println!("Requesting image for {:?}", self.display_mode);
+        if self.dirty && self.timeout_for_source_image.is_none() {
             if let Some(extents) = self.source_image_extents {
                 let cmd_extents = (
                     extents.left() as f64,
@@ -710,6 +758,11 @@ impl BAPViewModel {
                 );
                 if let Some(sender) = &self.cmd_out {
                     let pixel_size_rect = self.mm_rect_to_screen_rect(extents);
+                    let zoom = if pixel_size_rect.width() > pixel_size_rect.height() {
+                        (pixel_size_rect.width().ceil() * self.ppp()) / extents.width()
+                    } else {
+                        (pixel_size_rect.height().ceil() * self.ppp()) / extents.height()
+                    };
                     let ratio = pixel_size_rect.aspect_ratio();
                     let mut resolution = (
                         (self.ppp() * pixel_size_rect.width().ceil()) as usize,
@@ -721,6 +774,23 @@ impl BAPViewModel {
                         resolution = ((((MAX_SIZE as f32) * ratio) as usize), MAX_SIZE);
                     }
 
+                    let rotation: Option<((f64, f64), f64)> =
+                        if let CommandContext::Rotate(Some(center_mm), Some(ref1_mm), _second) =
+                            &self.command_context
+                            && let Some(pos) = self.last_pointer_pos
+                        {
+                            // stuff.
+                            let ref2_mm = self.frame_coords_to_mm(pos);
+                            // model.command_context =
+                            //     CommandContext::Rotate(Some(center_mm), Some(ref1_mm), Some(ref2_mm));
+                            let vec_a = *ref1_mm - *center_mm;
+                            let vec_b = ref2_mm - *center_mm;
+                            let degrees = BAPViewModel::degrees_between_two_vecs(vec_a, vec_b);
+                            Some(((center_mm.x as f64, center_mm.y as f64), degrees as f64))
+                        } else {
+                            None
+                        };
+
                     if let Some(handle) = &self.source_image_handle {
                         let hs = handle.size();
                         // println!("Self::hs {:?}", hs);
@@ -731,8 +801,10 @@ impl BAPViewModel {
                                     BAPDisplayMode::SVG => {
                                         // println!("REQUESTING SVG PREVIEW!");
                                         ViewCommand::RequestSourceImage {
-                                            extents: cmd_extents,
-                                            resolution: resolution,
+                                            // extents: cmd_extents,
+                                            zoom: zoom as f64,
+                                            // resolution: resolution,
+                                            rotation,
                                         }
                                     }
                                     BAPDisplayMode::Plot => {
@@ -756,8 +828,10 @@ impl BAPViewModel {
                             //);
                             sender
                                 .send(ViewCommand::RequestSourceImage {
-                                    extents: cmd_extents,
-                                    resolution: resolution,
+                                    // extents: cmd_extents,
+                                    zoom: zoom as f64,
+                                    // resolution: resolution,
+                                    rotation: None,
                                 })
                                 .unwrap_or_else(|err| {
                                     eprintln!("Failed to send request for updated image to core.");
@@ -987,6 +1061,35 @@ impl Default for BAPViewModel {
             undo_available: false,
             file_path: None,
             ruler_origin: RulerOrigin::Source,
+            overlay_image_handle: None,
+            overlay_image_extents: None,
+            timeout_for_overlay_image: None,
+            last_pointer_pos: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::f32::consts::PI;
+
+    use super::*;
+
+    #[test]
+    pub fn test_rotate_pos2() {
+        let p = Pos2::new(1., 0.);
+        let p2 = rotate_pos2(p, 180. * PI / 180.);
+        println!("P2->{}", p2);
+    }
+
+    #[test]
+    pub fn test_rotate_pos2_around_pos2() {
+        let p = Pos2::new(2., 0.);
+
+        let around = Pos2::new(1., 0.);
+        let p2 = rotate_pos2_around_pos2(p, around, 90. * PI / 180.);
+        println!("A90- P->{}, AROUND->{}, P2->{}", p, around, p2);
+        let p2 = rotate_pos2_around_pos2(p, around, 180. * PI / 180.);
+        println!("A180- P->{}, AROUND->{}, P2->{}", p, around, p2);
     }
 }

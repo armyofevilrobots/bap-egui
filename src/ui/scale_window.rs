@@ -14,12 +14,14 @@ pub(crate) fn scale_window(
         ui.heading("Scale by factor");
 
         if let CommandContext::Scale(factor) = &mut model.command_context {
+            let mut tmp_factor = (*factor * 100.0f64);
             ui.add(
-                Slider::new(factor, 0.01..=100.0)
-                    .custom_formatter(|val, _range| format!("{:0.1}%", val * 100.0))
+                Slider::new(&mut tmp_factor, 0.1..=1000.0)
+                    .custom_formatter(|val, _range| format!("{:0.1}%", val))
                     .logarithmic(true)
                     .text("Percent"),
             );
+            *factor = tmp_factor / 100.;
         }
         if let CommandContext::Scale(factor) = model.command_context {
             ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {

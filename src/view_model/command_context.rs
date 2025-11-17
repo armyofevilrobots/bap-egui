@@ -79,10 +79,32 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
     let cmd_project_open = (
         Key::O,
         (
-            "Open".to_string(),
+            "Open Project".to_string(),
             SpaceCommandBranch::Leaf(
-                "Open".to_string(),
+                "Open Project".to_string(),
                 Box::new(|model| model.open_project_with_dialog()),
+            ),
+        ),
+    );
+
+    let cmd_load_pgf = (
+        Key::G,
+        (
+            "Load PGF".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Load PGF".to_string(),
+                Box::new(|model| model.load_pgf_with_dialog()),
+            ),
+        ),
+    );
+
+    let cmd_import_svg = (
+        Key::V,
+        (
+            "Import SVG".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Import SVG".to_string(),
+                Box::new(|model| model.import_svg_with_dialog()),
             ),
         ),
     );
@@ -90,9 +112,9 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
     let cmd_project_saveas = (
         Key::A,
         (
-            "Save As".to_string(),
+            "Save Project As".to_string(),
             SpaceCommandBranch::Leaf(
-                "Save As".to_string(),
+                "Save Project As".to_string(),
                 Box::new(|model| model.save_project_with_dialog()),
             ),
         ),
@@ -101,9 +123,9 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
     let cmd_project_save = (
         Key::S,
         (
-            "Save".to_string(),
+            "Save Project".to_string(),
             SpaceCommandBranch::Leaf(
-                "Save".to_string(),
+                "Save Project".to_string(),
                 Box::new(|model| model.save_project(None)),
             ),
         ),
@@ -114,9 +136,9 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         (
             "Project".to_string(),
             SpaceCommandBranch::Branch(IndexMap::from([
-                cmd_project_open,
-                cmd_project_save,
-                cmd_project_saveas,
+                //cmd_project_open,
+                //cmd_project_save,
+                //cmd_project_saveas,
             ])),
         ),
     );
@@ -125,7 +147,17 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         Key::F,
         (
             "File".to_string(),
-            SpaceCommandBranch::Branch(IndexMap::from([cmd_file_project])),
+            SpaceCommandBranch::Branch(IndexMap::from([
+                // cmd_file_project,
+                cmd_project_open,
+                cmd_project_save,
+                cmd_project_saveas,
+                scb_separator(),
+                cmd_load_pgf,
+                cmd_import_svg,
+                scb_separator(),
+                cmd_quit,
+            ])),
         ),
     );
 
@@ -147,6 +179,18 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             ),
         ),
     );
+
+    let cmd_view_zero_rulers = (
+        Key::Z,
+        (
+            "Zero rulers to...".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Zero rulers to...".to_string(),
+                Box::new(|model| model.ruler_origin = model.ruler_origin.toggle()),
+            ),
+        ),
+    );
+
     let cmd_view_extents = (
         Key::E,
         (
@@ -186,6 +230,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 cmd_zoom_all,
                 scb_separator(),
                 cmd_view_rulers,
+                cmd_view_zero_rulers,
                 cmd_view_extents,
                 cmd_view_machine,
                 cmd_view_paper,
@@ -245,6 +290,36 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         ),
     );
 
+    let cmd_scale_factor = (
+        Key::F,
+        (
+            "Scale by factor".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Scale by factor".to_string(),
+                Box::new(|model| model.command_context = CommandContext::Scale(1.)),
+            ),
+        ),
+    );
+
+    let cmd_rotate = (
+        Key::R,
+        (
+            "Rotate".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Rotate".to_string(),
+                Box::new(|model| model.command_context = CommandContext::Rotate(None, None, None)),
+            ),
+        ),
+    );
+
+    let cmd_scale = (
+        Key::S,
+        (
+            "Scale".to_string(),
+            SpaceCommandBranch::Branch(IndexMap::from([cmd_scale_factor])),
+        ),
+    );
+
     let cmd_arrange = (
         Key::A,
         (
@@ -255,6 +330,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 cmd_arrange_paper,
                 scb_separator(),
                 cmd_set_origin,
+                scb_separator(),
             ])),
         ),
     );
@@ -309,6 +385,19 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             ),
         ),
     );
+    let cmd_edit = (
+        Key::E,
+        (
+            "Edit".to_string(),
+            SpaceCommandBranch::Branch(IndexMap::from([
+                cmd_project_undo,
+                scb_separator(),
+                cmd_scale,
+                cmd_rotate,
+            ])),
+        ),
+    );
+
     let cmd_media = (
         Key::M,
         (
@@ -326,22 +415,17 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         Key::P,
         (
             "Project".to_string(),
-            SpaceCommandBranch::Branch(IndexMap::from([
-                cmd_project_undo,
-                scb_separator(),
-                cmd_project_post_to_plotter,
-            ])),
+            SpaceCommandBranch::Branch(IndexMap::from([cmd_project_post_to_plotter])),
         ),
     );
 
     Mutex::new(SpaceCommandBranch::Branch(IndexMap::from([
         cmd_file,
+        cmd_edit,
         cmd_project,
         cmd_media,
         cmd_arrange,
         cmd_view,
-        scb_separator(),
-        cmd_quit,
     ])))
 });
 

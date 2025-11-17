@@ -202,6 +202,8 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
 
                     // Then we draw the live arc and second ref, if available...
                     if let Some(ref1_mm) = ref1 {
+                        // println!("We have an initial ref... Request new image?");
+                        model.request_new_source_image();
                         let ref_circle_rad =
                             (center_as_frame - model.mm_to_frame_coords(ref1_mm)).length();
                         let ref2_vec = (pos - model.mm_to_frame_coords(center_pos)).normalized()

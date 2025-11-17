@@ -209,26 +209,40 @@ impl ApplicationCore {
                         self.ctx.request_repaint();
                     }
                     ViewCommand::RequestSourceImage {
-                        extents,
-                        resolution,
+                        // extents,
+                        zoom,
+                        // resolution,
+                        rotation,
                     } => {
-                        let cimg = match render_source::render_svg_preview(
+                        let (cimg, extents_out) = match render_source::render_svg_preview(
                             &self.project,
-                            extents,
-                            resolution,
+                            // extents,
+                            zoom,
+                            // resolution,
+                            rotation.clone(),
                             &self.state_change_out,
-                            &self.cancel_render
+                            &self.cancel_render,
                         ) {
-                            Ok(cimg) => Some(cimg),
-                            Err(_) => None,
+                            Ok((cimg, xo)) => {
+                                eprintln!("Rendered CIMG of {:?}", cimg.size);
+                                (Some(cimg), (xo.min().x, xo.min().y, xo.width(), xo.height()))
+                            },
+                            Err(err) => {
+                                eprintln!("Error rendering source image: {:?}", err);
+                                let min_x = self.project.extents().min().x;
+                                let min_y = self.project.extents().min().y;
+
+                                (None, (min_x, min_y, self.project.extents().width(), self.project.extents().height()))
+                            },
                         };
 
                         if let Some(cimg) = cimg{
-                            self.last_render = Some((cimg.clone(), extents.clone()));
+                            self.last_render = Some((cimg.clone(), extents_out.clone()));
                             self.state_change_out
                                 .send(ApplicationStateChangeMsg::UpdateSourceImage {
                                     image: cimg,
-                                    extents,
+                                    extents: extents_out,
+                                    rotation: rotation.clone(),
                                 })
                                 .unwrap_or_else(|_err| {
                                     self.shutdown = true;
@@ -259,7 +273,7 @@ impl ApplicationCore {
                         self.checkpoint();
                         // println!("Rotating source data around {},{} by {} degrees", center.0, center.1, degrees);
                         // println!("PRE EXTENTS: {:?}", self.project.extents());
-                        self.project.rotate_geometry_around_point(center, degrees);
+                        self.project.rotate_geometry_around_point_mut(center, degrees);
                         // println!("POST EXTENTS: {:?}", self.project.extents());
                         self.force_reset_extents_in_view();
                         // println!("POST RESEND EXTENTS: {:?}", self.project.extents());
@@ -374,6 +388,7 @@ impl ApplicationCore {
                                 .send(ApplicationStateChangeMsg::UpdateSourceImage {
                                     image: cimg,
                                     extents,
+                                    rotation: None,
                                 })
                                 .unwrap_or_else(|_err| {
                                     self.shutdown = true;

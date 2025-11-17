@@ -157,7 +157,7 @@ impl PlotterConnection {
                     .expect("Cannot send OK result");
             }
             PlotterCommand::Connect(conn_detail) => {
-                println!("!connect");
+                // println!("!connect");
                 self.set_state(PlotterState::Connecting(conn_detail.clone()))
                     .expect("Cannot set to connecting?");
                 match TransportTypes::from_uri(conn_detail.as_str()) {
@@ -190,7 +190,7 @@ impl PlotterConnection {
                             .expect("Failed to set state?");
                     }
                 }
-                println!("Done connect wait.");
+                // println!("Done connect wait.");
             }
             PlotterCommand::Disconnect => match self.state {
                 PlotterState::Ready => {
