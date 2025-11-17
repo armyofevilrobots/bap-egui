@@ -374,11 +374,11 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
     );
 
     let cmd_project_post_to_plotter = (
-        Key::O,
+        Key::P,
         (
-            "Send to plotter".to_string(),
+            "Post to plotter".to_string(),
             SpaceCommandBranch::Leaf(
-                "Send to plotter".to_string(),
+                "Post to plotter".to_string(),
                 Box::new(|model| {
                     model.request_post();
                 }),

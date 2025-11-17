@@ -129,7 +129,7 @@ impl PlotterConnection {
             match tx.read_line(&mut banner) {
                 Ok(count) => {
                     if count == 0usize {
-                        println!("EOF");
+                        eprintln!("EOF");
                         return Err(anyhow!("EOF"));
                     } else {
                         if banner.starts_with("ok") {
@@ -151,7 +151,7 @@ impl PlotterConnection {
         // println!("ON_RECV: {:?}", &message);
         match message {
             PlotterCommand::Ping => {
-                println!("PING!");
+                //println!("PING!");
                 self.send
                     .send(PlotterResponse::Ok(message.clone(), "PONG!".to_string()))
                     .expect("Cannot send OK result");
@@ -178,7 +178,7 @@ impl PlotterConnection {
                         }
                     }
                     Err(err) => {
-                        println!("Failed to connect: {:?}", &err);
+                        eprintln!("Failed to connect: {:?}", &err);
                         self.transport = None;
                         self.send
                             .send(PlotterResponse::Err(
@@ -278,7 +278,7 @@ impl PlotterConnection {
                 }
             },
             PlotterCommand::Reset => {
-                println!("Got reset.");
+                eprintln!("Got serial connection reset.");
                 self.transport = None;
                 self.set_state(PlotterState::Disconnected)
                     .expect("Cannot send disconnected state to parent thread");
@@ -347,7 +347,7 @@ impl PlotterConnection {
                 Err(err) => match err {
                     TryRecvError::Empty => (),
                     TryRecvError::Disconnected => {
-                        println!("Socket disconnected?!");
+                        eprintln!("Plotter socket disconnected?!");
                         self.set_state(PlotterState::Dead)
                             .expect("Cannot send DEAD state to parent thread");
                     }
@@ -408,10 +408,10 @@ impl PlotterConnection {
                                             }
                                         }
                                     } else {
-                                        println!("No lines left.");
+                                        eprintln!("No lines left. Done plot.");
                                     }
                                 } else {
-                                    println!("Program done?!");
+                                    eprintln!("Program done? Nothing to plot.");
                                 }
                             }
                             None => {
@@ -457,13 +457,15 @@ impl PlotterConnection {
                     break;
                 }
                 PlotterState::Dead => {
-                    println!("Died!");
+                    eprintln!(
+                        "Plot sender died! I either lost my receiver, or some other unrecoverable error."
+                    );
                     break; // I died or lost my receiver, so bailing out.
                 }
                 PlotterState::Busy => std::thread::sleep(std::time::Duration::from_millis(100)),
             }
         }
-        println!("Exited plot connection runner.");
+        eprintln!("Exited plot connection runner.");
     }
 }
 

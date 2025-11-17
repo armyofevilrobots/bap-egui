@@ -411,7 +411,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                                 model.command_context = CommandContext::None;
                             }
                         } else if *pkey == Key::Space && *pressed {
-                            println!("SPACE MODE");
+                            // println!("SPACE MODE");
                             if model.command_context == CommandContext::None {
                                 model.command_context = CommandContext::Space(vec![]);
                             }

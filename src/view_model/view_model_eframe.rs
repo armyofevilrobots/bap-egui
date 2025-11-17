@@ -50,18 +50,18 @@ impl eframe::App for BAPViewModel {
                     rotation: opt_rot,
                 } => {
                     if let Some(handle) = &mut self.source_image_handle {
-                        println!(
-                            "Got incoming extents with image: {},{},{}w,{}h",
-                            x, y, width, height
-                        );
+                        //println!(
+                        // "Got incoming extents with image: {},{},{}w,{}h",
+                        // x, y, width, height
+                        // );
                         let tmp_source_image_extents = Some(Rect::from_min_size(
                             pos2(x as f32, y as f32),
                             vec2(width as f32, height as f32),
                         ));
-                        println!(
-                            "Incoming extents are : {:?} and known extents are: {:?}",
-                            tmp_source_image_extents, self.source_image_extents
-                        );
+                        //println!(
+                        //     "Incoming extents are : {:?} and known extents are: {:?}",
+                        //     tmp_source_image_extents, self.source_image_extents
+                        // );
                         handle.set(image, egui::TextureOptions::LINEAR);
                         self.source_image_extents = Some(Rect::from_min_size(
                             Pos2 {
@@ -151,7 +151,7 @@ impl eframe::App for BAPViewModel {
                     extents: _,
                 } => todo!(),
                 ApplicationStateChangeMsg::OriginChanged(x, y) => {
-                    println!("Got new origin: {},{}", x, y);
+                    // println!("Got new origin: {},{}", x, y);
                     self.set_origin(pos2(x as f32, y as f32), false)
                 }
                 ApplicationStateChangeMsg::UndoAvailable(is_avail) => {
@@ -159,7 +159,7 @@ impl eframe::App for BAPViewModel {
                     self.undo_available = is_avail
                 }
                 ApplicationStateChangeMsg::PaperChanged(paper) => {
-                    println!("Got a new paper of: {:?}", paper);
+                    // println!("Got a new paper of: {:?}", paper);
                     self.set_paper_color(
                         &Color32::from_rgb(
                             (255.0 * paper.rgb.0 as f32).min(255.).max(0.) as u8,

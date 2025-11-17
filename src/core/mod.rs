@@ -123,12 +123,12 @@ impl ApplicationCore {
 
     fn send_project_origin(&mut self) {
         if let Some(origin) = self.project.origin {
-            println!("Sending project origin: {:?}", self.project.origin);
+            // println!("Sending project origin: {:?}", self.project.origin);
             self.state_change_out
                 .send(ApplicationStateChangeMsg::OriginChanged(origin.0, origin.1))
                 .expect("Cannot send error message. Dead?");
         } else {
-            println!("Project has no origin to send!");
+            eprintln!("Project has no origin to send!");
         };
     }
 
@@ -224,7 +224,7 @@ impl ApplicationCore {
                             &self.cancel_render,
                         ) {
                             Ok((cimg, xo)) => {
-                                eprintln!("Rendered CIMG of {:?}", cimg.size);
+                                // eprintln!("Rendered CIMG of {:?}", cimg.size);
                                 (Some(cimg), (xo.min().x, xo.min().y, xo.width(), xo.height()))
                             },
                             Err(err) => {
@@ -407,7 +407,7 @@ impl ApplicationCore {
                     ViewCommand::Undo => self.undo(),
                     ViewCommand::SetPaper(paper) => {
                         self.checkpoint();
-                        println!("Setting project paper to: {:?}", paper);
+                        // println!("Setting project paper to: {:?}", paper);
                         self.project.paper = paper
                     },
                     ViewCommand::LoadProject(path_buf) => {

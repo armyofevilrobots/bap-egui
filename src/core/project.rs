@@ -285,7 +285,7 @@ impl Project {
                 Ok(mut prj) => {
                     prj.file_path = Some(path);
                     prj.calc_extents();
-                    println!("Calced extents are: {:?}", prj.extents());
+                    // println!("Calced extents are: {:?}", prj.extents());
                     Ok(prj)
                 }
                 Err(err) => {
