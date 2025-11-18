@@ -9,9 +9,10 @@ use std::num::ParseIntError;
 use std::ops::DerefMut;
 use std::sync::mpsc::{self, TryRecvError};
 use std::time::Duration;
+
 const DEFAULT_TIMEOUT: u64 = 30000;
 const DEFAULT_BAUDRATE: u64 = 115200 * 2;
-const MAX_OKS_BACKLOG: usize = 3;
+const MAX_OKS_BACKLOG: usize = 8;
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -372,7 +373,7 @@ impl PlotterConnection {
                                 // println!("Transport: {:?}", &transport);
                                 if let Some(program) = &self.program {
                                     if let Some(line) = program.get(current_line as usize).clone() {
-                                        if line.to_uppercase().trim().starts_with("M06") {
+                                        if line.to_uppercase().trim().starts_with("$M06") {
                                             self.set_state(PlotterState::Paused(
                                                 current_line + 1,
                                                 total_lines,

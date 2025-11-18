@@ -19,6 +19,7 @@ use crate::core::sender::{PlotterResponse, PlotterState};
 use crate::view_model::view_model_patch::ViewModelPatch;
 pub(crate) mod command_context;
 // pub(crate) mod project_ops;
+pub(crate) mod space_commands;
 pub(crate) mod view_model_eframe;
 pub(crate) mod view_model_patch;
 pub use command_context::CommandContext;
@@ -971,7 +972,13 @@ impl BAPViewModel {
                     PlotterState::Running(lines, oflines, _) => {
                         // println!("Received running stanza: {:?}", plotter_state);
                         self.progress = Some((
-                            format!("Plotting: {}/{} GCODE commands", lines, oflines).to_string(),
+                            format!(
+                                "Plotting: {}/{} @{:2}%",
+                                lines,
+                                oflines,
+                                ((lines * 100) as f32 / *oflines as f32).floor() as usize
+                            )
+                            .to_string(),
                             ((lines * 100) / oflines) as usize,
                         ));
                         if self.timeout_for_source_image.is_none() {

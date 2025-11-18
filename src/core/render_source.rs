@@ -8,6 +8,10 @@ use crate::core::commands::ApplicationStateChangeMsg;
 use crate::core::project::{PenDetail, Project};
 use tiny_skia::{LineCap, PathBuilder, Pixmap, Stroke, Transform};
 
+const MAX_TEXTURE_SIZE: usize = 8192; // Maximum size in any dimension of the preview images.
+// This can never be more than 16384. That's the max
+// size of the underlying EGUI framework.
+
 pub(crate) fn render_svg_preview(
     project: &Project,
     // extents: (f64, f64, f64, f64),
@@ -17,18 +21,6 @@ pub(crate) fn render_svg_preview(
     _state_change_out: &Sender<ApplicationStateChangeMsg>,
     cancel: &Receiver<()>,
 ) -> Result<(ColorImage, Rect), anyhow::Error> {
-    // println!("Rendering.");
-    // let mut extents = Rect::new(
-    //     Coord {
-    //         x: extents.0,
-    //         y: extents.1,
-    //     },
-    //     Coord {
-    //         x: extents.2 + extents.0,
-    //         y: extents.3 + extents.1,
-    //     },
-    // );
-
     let (extents, geo) = if let Some(((xc, yc), rot)) = &rotate {
         let geo = project.rotate_geometry_around_point((*xc, *yc), *rot);
         (Project::calc_extents_for_geometry(&geo), geo)
@@ -36,10 +28,30 @@ pub(crate) fn render_svg_preview(
         (project.extents(), project.geometry.clone())
     };
 
-    let resolution = (
+    let mut resolution = (
         (zoom * extents.width().ceil()) as usize,
         (zoom * extents.height().ceil()) as usize,
     );
+
+    // Cut the render size for fast rotation
+    if rotate.is_some() {
+        resolution = (resolution.0 / 2, resolution.1 / 2);
+    }
+
+    if resolution.0 > MAX_TEXTURE_SIZE {
+        let ratio = resolution.0 as f32 / MAX_TEXTURE_SIZE as f32;
+        resolution = (
+            (resolution.0 as f32 / ratio) as usize,
+            (resolution.1 as f32 / ratio) as usize,
+        );
+    }
+    if resolution.1 > MAX_TEXTURE_SIZE {
+        let ratio = resolution.1 as f32 / MAX_TEXTURE_SIZE as f32;
+        resolution = (
+            (resolution.0 as f32 / ratio) as usize,
+            (resolution.1 as f32 / ratio) as usize,
+        );
+    }
 
     let (xofs, yofs) = extents.min().x_y();
 

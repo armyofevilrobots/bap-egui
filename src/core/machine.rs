@@ -13,6 +13,34 @@ pub struct MachineConfig {
 }
 
 impl MachineConfig {
+    pub fn set_post_template(&mut self, post_template: &Vec<(String, String)>) {
+        self.post_template = Box::new(post_template.clone())
+    }
+
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+
+    #[allow(dead_code)]
+    pub fn set_feedrate(&mut self, feedrate: f64) {
+        self.feedrate = feedrate;
+    }
+
+    #[allow(dead_code)]
+    pub fn set_limits(&mut self, limits: (f64, f64)) {
+        self.limits = limits;
+    }
+
+    #[allow(dead_code)]
+    pub fn set_keepdown(&mut self, keepdown: Option<f64>) {
+        self.keepdown = keepdown
+    }
+
+    #[allow(dead_code)]
+    pub fn set_skim(&mut self, skim: Option<f64>) {
+        self.skim = skim
+    }
+
     pub fn post_template(&self) -> AnyResult<Tera> {
         let mut tera = Tera::default();
         tera.add_raw_templates(self.post_template.clone().into_iter())?;
@@ -33,11 +61,6 @@ impl MachineConfig {
 
     pub fn feedrate(&self) -> f64 {
         self.feedrate
-    }
-
-    #[allow(dead_code)]
-    pub fn set_feedrate(&mut self, feedrate: f64) {
-        self.feedrate = feedrate;
     }
 
     pub fn bapv1() -> Self {
@@ -104,16 +127,17 @@ impl MachineConfig {
             //     "X{{xmm|round(precision=2)}} Y{{ymm|round(precision=2)}}".to_string()),
             ("toolchange".into(),
                 //"M600 ; Pause for change to tool {{tool_id}}".to_string()),
-                format!("M280 S{}\nG0 X115 Y230\nM06 T{{tool_id}}", &bap_top).to_string())
+                format!("M280 S{}\nG0 X115 Y230\n$M06 T{{tool_id}}", &bap_top).to_string())
         ];
         // println!("Template is: {:?}", bap_post_template);
         Self {
             name: "BAPv1".into(),
             post_template: Box::new(bap_post_template.clone()),
             skim: Some(10.),
-            keepdown: Some(0.5),
+            keepdown: Some(0.0),
             limits: (235., 235.),
             feedrate: 1200.,
+            // emulate_m06: true,
         }
     }
 }
