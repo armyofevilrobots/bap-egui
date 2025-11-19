@@ -105,6 +105,20 @@ pub(crate) fn floating_tool_window(
                             // model.pen_crib_open = true;
                             model.command_context = CommandContext::PenCrib;
                         };
+
+                        if tool_button(
+                            ui,
+                            egui::include_image!("../../resources/images/machine_icon.png"),
+                            Some("Edit Machine/Post".into()),
+                            true,
+                        )
+                        .clicked()
+                        {
+                            // model.pen_crib_open = true;
+                            model.command_context =
+                                CommandContext::MachineEdit(Some(model.machine_config.clone()));
+                        };
+
                         if tool_button(
                             ui,
                             egui::include_image!("../../resources/images/print.png"),
@@ -126,6 +140,7 @@ pub(crate) fn floating_tool_window(
                                 ..Default::default()
                             });
                         };
+                        ui.end_row();
                         if tool_button(
                             ui,
                             egui::include_image!("../../resources/images/zoom_fit.png"),
@@ -136,7 +151,6 @@ pub(crate) fn floating_tool_window(
                         {
                             model.zoom_fit();
                         };
-                        ui.end_row();
                     });
 
                 // ui.collapsing("Alignment", |ui| {

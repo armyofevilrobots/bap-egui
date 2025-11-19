@@ -1,3 +1,4 @@
+use crate::ui::machine::machine_editor_window;
 // use crate::ui::bottom_panel::bottom_panel;
 use crate::ui::menu::main_menu;
 use crate::ui::paper_chooser::paper_chooser_window;
@@ -11,6 +12,7 @@ use egui::{Align2, Color32, Key, Rect, Stroke, StrokeKind, pos2};
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 
 pub(crate) mod bottom_panel;
+pub(crate) mod machine;
 pub(crate) mod menu;
 pub(crate) mod paper_chooser;
 pub(crate) mod pen_crib;
@@ -51,9 +53,12 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
     match &model.command_context {
         CommandContext::PaperChooser => paper_chooser_window(model, ctx),
         CommandContext::PenCrib => pen_crib_window(model, ctx),
-        CommandContext::PenEdit(pen_idx) => pen_editor::pen_editor_window(model, ctx, *pen_idx),
+        CommandContext::PenEdit(pen_idx, pen) => {
+            pen_editor::pen_editor_window(model, ctx, *pen_idx)
+        }
         CommandContext::Scale(_factor) => scale_window::scale_window(model, ctx),
         CommandContext::PenDelete(pen_idx) => pen_delete_window(model, ctx, *pen_idx),
+        CommandContext::MachineEdit(_opt_machine) => machine_editor_window(model, ctx),
         CommandContext::Space(keys) => {
             let keys = keys.clone();
             match CommandContext::dispatch_space_cmd(model, &keys) {

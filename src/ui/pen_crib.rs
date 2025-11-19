@@ -42,7 +42,8 @@ pub(crate) fn pen_crib_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                             )
                             .clicked()
                         {
-                            model.command_context = crate::view_model::CommandContext::PenEdit(idx);
+                            model.command_context =
+                                crate::view_model::CommandContext::PenEdit(idx, pen.clone());
                         };
                         ui.label(format!("○ {:3.2}mm", pen.stroke_width));
                         ui.label(format!("◑ {:3.2}%", pen.stroke_density * 100.));
@@ -109,7 +110,10 @@ pub(crate) fn pen_crib_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                 tool_id: pen_id,
                 ..PenDetail::default()
             });
-            model.command_context = crate::view_model::CommandContext::PenEdit(pen_id - 1);
+            model.command_context = crate::view_model::CommandContext::PenEdit(
+                pen_id - 1,
+                model.pen_crib.last().unwrap().clone(),
+            );
         };
 
         ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {

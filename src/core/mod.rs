@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::{Duration, Instant};
 
@@ -29,6 +30,7 @@ const UNDO_MAX: usize = 16;
 
 #[derive(Debug)]
 pub struct ApplicationCore {
+    config_dir: PathBuf,
     view_command_in: Receiver<ViewCommand>,
     state_change_out: Sender<ApplicationStateChangeMsg>,
     cancel_render: Receiver<()>,
@@ -83,6 +85,9 @@ impl ApplicationCore {
             gcode: None,
             progress: (0, 0, 0),
             state: PlotterState::Busy,
+            config_dir: std::env::home_dir().unwrap_or(
+                std::env::current_dir().expect("Cannot determine homedir OR cwd. Dying."),
+            ),
         };
         (core, vm_to_app, vm_from_app, cancel_render_sender)
     }

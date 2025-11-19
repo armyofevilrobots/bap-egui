@@ -1,17 +1,19 @@
 use super::space_commands::{SPACE_CMDS, SpaceCommandBranch};
+use aoer_plotty_rs::plotter::pen::PenDetail;
 use eframe::egui;
 use egui::{Key, Pos2};
 
-use crate::view_model::BAPViewModel;
+use crate::{core::machine::MachineConfig, view_model::BAPViewModel};
 // use crate::view_model::project_ops::project_ops;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum CommandContext {
     Origin,
     PaperChooser,
+    MachineEdit(Option<MachineConfig>),
     PenCrib,
-    PenEdit(usize),   // The pen index in Vec<Pens>
-    PenDelete(usize), // Delete the pen at IDX via modal confirmation
+    PenEdit(usize, PenDetail), // The pen index in Vec<Pens>
+    PenDelete(usize),          // Delete the pen at IDX via modal confirmation
     #[allow(unused)]
     Clip(Option<Pos2>, Option<Pos2>),
     Rotate(Option<Pos2>, Option<Pos2>, Option<Pos2>), // center, reference, angle

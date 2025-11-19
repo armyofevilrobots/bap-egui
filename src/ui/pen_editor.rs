@@ -3,7 +3,10 @@ use std::f64::consts::PI;
 use csscolorparser::Color;
 use egui::{Color32, Id, Layout, Rect, Slider, Stroke, StrokeKind, epaint::PathStroke, pos2, vec2};
 
-use crate::{core::project::PenDetail, view_model::BAPViewModel};
+use crate::{
+    core::project::PenDetail,
+    view_model::{BAPViewModel, CommandContext},
+};
 
 pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx: usize) {
     egui::Modal::new(Id::new("Pen Editor")).show(ctx, |ui| {
@@ -18,7 +21,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                     .unwrap_or(&PenDetail::default())
                     .name
             ));
-            let (painter_resp, painter) = ui.allocate_painter(vec2(390., 420.), egui::Sense::all());
+            let (painter_resp, painter) = ui.allocate_painter(vec2(390., 460.), egui::Sense::all());
             let prect = painter_resp.rect;
             let ofs = (prect.min.clone() + vec2(10., 10.)).to_vec2();
             let pen_crib_len = model.pen_crib.len();
@@ -129,19 +132,6 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                             .logarithmic(true)
                             .text("Density"),
                     )
-                },
-            );
-
-            #[allow(deprecated)]
-            let _ok_clicked_response = ui.allocate_ui_at_rect(
-                Rect::from_min_max(pos2(0., 400.) + ofs, pos2(390.0, 420.0) + ofs),
-                |ui| {
-                    ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.button("Ok").clicked() {
-                            // model.pen_crib_open = false
-                            model.command_context = crate::view_model::CommandContext::PenCrib
-                        }
-                    });
                 },
             );
 
@@ -256,8 +246,28 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                 ],
                 PathStroke::new(1., ui.visuals().text_color()),
             );
-            // ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
-            // });
+
+            #[allow(deprecated)]
+            let pen_density_slider_response = ui.allocate_ui_at_rect(
+                Rect::from_min_max(pos2(35., 430.) + ofs, pos2(390.0, 460.0) + ofs),
+                |ui| {
+                    ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("Ok").clicked() {
+                            // model.pen_crib_open = false
+                            model.command_context = crate::view_model::CommandContext::PenCrib
+                        }
+                        if ui.button("Cancel").clicked() {
+                            // model.pen_crib_open = false
+                            //
+                            if let CommandContext::PenEdit(idx, pen) = &model.command_context {
+                                eprintln!("Dropping changes.");
+                                model.pen_crib[*idx] = pen.clone()
+                            }
+                            model.command_context = crate::view_model::CommandContext::PenCrib
+                        }
+                    });
+                },
+            );
         });
     });
 }

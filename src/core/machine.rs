@@ -1,8 +1,10 @@
+use std::fmt::Debug;
+
 use anyhow::Result as AnyResult;
 use serde::{Deserialize, Serialize};
 use tera::Tera;
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct MachineConfig {
     name: String,
     post_template: Box<Vec<(String, String)>>,
@@ -12,9 +14,29 @@ pub struct MachineConfig {
     feedrate: f64,
 }
 
+impl Debug for MachineConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MachineConfig")
+            .field("name", &self.name)
+            .field("skim", &self.skim)
+            .field("keepdown", &self.keepdown)
+            .field("limits", &self.limits)
+            .field("feedrate", &self.feedrate)
+            .finish()
+    }
+}
+
 impl MachineConfig {
     pub fn set_post_template(&mut self, post_template: &Vec<(String, String)>) {
         self.post_template = Box::new(post_template.clone())
+    }
+
+    pub fn get_post_template(&self) -> Vec<(String, String)> {
+        self.post_template.as_ref().clone()
+    }
+
+    pub fn name(&self) -> String {
+        self.name.clone()
     }
 
     pub fn set_name(&mut self, name: String) {
