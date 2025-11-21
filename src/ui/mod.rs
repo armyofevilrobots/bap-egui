@@ -319,17 +319,20 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                 CommandContext::Clip(_pos2, _pos3) => todo!(),
                 CommandContext::Rotate(None, None, None) => {
                     if let Some(pos) = ctx.pointer_hover_pos() {
-                        model.command_context =
-                            CommandContext::Rotate(Some(model.frame_coords_to_mm(pos)), None, None)
+                        model.set_command_context(CommandContext::Rotate(
+                            Some(model.frame_coords_to_mm(pos)),
+                            None,
+                            None,
+                        ));
                     }
                 }
                 CommandContext::Rotate(Some(center_mm), None, None) => {
                     if let Some(pos) = ctx.pointer_hover_pos() {
-                        model.command_context = CommandContext::Rotate(
+                        model.set_command_context(CommandContext::Rotate(
                             Some(center_mm),
                             Some(model.frame_coords_to_mm(pos)),
                             None,
-                        )
+                        ));
                     }
                 }
                 CommandContext::Rotate(Some(center_mm), Some(ref1_mm), None) => {
@@ -353,11 +356,16 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                 _ => {
                     if let Some(pos) = ctx.pointer_hover_pos() {
                         // println!("Clicked at {:?}", model.frame_coords_to_mm(pos));
+                        let mods = ctx.input(|i| i.modifiers.clone());
 
-                        if !ctx.input(|i| i.modifiers.clone()).shift {
+                        if !mods.shift && !mods.ctrl {
                             model.pick_clear();
                         }
-                        model.pick_at_point(model.frame_coords_to_mm(pos));
+                        if ctx.input(|i| i.modifiers.clone()).ctrl {
+                            model.toggle_pick_at_point(model.frame_coords_to_mm(pos));
+                        } else {
+                            model.pick_at_point(model.frame_coords_to_mm(pos));
+                        }
                     }
                     model.cancel_command_context(true);
                 }
@@ -422,7 +430,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                         } else if *pkey == Key::Space && *pressed {
                             // println!("SPACE MODE");
                             if model.command_context == CommandContext::None {
-                                model.command_context = CommandContext::Space(vec![]);
+                                model.set_command_context(CommandContext::Space(vec![]));
                             }
                         } else if *pressed
                             && let CommandContext::Space(keys) = &mut model.command_context

@@ -7,7 +7,7 @@ use std::thread::{JoinHandle, sleep, spawn};
 use std::time::{Duration, Instant};
 
 use eframe::egui;
-use egui::{Color32, Key, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
+use egui::{Color32, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
 use rfd::FileDialog;
 
@@ -19,10 +19,13 @@ use crate::core::sender::{PlotterResponse, PlotterState};
 use crate::view_model::view_model_patch::ViewModelPatch;
 pub(crate) mod command_context;
 // pub(crate) mod project_ops;
+pub(crate) mod default;
 pub(crate) mod space_commands;
+pub(crate) mod util;
 pub(crate) mod view_model_eframe;
 pub(crate) mod view_model_patch;
 pub use command_context::CommandContext;
+pub use util::*;
 
 pub const PIXELS_PER_MM: f32 = 4.; // This is also scaled by the PPP value, but whatever.
 pub const MAX_SIZE: usize = 8192;
@@ -89,52 +92,7 @@ pub struct BAPViewModel {
     pub ruler_origin: RulerOrigin,
     last_pointer_pos: Option<Pos2>,
     pub picked: Option<Vec<usize>>,
-    pub modifiers: Vec<Key>,
-}
-
-pub trait IsPos2Able {
-    fn into_pos2(&self) -> Pos2;
-}
-
-impl IsPos2Able for Pos2 {
-    fn into_pos2(&self) -> Pos2 {
-        self.clone()
-    }
-}
-impl IsPos2Able for Vec2 {
-    fn into_pos2(&self) -> Pos2 {
-        self.to_pos2()
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Debug)]
-pub enum RulerOrigin {
-    Origin,
-    Source,
-}
-
-impl RulerOrigin {
-    pub fn toggle(&self) -> Self {
-        match self {
-            RulerOrigin::Origin => RulerOrigin::Source,
-            RulerOrigin::Source => RulerOrigin::Origin,
-        }
-    }
-}
-
-fn rotate_pos2(pos: Pos2, angle: f32) -> Pos2 {
-    Pos2::new(
-        pos.x * angle.cos() - pos.y * angle.sin(),
-        pos.y * angle.cos() + pos.x * angle.sin(),
-    )
-}
-
-/// Helper that rotates a point around another point.
-fn rotate_pos2_around_pos2(pos: Pos2, around: Pos2, angle: f32) -> Pos2 {
-    let tmp_pos = (pos - around).to_pos2();
-    let tmp_pos = rotate_pos2(tmp_pos, angle);
-    let tmp_pos = tmp_pos + around.to_vec2();
-    tmp_pos
+    // pub modifiers: Vec<Key>,
 }
 
 impl BAPViewModel {
@@ -168,6 +126,10 @@ impl BAPViewModel {
 
     pub fn pick_at_point(&self, point: Pos2) {
         self.yolo_view_command(ViewCommand::TryPickAt(point.x as f64, point.y as f64));
+    }
+
+    pub fn toggle_pick_at_point(&self, point: Pos2) {
+        self.yolo_view_command(ViewCommand::TogglePickAt(point.x as f64, point.y as f64));
     }
 
     /// Takes a given bounding box (extents) and calculates how big it would be if rotated d degrees.
@@ -244,19 +206,18 @@ impl BAPViewModel {
         };
     }
 
-    #[allow(unused)]
     pub fn set_command_context(&mut self, ctx: CommandContext) {
         self.command_context = match &self.command_context {
             CommandContext::Origin => ctx,
             CommandContext::PaperChooser => ctx,
-            CommandContext::MachineEdit(machine_config) => ctx,
+            CommandContext::MachineEdit(_machine_config) => ctx,
             CommandContext::PenCrib => ctx,
-            CommandContext::PenEdit(_, pen_detail) => ctx,
-            CommandContext::PenDelete(_) => ctx,
-            CommandContext::Clip(pos2, pos3) => ctx,
-            CommandContext::Rotate(pos2, pos3, pos4) => ctx,
-            CommandContext::Scale(_) => ctx,
-            CommandContext::Space(items) => ctx,
+            CommandContext::PenEdit(_idx, _pen_detail) => ctx,
+            CommandContext::PenDelete(_idx) => ctx,
+            CommandContext::Clip(_pos2, _pos3) => ctx,
+            CommandContext::Rotate(_pos2, _pos3, _pos4) => ctx,
+            CommandContext::Scale(_scale) => ctx,
+            CommandContext::Space(_items) => ctx,
             CommandContext::None => ctx,
         };
     }
@@ -1098,78 +1059,6 @@ impl BAPViewModel {
                     PlotterState::Dead => self.toast_error("Plotter is dead.".to_string()),
                 }
             }
-        }
-    }
-}
-
-impl Default for BAPViewModel {
-    fn default() -> Self {
-        Self {
-            docked: true,
-            display_mode: BAPDisplayMode::SVG,
-            state_in: None,
-            cmd_out: None,
-            status_msg: None,
-            progress: None,
-            file_selector: None,
-            source_image_handle: None,
-            source_image_extents: None,
-            timeout_for_source_image: None,
-            cancel_render: None,
-            look_at: Pos2 { x: 0., y: 0. },
-            view_zoom: 4.,
-            command_context: CommandContext::None,
-            paper_orientation: Orientation::Portrait,
-            // paper_modal_open: false,
-            // pen_crib_open: false,
-            // TODO: This should just be a paper record.
-            paper_size: PaperSize::Letter,
-            origin: pos2(0., 0.),
-            paper_color: Color32::WHITE,
-            center_coords: pos2(0., 0.),
-            machine_config: MachineConfig::default(),
-            show_machine_limits: true,
-            show_paper: true,
-            show_rulers: true,
-            show_extents: true,
-            ppp: 1.5,
-            dirty: false,
-            container_rect: None,
-            edit_cmd: String::new(),
-            serial_ports: Vec::new(), //Just a default
-            current_port: "".to_string(),
-            join_handle: None,
-            move_increment: 5.,
-            plotter_state: PlotterState::Disconnected,
-            queued_toasts: VecDeque::new(),
-            pen_crib: vec![
-                Default::default(),
-                PenDetail {
-                    tool_id: 2,
-                    name: "Red Pen".to_string(),
-                    stroke_width: 1.0,
-                    stroke_density: 1.0,
-                    feed_rate: Some(2000.0),
-                    color: csscolorparser::Color::from_rgba8(255, 0, 0, 255),
-                },
-                PenDetail {
-                    tool_id: 3,
-                    name: "Blue Pen".to_string(),
-                    stroke_width: 0.25,
-                    stroke_density: 0.5, // It's runny
-                    feed_rate: Some(1000.0),
-                    color: csscolorparser::Color::from_rgba8(0, 0, 255, 255),
-                },
-            ],
-            undo_available: false,
-            file_path: None,
-            ruler_origin: RulerOrigin::Source,
-            // overlay_image_handle: None,
-            // overlay_image_extents: None,
-            // timeout_for_overlay_image: None,
-            last_pointer_pos: None,
-            modifiers: Vec::new(),
-            picked: None,
         }
     }
 }

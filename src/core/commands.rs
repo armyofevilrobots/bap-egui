@@ -56,8 +56,10 @@ pub enum ViewCommand {
     LoadPGF(PathBuf),
     SaveProject(Option<PathBuf>),
     TryPickAt(f64, f64),
+    TogglePickAt(f64, f64),
     ClearPick,
     UnGroup,
+    Group,
     None,
 }
 
