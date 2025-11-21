@@ -42,49 +42,7 @@ impl ApplicationCore {
                         // resolution,
                         rotation,
                     } => {
-                        let phase = (SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)).expect("Should never fail to calc unix seconds.");
-                        let phase = phase.as_secs_f64();
-                        let (cimg, extents_out) = match render_source::render_svg_preview(
-                            &self.project,
-                            zoom,
-                            rotation.clone(),
-                            self.picked.clone(),
-                            phase,
-                            &self.state_change_out,
-                            &self.cancel_render,
-                        ) {
-                            Ok((cimg, xo)) => {
-                                // eprintln!("Rendered CIMG of {:?}", cimg.size);
-                                (Some(cimg), (xo.min().x, xo.min().y, xo.width(), xo.height()))
-                            },
-                            Err(_err) => {
-                                // eprintln!("Error rendering source image: {:?}", err);
-                                let min_x = self.project.extents().min().x;
-                                let min_y = self.project.extents().min().y;
-
-                                (None, (min_x, min_y, self.project.extents().width(), self.project.extents().height()))
-                            },
-                        };
-
-                        if let Some(cimg) = cimg{
-                            self.last_render = Some((cimg.clone(), extents_out.clone()));
-                            self.last_rendered = Instant::now();
-                            self.state_change_out
-                                .send(ApplicationStateChangeMsg::UpdateSourceImage {
-                                    image: cimg,
-                                    extents: extents_out,
-                                    rotation: rotation.clone(),
-                                })
-                                .unwrap_or_else(|_err| {
-                                    self.shutdown = true;
-                                    eprintln!("Failed to send message from bap core. Shutting down.");
-                                });
-
-                        }
-                        // while let Ok(_) = self.cancel_render.try_recv() {
-                        //     eprintln!("Draining excessive cancels.");
-                        // }
-                        self.ctx.request_repaint();
+                        self.handle_request_source_image(zoom, rotation);
                     }
                     ViewCommand::ImportSVG(path_buf) => {
                         self.checkpoint();

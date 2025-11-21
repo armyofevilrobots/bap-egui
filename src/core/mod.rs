@@ -1,9 +1,8 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::time::{Duration, Instant, SystemTime};
+use std::time::Instant;
 
-use aoer_plotty_rs::context::pgf_file::PlotGeometry;
 use egui::{ColorImage, Context};
 
 pub(crate) mod commands;
@@ -19,12 +18,10 @@ pub(crate) mod serial;
 
 use commands::{ApplicationStateChangeMsg, ViewCommand};
 use gcode::GCode;
-use geo::{Geometry, MultiLineString};
 use tera::Context as TeraContext;
 
 use crate::core::project::Project;
 use crate::core::render_plot::render_plot_preview;
-use crate::view_model::view_model_patch::ViewModelPatch;
 use machine::MachineConfig;
 use sender::{PlotterCommand, PlotterConnection, PlotterResponse, PlotterState};
 /// The actual application core that does shit.
