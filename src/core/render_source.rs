@@ -2,6 +2,7 @@ use egui::ColorImage;
 use geo::{Geometry, Rect};
 use skia_safe::paint::Style;
 use skia_safe::{AlphaType, Bitmap, Color, ImageInfo, Paint, Path, PathEffect, surfaces};
+use std::collections::BTreeSet;
 use std::ops::Rem;
 use std::sync::mpsc::{Receiver, Sender};
 
@@ -18,7 +19,7 @@ pub(crate) fn render_svg_preview(
     // resolution: (usize, usize),
     zoom: f64,
     rotate: Option<((f64, f64), f64)>,
-    picked: Option<u32>,
+    picked: Option<BTreeSet<u32>>,
     phase: f64,
     _state_change_out: &Sender<ApplicationStateChangeMsg>,
     cancel: &Receiver<()>,
@@ -79,8 +80,9 @@ pub(crate) fn render_svg_preview(
         paint.set_path_effect(None);
         paint.set_stroke_cap(skia_safe::PaintCap::Round);
         paint.set_stroke_width(pen.stroke_width as f32);
-        if let Some(id) = picked {
-            if id == pg.id as u32 {
+        if let Some(pickset) = &picked {
+            let id = pg.id as u32;
+            if pickset.contains(&id) {
                 let dash = 16.0 / sx;
                 let phase = phase.rem((dash * 4.) as f64) as f32;
                 // println!("Matched pick with phase {}", phase);

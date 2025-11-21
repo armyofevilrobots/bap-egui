@@ -56,6 +56,8 @@ pub enum ViewCommand {
     LoadPGF(PathBuf),
     SaveProject(Option<PathBuf>),
     TryPickAt(f64, f64),
+    ClearPick,
+    UnGroup,
     None,
 }
 
@@ -96,6 +98,6 @@ pub enum ApplicationStateChangeMsg {
     UndoAvailable(bool),
     PaperChanged(Paper),
     PatchViewModel(ViewModelPatch),
-    Picked(Option<usize>),
+    Picked(Option<Vec<usize>>),
     None,
 }

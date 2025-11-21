@@ -7,7 +7,7 @@ use std::thread::{JoinHandle, sleep, spawn};
 use std::time::{Duration, Instant};
 
 use eframe::egui;
-use egui::{Color32, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
+use egui::{Color32, Key, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
 use rfd::FileDialog;
 
@@ -88,6 +88,8 @@ pub struct BAPViewModel {
     pub file_path: Option<PathBuf>,
     pub ruler_origin: RulerOrigin,
     last_pointer_pos: Option<Pos2>,
+    pub picked: Option<Vec<usize>>,
+    pub modifiers: Vec<Key>,
 }
 
 pub trait IsPos2Able {
@@ -138,6 +140,30 @@ fn rotate_pos2_around_pos2(pos: Pos2, around: Pos2, angle: f32) -> Pos2 {
 impl BAPViewModel {
     pub fn name() -> &'static str {
         "Bot-a-Plot"
+    }
+
+    pub fn set_picked(&mut self, picked: Option<Vec<usize>>) {
+        self.picked = picked;
+    }
+
+    pub fn picked(&self) -> Option<Vec<usize>> {
+        self.picked.clone()
+    }
+
+    pub fn ungroup(&mut self) {
+        if self.picked.is_some() {
+            self.yolo_view_command(ViewCommand::UnGroup);
+        } else {
+            self.toast(
+                "Can't ungroup with no selection".to_string(),
+                ToastKind::Error,
+                5.,
+            );
+        }
+    }
+
+    pub fn pick_clear(&self) {
+        self.yolo_view_command(ViewCommand::ClearPick);
     }
 
     pub fn pick_at_point(&self, point: Pos2) {
@@ -1142,6 +1168,8 @@ impl Default for BAPViewModel {
             // overlay_image_extents: None,
             // timeout_for_overlay_image: None,
             last_pointer_pos: None,
+            modifiers: Vec::new(),
+            picked: None,
         }
     }
 }

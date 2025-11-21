@@ -9,6 +9,7 @@ use geo::{Geometry, LineString, MultiLineString, Point, Rect, Rotate, coord};
 use nalgebra::{Affine2, Matrix3};
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
+use std::any::Any;
 use std::ffi::OsString;
 use std::fmt::Display;
 use std::fs::File;
@@ -283,6 +284,7 @@ impl Project {
             return match ron::de::from_reader::<File, Self>(project_rdr) {
                 Ok(mut prj) => {
                     prj.file_path = Some(path);
+                    prj.reindex_geometry();
                     prj.calc_extents();
                     // println!("Calced extents are: {:?}", prj.extents());
                     Ok(prj)
@@ -579,17 +581,29 @@ impl Project {
         }
     }
 
+    pub fn reindex_geometry(&mut self) {
+        self.geometry.iter_mut().enumerate().for_each(|(idx, geo)| {
+            // println!(
+            //     "Reindexing Geo #{} to #{} with size of {:?}",
+            //     geo.id,
+            //     idx,
+            //     geo.geometry.bounding_rect()
+            // );
+            geo.id = idx as u64
+        });
+    }
+
+    /// Loads a pregenerated plot geo set (Plotter Geometry Format)
     pub fn load_pgf(&mut self, path: &PathBuf) -> Result<()> {
         if let Ok(path) = std::fs::canonicalize(path) {
             let pgf: PGF = PGF::from_file(&path)?;
-
             self.geometry = pgf.geometries();
             self.geometry.sort_by(|item1, item2| {
                 let s1 = item1.stroke.clone().unwrap_or(PenDetail::default());
                 let s2 = item2.stroke.clone().unwrap_or(PenDetail::default());
                 s1.tool_id.cmp(&s2.tool_id)
             });
-
+            self.reindex_geometry();
             self.regenerate_extents();
         }
         Ok(())

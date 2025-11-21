@@ -1,6 +1,11 @@
 use geo::{Geometry, Rect};
 use skia_safe::paint::Style;
-use skia_safe::{AlphaType, Bitmap, BlendMode, Color, ImageInfo, Paint, Path, surfaces};
+use skia_safe::{
+    AlphaType, Bitmap, BlendMode, Blender, Color, ColorSpace, EncodedImageFormat, ImageInfo, Paint,
+    Path, Pixmap, surfaces,
+};
+use std::collections::BTreeSet;
+use std::ops::{Shl, Shr};
 use std::sync::mpsc::Sender;
 use std::u32;
 
@@ -21,34 +26,31 @@ pub(crate) fn render_pick_map(
     );
 
     let (xofs, yofs) = extents.min().x_y();
-
-    let _stroke_width = (resolution.0 as f32 / extents.width() as f32) * 2.5;
-    // TODO: This resolution needs to be scaled if we have rotated.
     let sx = resolution.0 as f32 / extents.width() as f32;
     let sy = resolution.1 as f32 / extents.height() as f32;
     let mut surface =
         surfaces::raster_n32_premul((resolution.0 as i32, resolution.1 as i32)).expect("surface");
-    let mut paint = Paint::default();
-    paint.set_color(Color::new(u32::MAX));
-    paint.set_style(Style::Stroke);
-    paint.set_anti_alias(false); // We want sharp edges and no "blurs"
-    // paint.set_stroke_width(0.1);
-    paint.set_stroke_cap(skia_safe::PaintCap::Round);
-    paint.set_shader(None);
     let canvas = surface.canvas();
     canvas.clear(u32::MAX);
-    // canvas.draw_circle((0., 0.), 25., &paint);
     canvas.translate((-xofs as f32 * sx, -yofs as f32 * sy));
     canvas.scale((sx, sy));
-    let _mid = extents.center();
-    paint.set_blend_mode(BlendMode::Src);
+    let mut paint = Paint::default();
+    paint
+        .set_style(Style::Stroke)
+        .set_anti_alias(false) // We want sharp edges and no "blurs"
+        .set_stroke_cap(skia_safe::PaintCap::Round)
+        .set_blend_mode(BlendMode::Src)
+        .set_alpha(255)
+        .set_color(Color::new(u32::MAX));
     for pg in &geo {
+        let _mid = extents.center();
+
         let pen = pg.stroke.clone().unwrap_or(PenDetail::default());
-        paint.set_stroke_width(pen.stroke_width as f32);
-        paint.set_color(Color::new(pg.id as u32));
+        paint.set_stroke_width(pen.stroke_width as f32 * PICKS_PER_MM as f32);
+        let geo_color = Color::new(pg.id as u32 | 0xff000000);
+        paint.set_color(geo_color);
 
         if let Geometry::MultiLineString(mls) = &pg.geometry {
-            //&pg.geometry {
             let _line_count = mls.0.len();
             for (_idx, line) in mls.0.clone().iter().enumerate() {
                 let mut path = Path::new();
@@ -62,6 +64,7 @@ pub(crate) fn render_pick_map(
             }
         }
     }
+
     let mut bmap = Bitmap::new();
     let _result = bmap.set_info(
         &ImageInfo::new(
@@ -73,13 +76,23 @@ pub(crate) fn render_pick_map(
         None,
     );
     bmap.alloc_pixels();
+
     let _result = surface.read_pixels_to_bitmap(&bmap, (0, 0));
     let mut pixels = bmap.peek_pixels().expect("Failed to peek pixel data.");
     let data = pixels.bytes_mut().expect("Failed to get back pixel data.");
-    let u32_data = vec![0_u32; data.len() / 4];
-    unsafe {
-        let u8_ref = std::slice::from_raw_parts_mut((*data).as_mut_ptr(), data.len());
-        std::ptr::copy(u8_ref.as_ptr(), u32_data.as_ptr() as *mut u8, data.len());
+    let u32_data: Vec<u32> = data
+        .chunks_exact(4)
+        .map(|chunk| {
+            let r = chunk[0];
+            let g = chunk[1];
+            let b = chunk[2];
+            let _a = chunk[3];
+            b as u32 + g as u32 * 256 + r as u32 * 65536
+        })
+        .collect();
+    let mut found: BTreeSet<u32> = BTreeSet::new();
+    for pixel in &u32_data {
+        found.insert(*pixel);
     }
     Ok((u32_data, extents))
 }

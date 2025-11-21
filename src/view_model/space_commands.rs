@@ -363,6 +363,33 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             ),
         ),
     );
+
+    let cmd_geometry_ungroup = (
+        Key::U,
+        (
+            "Ungroup".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Ungroup".to_string(),
+                Box::new(|model| {
+                    model.ungroup();
+                }),
+            ),
+        ),
+    );
+
+    let cmd_geometry = (
+        Key::G,
+        (
+            "Geometry".to_string(),
+            SpaceCommandBranch::Branch(IndexMap::from([
+                cmd_geometry_ungroup,
+                scb_separator(),
+                cmd_rotate,
+                cmd_scale,
+            ])),
+        ),
+    );
+
     let cmd_edit = (
         Key::E,
         (
@@ -370,8 +397,9 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Branch(IndexMap::from([
                 cmd_project_undo,
                 scb_separator(),
-                cmd_scale,
-                cmd_rotate,
+                cmd_geometry,
+                // cmd_scale,
+                // cmd_rotate,
             ])),
         ),
     );

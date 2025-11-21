@@ -1,7 +1,9 @@
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::{Duration, Instant, SystemTime};
 
+use aoer_plotty_rs::context::pgf_file::PlotGeometry;
 use egui::{ColorImage, Context};
 
 pub(crate) mod commands;
@@ -16,6 +18,7 @@ pub(crate) mod serial;
 
 use commands::{ApplicationStateChangeMsg, ViewCommand};
 use gcode::GCode;
+use geo::{Geometry, MultiLineString};
 use tera::Context as TeraContext;
 
 use crate::core::project::Project;
@@ -42,7 +45,7 @@ pub struct ApplicationCore {
     machine: MachineConfig,
     last_render: Option<(ColorImage, (f64, f64, f64, f64))>,
     pick_image: Option<(Vec<u32>, (f64, f64, f64, f64))>,
-    picked: Option<u32>,
+    picked: Option<BTreeSet<u32>>,
     last_rendered: Instant,
     ctx: Context, // Just a repaint context, not used for ANYTHING else.
     plot_sender: Sender<PlotterCommand>,
@@ -146,11 +149,18 @@ impl ApplicationCore {
     }
 
     fn rebuild_after_content_change(&mut self) {
+        self.project.reindex_geometry();
         self.project.regenerate_extents();
         let (pick_image, tmp_extents) =
             pick_map::render_pick_map(&self.project, &self.state_change_out)
                 .expect("Failed to generate pick map!");
+        let mut found: BTreeSet<u32> = BTreeSet::new();
+        for pixel in &pick_image {
+            found.insert(*pixel);
+        }
+        // println!("FOUND: {:?}", found);
 
+        // println!("Updating pick image.");
         self.pick_image = Some((
             pick_image,
             (
@@ -509,8 +519,16 @@ impl ApplicationCore {
                         let picked = self.try_pick(x,y);
                         if let Some(id) = picked {
                             // println!("Got a geo pick at {}", geo.id);
-                            self.picked = Some(id as u32);
-                            self.state_change_out.send(ApplicationStateChangeMsg::Picked(Some(id as usize))).expect("OMFG ViewModel is borked sending pick id");
+                            //
+                            if self.picked.is_none(){
+                                self.picked = Some(BTreeSet::new());
+                            }
+
+                            self.picked.as_mut().unwrap().insert(id as u32);
+                            self.state_change_out.send(ApplicationStateChangeMsg::Picked(Some(self.picked.as_ref().unwrap()
+                                .iter()
+                                .map(|i| *i as usize)
+                                .collect::<Vec<usize>>()))).expect("OMFG ViewModel is borked sending pick id");
                         }else{
                             self.state_change_out.send(ApplicationStateChangeMsg::Picked(None)).expect("OMFG ViewModel is borked sending pick id");
                             self.picked = None
@@ -518,17 +536,67 @@ impl ApplicationCore {
                         self.last_rendered=Instant::now()+Duration::from_millis((PICKED_ROTATE_TIME * 1000.) as u64);
                         self.ctx.request_repaint();
                     },
+                    ViewCommand::ClearPick => {
+                        self.state_change_out.send(ApplicationStateChangeMsg::Picked(None)).expect("OMFG ViewModel is borked sending pick id");
+                        self.picked = None
+                    },
+                    ViewCommand::UnGroup => {
+                        // println!("Would have ungrouped {:?}", self.picked);
+                        if let Some(picked) = &self.picked{
+                            // Make copies of all the stuff we're breaking up.
+                            let geo_items: Vec<PlotGeometry> = picked
+                                .iter()
+                                .filter_map(|idx| self.project.geometry.get(*idx as usize))
+                                .map(|item| item.clone())
+                                .collect();
+                            // Then remove them from the geometry list. We reverse the order
+                            // to prevent shrinking and removing the wrong shit.
+                            for idx in picked.iter().rev(){
+                                self.project.geometry.remove(*idx as usize);
+                            }
+
+                            for geo in geo_items{
+                                let geo = geo.clone();
+                                match geo.geometry{
+                                    Geometry::MultiLineString(mls)=>{
+                                        for linestring in mls.0{
+                                            self.project.geometry.push(
+                                                PlotGeometry{
+                                                    geometry: Geometry::MultiLineString(MultiLineString::new(vec![linestring])),
+                                                    id: u32::MAX as u64,
+                                                    stroke: geo.stroke.clone(),
+                                                    keepdown_strategy: geo.keepdown_strategy.clone(),
+                                                });
+                                        }
+                                    }
+                                    _ =>()
+                                }
+                            }
+                            self.state_change_out.send(ApplicationStateChangeMsg::Picked(None)).expect("OMFG ViewModel is borked sending pick id");
+                            self.picked = None;
+                            self.pick_image = None;
+                            self.rebuild_after_content_change();
+                            self.state_change_out
+                                .send(ApplicationStateChangeMsg::PatchViewModel(
+                                    ViewModelPatch::from(self.project.clone())))
+                                .expect("Failed to send error to viewmodel.");
+                            self.ctx.request_repaint();
+
+                        }
+
+                    },
                 },
             }
 
-            if let Some(id) = self.picked
+            if let Some(pickset) = &self.picked
                 && (Instant::now() - self.last_rendered)
                     > Duration::from_millis((PICKED_ROTATE_TIME * 1000.) as u64)
             {
                 // println!("Refreshing geo pick image for {}", id);
-                self.picked = Some(id as u32);
                 self.state_change_out
-                    .send(ApplicationStateChangeMsg::Picked(Some(id as usize)))
+                    .send(ApplicationStateChangeMsg::Picked(Some(
+                        pickset.iter().map(|i| *i as usize).collect(),
+                    )))
                     .expect("OMFG ViewModel is borked sending pick id");
                 self.last_rendered = Instant::now() + Duration::from_secs(10); // Prevent spamming by putting this WAY in the future
                 self.ctx.request_repaint();
@@ -634,6 +702,7 @@ impl ApplicationCore {
                 if *id == u32::MAX {
                     return None;
                 }
+                // println!("Picked a color of {:?}", id);
                 match self.project.geometry.get(*id as usize) {
                     Some(geo) => Some(geo.id.clone() as u32),
                     None => None,
