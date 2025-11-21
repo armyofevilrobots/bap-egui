@@ -1,11 +1,7 @@
 use geo::{Geometry, Rect};
 use skia_safe::paint::Style;
-use skia_safe::{
-    AlphaType, Bitmap, BlendMode, Blender, Color, ColorSpace, EncodedImageFormat, ImageInfo, Paint,
-    Path, Pixmap, surfaces,
-};
+use skia_safe::{AlphaType, Bitmap, BlendMode, Color, ImageInfo, Paint, Path, surfaces};
 use std::collections::BTreeSet;
-use std::ops::{Shl, Shr};
 use std::sync::mpsc::Sender;
 use std::u32;
 

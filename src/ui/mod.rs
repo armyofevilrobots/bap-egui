@@ -6,7 +6,7 @@ use crate::ui::pen_crib::pen_crib_window;
 use crate::ui::pen_delete::pen_delete_window;
 use crate::view_model::command_context::SpaceCommandStatus;
 use crate::view_model::{BAPViewModel, CommandContext};
-use eframe::{App, egui};
+use eframe::egui;
 use egui::Direction::BottomUp;
 use egui::{Align2, Color32, Key, Rect, Stroke, StrokeKind, pos2};
 use egui_toast::Toasts;
@@ -410,7 +410,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     physical_key,
                     pressed,
                     repeat: _,
-                    modifiers: mods,
+                    modifiers: _mods,
                 } => {
                     if let Some(pkey) = physical_key {
                         if *pkey == Key::Escape && *pressed {

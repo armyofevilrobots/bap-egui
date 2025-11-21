@@ -1,7 +1,4 @@
-
-use egui::{
-    Id, Layout, Slider, Style, TextEdit, Vec2,
-};
+use egui::{Id, Layout, Slider, Style, TextEdit, Vec2};
 use indexmap::IndexMap;
 
 use crate::view_model::BAPViewModel;

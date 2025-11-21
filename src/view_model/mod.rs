@@ -151,7 +151,7 @@ impl BAPViewModel {
     }
 
     pub fn ungroup(&mut self) {
-        if self.picked.is_some() {
+        if self.picked().is_some() {
             self.yolo_view_command(ViewCommand::UnGroup);
         } else {
             self.toast(

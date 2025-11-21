@@ -9,7 +9,6 @@ use geo::{Geometry, LineString, MultiLineString, Point, Rect, Rotate, coord};
 use nalgebra::{Affine2, Matrix3};
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
-use std::any::Any;
 use std::ffi::OsString;
 use std::fmt::Display;
 use std::fs::File;
