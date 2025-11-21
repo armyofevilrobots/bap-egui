@@ -248,7 +248,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
             );
 
             #[allow(deprecated)]
-            let pen_density_slider_response = ui.allocate_ui_at_rect(
+            let _pen_density_slider_response = ui.allocate_ui_at_rect(
                 Rect::from_min_max(pos2(35., 430.) + ofs, pos2(390.0, 460.0) + ofs),
                 |ui| {
                     ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {

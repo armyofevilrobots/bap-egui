@@ -2,7 +2,6 @@ use crate::core::project::Orientation;
 use crate::core::sender::PlotterState;
 use crate::view_model::{BAPDisplayMode, BAPViewModel, CommandContext, RulerOrigin};
 use eframe::egui;
-use egui::accesskit::Rect;
 use egui::{ComboBox, Sense, Slider, TextEdit, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 
@@ -527,7 +526,7 @@ pub(crate) fn floating_tool_window(
         });
         if model.docked {
             let mut avail = ui.cursor();
-            let mut width = ui.min_rect().width();
+            let width = ui.min_rect().width();
             avail.set_height(ui.available_height() - wtop - 90.);
             avail.set_width(width);
             ui.allocate_rect(avail, Sense::empty());

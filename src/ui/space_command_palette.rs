@@ -4,7 +4,7 @@ use crate::view_model::space_commands::{SPACE_CMDS, SpaceCommandBranch};
 use crate::view_model::{BAPViewModel, CommandContext};
 
 // Let's try this again from scratch
-pub fn shortcut_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
+pub fn space_command_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
     if let CommandContext::Space(mut keys) = model.command_context.clone() {
         let mut coldata: Vec<Vec<(Key, Vec<Key>, String, bool)>> = Vec::new(); // Key, name, current?
         let mut tree = &*SPACE_CMDS.lock(); //.expect("Couldn't take over CMDS list");

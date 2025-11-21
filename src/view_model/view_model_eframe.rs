@@ -173,7 +173,7 @@ impl eframe::App for BAPViewModel {
                 }
                 ApplicationStateChangeMsg::PatchViewModel(patch) => self.patch(patch),
                 ApplicationStateChangeMsg::Picked(id) => {
-                    println!("Picked {:?}", id);
+                    // println!("Picked {:?}", id);
                     if self.display_mode() == BAPDisplayMode::SVG {
                         self.request_new_source_image();
                     }

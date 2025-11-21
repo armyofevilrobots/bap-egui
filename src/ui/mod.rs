@@ -9,7 +9,7 @@ use crate::view_model::{BAPViewModel, CommandContext};
 use eframe::egui;
 use egui::Direction::BottomUp;
 use egui::{Align2, Color32, Key, Rect, Stroke, StrokeKind, pos2};
-use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
+use egui_toast::Toasts;
 
 pub(crate) mod bottom_panel;
 pub(crate) mod machine;
@@ -53,7 +53,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
     match &model.command_context {
         CommandContext::PaperChooser => paper_chooser_window(model, ctx),
         CommandContext::PenCrib => pen_crib_window(model, ctx),
-        CommandContext::PenEdit(pen_idx, pen) => {
+        CommandContext::PenEdit(pen_idx, _pen) => {
             pen_editor::pen_editor_window(model, ctx, *pen_idx)
         }
         CommandContext::Scale(_factor) => scale_window::scale_window(model, ctx),
@@ -352,7 +352,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                 CommandContext::Space(_) => (),
                 _ => {
                     if let Some(pos) = ctx.pointer_hover_pos() {
-                        println!("Clicked at {:?}", model.frame_coords_to_mm(pos));
+                        // println!("Clicked at {:?}", model.frame_coords_to_mm(pos));
                         model.pick_at_point(model.frame_coords_to_mm(pos));
                     }
                     model.cancel_command_context(true);
@@ -436,7 +436,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
             });
         });
 
-        space_command_palette::shortcut_panel(model, ctx);
+        space_command_palette::space_command_panel(model, ctx);
 
         bottom_panel::bottom_panel(model, ctx);
         while !model.queued_toasts.is_empty() {

@@ -340,7 +340,7 @@ impl BAPViewModel {
                 size: self.paper_size.clone(),
                 orientation: self.paper_orientation.clone(),
             });
-            println!("COLOR paper out {:?}", paper_out);
+            // println!("COLOR paper out {:?}", paper_out);
             cmd_out
                 .send(paper_out)
                 .expect("Failed to send SetPaper command?");
@@ -364,7 +364,7 @@ impl BAPViewModel {
                 size: self.paper_size.clone(),
                 orientation: self.paper_orientation.clone(),
             });
-            println!("SIZE Paper out: {:?}", paper_out);
+            // println!("SIZE Paper out: {:?}", paper_out);
             cmd_out
                 .send(paper_out)
                 .expect("Failed to send SetPaper command?");

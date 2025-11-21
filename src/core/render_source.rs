@@ -1,14 +1,12 @@
 use egui::ColorImage;
-use geo::{Coord, Geometry, Rect};
+use geo::{Geometry, Rect};
 use skia_safe::paint::Style;
 use skia_safe::{AlphaType, Bitmap, Color, ImageInfo, Paint, Path, PathEffect, surfaces};
 use std::ops::Rem;
 use std::sync::mpsc::{Receiver, Sender};
-use usvg::tiny_skia_path::Scalar;
 
 use crate::core::commands::ApplicationStateChangeMsg;
 use crate::core::project::{PenDetail, Project};
-use tiny_skia::{LineCap, PathBuilder, Pixmap, Stroke, Transform};
 
 const MAX_TEXTURE_SIZE: usize = 8192; // Maximum size in any dimension of the preview images.
 // This can never be more than 16384. That's the max
@@ -85,8 +83,8 @@ pub(crate) fn render_svg_preview(
             if id == pg.id as u32 {
                 let dash = 16.0 / sx;
                 let phase = phase.rem((dash * 4.) as f64) as f32;
-                println!("Matched pick with phase {}", phase);
-                println!("Dash is {} sx is {}", dash, sx);
+                // println!("Matched pick with phase {}", phase);
+                // println!("Dash is {} sx is {}", dash, sx);
                 paint.set_path_effect(PathEffect::dash(&[dash, dash, dash, dash], phase));
                 paint.set_stroke_cap(skia_safe::PaintCap::Square);
                 paint.set_stroke_width(1. / sx as f32);

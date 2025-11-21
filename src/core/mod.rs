@@ -1,8 +1,7 @@
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::time::{self, Duration, Instant, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
 
-use aoer_plotty_rs::context::pgf_file::PlotGeometry;
 use egui::{ColorImage, Context};
 
 pub(crate) mod commands;
@@ -222,6 +221,9 @@ impl ApplicationCore {
         let mut last_sent_plotter_running_progress = Instant::now() - Duration::from_secs(60); // Just pretend it's been a while.
 
         while !self.shutdown {
+            while let Ok(_) = self.cancel_render.try_recv() {
+                eprintln!("Draining excessive cancels.");
+            }
             match self
                 .view_command_in
                 .recv_timeout(Duration::from_millis(100))
@@ -523,7 +525,7 @@ impl ApplicationCore {
                 && (Instant::now() - self.last_rendered)
                     > Duration::from_millis((PICKED_ROTATE_TIME * 1000.) as u64)
             {
-                println!("Refreshing geo pick image for {}", id);
+                // println!("Refreshing geo pick image for {}", id);
                 self.picked = Some(id as u32);
                 self.state_change_out
                     .send(ApplicationStateChangeMsg::Picked(Some(id as usize)))

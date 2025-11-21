@@ -1,8 +1,7 @@
-use egui::ColorImage;
-use geo::{Coord, Geometry, Rect};
+use geo::{Geometry, Rect};
 use skia_safe::paint::Style;
-use skia_safe::{AlphaType, Bitmap, BlendMode, Color, ImageInfo, Paint, Path, Pixmap, surfaces};
-use std::sync::mpsc::{Receiver, Sender};
+use skia_safe::{AlphaType, Bitmap, BlendMode, Color, ImageInfo, Paint, Path, surfaces};
+use std::sync::mpsc::Sender;
 use std::u32;
 
 use crate::core::commands::ApplicationStateChangeMsg;
@@ -12,11 +11,11 @@ pub const PICKS_PER_MM: usize = 4;
 
 pub(crate) fn render_pick_map(
     project: &Project,
-    state_change_out: &Sender<ApplicationStateChangeMsg>,
+    _state_change_out: &Sender<ApplicationStateChangeMsg>,
 ) -> Result<(Vec<u32>, Rect), anyhow::Error> {
     let (extents, geo) = (project.extents(), project.geometry.clone());
 
-    let mut resolution = (
+    let resolution = (
         (PICKS_PER_MM as f64 * extents.width().ceil()) as usize,
         (PICKS_PER_MM as f64 * extents.height().ceil()) as usize,
     );
@@ -76,10 +75,10 @@ pub(crate) fn render_pick_map(
     bmap.alloc_pixels();
     let _result = surface.read_pixels_to_bitmap(&bmap, (0, 0));
     let mut pixels = bmap.peek_pixels().expect("Failed to peek pixel data.");
-    let mut data = pixels.bytes_mut().expect("Failed to get back pixel data.");
-    let mut u32_data = vec![0_u32; data.len() / 4];
+    let data = pixels.bytes_mut().expect("Failed to get back pixel data.");
+    let u32_data = vec![0_u32; data.len() / 4];
     unsafe {
-        let mut u8_ref = std::slice::from_raw_parts_mut((*data).as_mut_ptr(), data.len());
+        let u8_ref = std::slice::from_raw_parts_mut((*data).as_mut_ptr(), data.len());
         std::ptr::copy(u8_ref.as_ptr(), u32_data.as_ptr() as *mut u8, data.len());
     }
     Ok((u32_data, extents))

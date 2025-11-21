@@ -1,17 +1,10 @@
-use std::{collections::HashMap, f64::consts::PI};
 
-use csscolorparser::Color;
-use eframe::Frame;
 use egui::{
-    Color32, Id, Layout, Rect, Slider, Stroke, StrokeKind, Style, TextEdit, Vec2,
-    epaint::PathStroke, pos2, vec2,
+    Id, Layout, Slider, Style, TextEdit, Vec2,
 };
 use indexmap::IndexMap;
 
-use crate::{
-    core::project::PenDetail,
-    view_model::{BAPViewModel, CommandContext},
-};
+use crate::view_model::BAPViewModel;
 
 pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
     egui::Modal::new(Id::new("Pen Editor")).frame(egui::containers::Frame::window(&Style::default())).show(ctx, |ui| {
@@ -111,7 +104,7 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                             .iter()
                             .map(|(k,v)| (k.clone(), v.clone())));
                     let mut update=false;
-                    for (name, mut tpl) in templates.iter_mut(){
+                    for (name, tpl) in templates.iter_mut(){
                         ui.label(name.clone());
                         let te = TextEdit::multiline(tpl).desired_width(560.0);
                         if ui.add(te).changed(){update=true}
