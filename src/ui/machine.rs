@@ -137,16 +137,18 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
             ui.allocate_ui(Vec2::new(scrollarea_resp.content_size.x, 16.), |ui|{
                 ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui.button("Cancel").clicked() {
-                        if let CommandContext::MachineEdit(saved_machine) = &model.command_context {
-                            if let Some(machine) = saved_machine {
-                                model.machine_config = machine.clone();
-                            }
-                            model.set_command_context(CommandContext::None);
-                        }
+                        // if let CommandContext::MachineEdit(saved_machine) = &model.command_context {
+                            // if let Some(machine) = saved_machine {
+                            //     model.machine_config = machine.clone();
+                            // }
+                            //model.set_command_context(CommandContext::None);
+                            model.cancel_command_context(true);
+                        // }
                     }
                     if ui.button("Ok").clicked() {
                         // model.paper_modal_open = false
-                        model.set_command_context(CommandContext::None);
+                        // model.set_command_context(CommandContext::None);
+                        model.cancel_command_context(false);
                     }
 
                 });

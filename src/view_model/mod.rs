@@ -140,6 +140,10 @@ impl BAPViewModel {
         "Bot-a-Plot"
     }
 
+    pub fn pick_at_point(&self, point: Pos2) {
+        self.yolo_view_command(ViewCommand::TryPickAt(point.x as f64, point.y as f64));
+    }
+
     /// Takes a given bounding box (extents) and calculates how big it would be if rotated d degrees.
     #[allow(unused)]
     pub fn calc_rotated_bounding_box(around: Pos2, angle: f32, r: Rect) -> Rect {
@@ -153,17 +157,82 @@ impl BAPViewModel {
     }
 
     #[allow(unused)]
+    pub fn cancel_command_context(&mut self, was_cancel: bool) {
+        if was_cancel {
+            if self.command_context != CommandContext::None {
+                self.queued_toasts.push_back(Toast {
+                    kind: ToastKind::Info,
+                    text: format!("Exited command context {}", self.command_context).into(),
+                    options: ToastOptions::default()
+                        .duration_in_seconds(3.0)
+                        .show_progress(true),
+                    ..Default::default()
+                });
+            }
+        };
+
+        self.command_context = match &self.command_context {
+            CommandContext::Origin => CommandContext::None,
+            CommandContext::PaperChooser => CommandContext::None,
+            CommandContext::MachineEdit(machine_config) => {
+                if was_cancel {
+                    self.machine_config = match machine_config {
+                        Some(cfg) => cfg.clone(),
+                        None => self.machine_config.clone(),
+                    };
+                };
+                CommandContext::None
+            }
+            CommandContext::PenCrib => CommandContext::None,
+            CommandContext::PenEdit(_, pen_detail) => CommandContext::PenCrib,
+            CommandContext::PenDelete(_) => CommandContext::PenCrib,
+            CommandContext::Clip(pos2, pos3) => CommandContext::None,
+            CommandContext::Rotate(pos2, pos3, pos4) => {
+                if was_cancel {
+                    if let Some(p4) = pos4 {
+                        CommandContext::Rotate(pos2.clone(), pos3.clone(), None)
+                    } else if let Some(p3) = pos3 {
+                        CommandContext::Rotate(pos2.clone(), None, None)
+                    } else {
+                        CommandContext::None
+                    }
+                } else {
+                    CommandContext::None
+                }
+            }
+            CommandContext::Scale(_) => CommandContext::None,
+            CommandContext::Space(items) => {
+                if was_cancel {
+                    if items.len() > 0 {
+                        CommandContext::Space(Vec::from_iter(
+                            items[0..(items.len() - 1)].iter().map(|i| i.clone()),
+                        ))
+                    } else {
+                        CommandContext::None
+                    }
+                } else {
+                    CommandContext::None
+                }
+            }
+            CommandContext::None => CommandContext::None,
+        };
+    }
+
+    #[allow(unused)]
     pub fn set_command_context(&mut self, ctx: CommandContext) {
-        self.command_context = ctx;
-        // if self.overlay_image_extents.is_some() {
-        //     // Do the clearing of any stateful crap.
-        //     if let Some(handle) = &mut self.overlay_image_handle {
-        //         let tmp_image = ColorImage::filled([2, 2], Color32::TRANSPARENT);
-        //         handle.set(tmp_image, egui::TextureOptions::LINEAR);
-        //     };
-        //     self.overlay_image_extents = None;
-        //     self.timeout_for_overlay_image = None;
-        // }
+        self.command_context = match &self.command_context {
+            CommandContext::Origin => ctx,
+            CommandContext::PaperChooser => ctx,
+            CommandContext::MachineEdit(machine_config) => ctx,
+            CommandContext::PenCrib => ctx,
+            CommandContext::PenEdit(_, pen_detail) => ctx,
+            CommandContext::PenDelete(_) => ctx,
+            CommandContext::Clip(pos2, pos3) => ctx,
+            CommandContext::Rotate(pos2, pos3, pos4) => ctx,
+            CommandContext::Scale(_) => ctx,
+            CommandContext::Space(items) => ctx,
+            CommandContext::None => ctx,
+        };
     }
 
     pub fn undo(&self) {

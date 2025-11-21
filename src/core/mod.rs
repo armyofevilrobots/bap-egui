@@ -1,11 +1,13 @@
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::time::{Duration, Instant};
+use std::time::{self, Duration, Instant, SystemTime};
 
+use aoer_plotty_rs::context::pgf_file::PlotGeometry;
 use egui::{ColorImage, Context};
 
 pub(crate) mod commands;
 pub(crate) mod machine;
+pub(crate) mod pick_map;
 pub(crate) mod post;
 pub(crate) mod project;
 pub(crate) mod render_plot;
@@ -27,6 +29,7 @@ use sender::{PlotterCommand, PlotterConnection, PlotterResponse, PlotterState};
 ///
 ///
 const UNDO_MAX: usize = 16;
+const PICKED_ROTATE_TIME: f64 = 0.1;
 
 #[derive(Debug)]
 pub struct ApplicationCore {
@@ -39,6 +42,9 @@ pub struct ApplicationCore {
     history: Vec<Project>,
     machine: MachineConfig,
     last_render: Option<(ColorImage, (f64, f64, f64, f64))>,
+    pick_image: Option<(Vec<u32>, (f64, f64, f64, f64))>,
+    picked: Option<u32>,
+    last_rendered: Instant,
     ctx: Context, // Just a repaint context, not used for ANYTHING else.
     plot_sender: Sender<PlotterCommand>,
     plot_receiver: Receiver<PlotterResponse>,
@@ -69,25 +75,28 @@ impl ApplicationCore {
             .send(ApplicationStateChangeMsg::FoundPorts(serial::scan_ports()))
             .expect("Failed to send serial port list up to view.");
         let core = ApplicationCore {
+            config_dir: std::env::home_dir().unwrap_or(
+                std::env::current_dir().expect("Cannot determine homedir OR cwd. Dying."),
+            ),
             view_command_in: app_from_vm,
             state_change_out: app_to_vm,
+            cancel_render: cancel_render_receiver,
             shutdown: false,
             project: Project::new(),
             history: vec![],
             machine: MachineConfig::default(),
-            plot_receiver: plotter_to_app,
-            plot_sender: app_to_plotter,
-            ctx,
-            last_serial_scan: Instant::now(),
-            program: None,
-            cancel_render: cancel_render_receiver,
             last_render: None,
+            pick_image: None,
+            ctx,
+            plot_sender: app_to_plotter,
+            plot_receiver: plotter_to_app,
+            last_serial_scan: Instant::now(),
+            last_rendered: Instant::now(),
+            program: None,
             gcode: None,
             progress: (0, 0, 0),
             state: PlotterState::Busy,
-            config_dir: std::env::home_dir().unwrap_or(
-                std::env::current_dir().expect("Cannot determine homedir OR cwd. Dying."),
-            ),
+            picked: None,
         };
         (core, vm_to_app, vm_from_app, cancel_render_sender)
     }
@@ -137,8 +146,21 @@ impl ApplicationCore {
         };
     }
 
-    fn force_reset_extents_in_view(&mut self) {
+    fn rebuild_after_content_change(&mut self) {
         self.project.regenerate_extents();
+        let (pick_image, tmp_extents) =
+            pick_map::render_pick_map(&self.project, &self.state_change_out)
+                .expect("Failed to generate pick map!");
+
+        self.pick_image = Some((
+            pick_image,
+            (
+                tmp_extents.min().x,
+                tmp_extents.min().y,
+                tmp_extents.width(),
+                tmp_extents.height(),
+            ),
+        ));
         let app_extents = ApplicationStateChangeMsg::SourceChanged {
             extents: (
                 self.project.extents().min().x,
@@ -163,7 +185,7 @@ impl ApplicationCore {
         if self.history.len() > UNDO_MAX {
             self.history.remove(0);
         }
-        self.force_reset_extents_in_view();
+        self.rebuild_after_content_change();
         self.update_vm_undo_avail();
     }
 
@@ -182,7 +204,7 @@ impl ApplicationCore {
         };
         self.send_project_origin();
         self.project.regenerate_extents();
-        self.force_reset_extents_in_view();
+        self.rebuild_after_content_change();
         self.update_vm_undo_avail();
         self.update_vm_paper();
     }
@@ -219,12 +241,14 @@ impl ApplicationCore {
                         // resolution,
                         rotation,
                     } => {
+                        let phase = (SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)).expect("Should never fail to calc unix seconds.");
+                        let phase = phase.as_secs_f64();
                         let (cimg, extents_out) = match render_source::render_svg_preview(
                             &self.project,
-                            // extents,
                             zoom,
-                            // resolution,
                             rotation.clone(),
+                            self.picked.clone(),
+                            phase,
                             &self.state_change_out,
                             &self.cancel_render,
                         ) {
@@ -243,6 +267,7 @@ impl ApplicationCore {
 
                         if let Some(cimg) = cimg{
                             self.last_render = Some((cimg.clone(), extents_out.clone()));
+                            self.last_rendered = Instant::now();
                             self.state_change_out
                                 .send(ApplicationStateChangeMsg::UpdateSourceImage {
                                     image: cimg,
@@ -260,7 +285,7 @@ impl ApplicationCore {
                     ViewCommand::ImportSVG(path_buf) => {
                         self.checkpoint();
                         self.project.import_svg(&path_buf, true);
-                        self.force_reset_extents_in_view();
+                        self.rebuild_after_content_change();
 
                     }
                     ViewCommand::SetOrigin(x, y) => {
@@ -280,7 +305,7 @@ impl ApplicationCore {
                         // println!("PRE EXTENTS: {:?}", self.project.extents());
                         self.project.rotate_geometry_around_point_mut(center, degrees);
                         // println!("POST EXTENTS: {:?}", self.project.extents());
-                        self.force_reset_extents_in_view();
+                        self.rebuild_after_content_change();
                         // println!("POST RESEND EXTENTS: {:?}", self.project.extents());
 
                     },
@@ -365,7 +390,7 @@ impl ApplicationCore {
                         //TODO: MIgrate this into Project.
                         self.checkpoint();
                         self.project.scale_by_factor(factor);
-                        self.force_reset_extents_in_view();
+                        self.rebuild_after_content_change();
 
                     },
                     ViewCommand::RequestPlotPreviewImage { extents, resolution } => {
@@ -389,6 +414,7 @@ impl ApplicationCore {
 
                         if let Some(cimg) = cimg{
                             self.last_render = Some((cimg.clone(), extents));
+                            self.last_rendered = Instant::now();
                             self.state_change_out
                                 .send(ApplicationStateChangeMsg::UpdateSourceImage {
                                     image: cimg,
@@ -435,7 +461,7 @@ impl ApplicationCore {
                                 ViewModelPatch::from(self.project.clone())))
                             .expect("Failed to send error to viewmodel.");
                         self.ctx.request_repaint();
-                        self.force_reset_extents_in_view();
+                        self.rebuild_after_content_change();
 
                     },
                     ViewCommand::SaveProject(path_buf) => {
@@ -466,7 +492,7 @@ impl ApplicationCore {
                             self.ctx.request_repaint();
 
                         });
-                        self.force_reset_extents_in_view();
+                        self.rebuild_after_content_change();
                     },
                     ViewCommand::ResetProject => {
                         self.checkpoint();
@@ -475,9 +501,35 @@ impl ApplicationCore {
                             .send(ApplicationStateChangeMsg::PatchViewModel(
                                 ViewModelPatch::from(self.project.clone())))
                             .expect("Failed to send error to viewmodel.");
-                        self.force_reset_extents_in_view();
+                        self.rebuild_after_content_change();
+                    },
+                    ViewCommand::TryPickAt(x, y) => {
+                        let picked = self.try_pick(x,y);
+                        if let Some(id) = picked {
+                            // println!("Got a geo pick at {}", geo.id);
+                            self.picked = Some(id as u32);
+                            self.state_change_out.send(ApplicationStateChangeMsg::Picked(Some(id as usize))).expect("OMFG ViewModel is borked sending pick id");
+                        }else{
+                            self.state_change_out.send(ApplicationStateChangeMsg::Picked(None)).expect("OMFG ViewModel is borked sending pick id");
+                            self.picked = None
+                        }
+                        self.last_rendered=Instant::now()+Duration::from_millis((PICKED_ROTATE_TIME * 1000.) as u64);
+                        self.ctx.request_repaint();
                     },
                 },
+            }
+
+            if let Some(id) = self.picked
+                && (Instant::now() - self.last_rendered)
+                    > Duration::from_millis((PICKED_ROTATE_TIME * 1000.) as u64)
+            {
+                println!("Refreshing geo pick image for {}", id);
+                self.picked = Some(id as u32);
+                self.state_change_out
+                    .send(ApplicationStateChangeMsg::Picked(Some(id as usize)))
+                    .expect("OMFG ViewModel is borked sending pick id");
+                self.last_rendered = Instant::now() + Duration::from_secs(10); // Prevent spamming by putting this WAY in the future
+                self.ctx.request_repaint();
             }
 
             // Also, we need to check for plotter responses...
@@ -558,5 +610,39 @@ impl ApplicationCore {
         self.state_change_out
             .send(ApplicationStateChangeMsg::Dead)
             .expect("Failed to send shutdown status back to viewmodel.");
+    }
+
+    fn try_pick(&self, x: f64, y: f64) -> Option<u32> {
+        if let Some((pick_img, extents)) = &self.pick_image {
+            // println!("Click MM are {},{}", x, y);
+            let xpx = (x - extents.0).ceil() as usize * pick_map::PICKS_PER_MM;
+            let ypx = (y - extents.0).ceil() as usize * pick_map::PICKS_PER_MM;
+            if x < extents.0
+                || y < extents.1
+                || y > (extents.1 + extents.3)
+                || x > (extents.0 + extents.2)
+            {
+                // println!("Outside of extents.");
+                return None;
+            }
+            let xspan = extents.2.ceil() as usize * pick_map::PICKS_PER_MM;
+            // println!("Extents are: {:?}", extents);
+            // println!("XPX and YPX are {},{}", xpx, ypx);
+            if let Some(id) = pick_img.get(xpx + ypx * xspan) {
+                if *id == u32::MAX {
+                    return None;
+                }
+                match self.project.geometry.get(*id as usize) {
+                    Some(geo) => Some(geo.id.clone() as u32),
+                    None => None,
+                }
+            } else {
+                None
+            }
+            // println!("Picked ID: {:?}", id);
+            // None
+        } else {
+            None
+        }
     }
 }

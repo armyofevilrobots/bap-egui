@@ -344,9 +344,11 @@ impl Project {
         let (xc, yc) = around;
         self.geometry
             .iter()
-            .map(|pg| {
+            .enumerate()
+            .map(|(idx, pg)| {
                 let new_geo = pg.geometry.rotate_around_point(angle, Point::new(xc, yc));
                 PlotGeometry {
+                    id: idx as u64,
                     geometry: new_geo,
                     stroke: pg.stroke.clone(),
                     keepdown_strategy: pg.keepdown_strategy.clone(),
@@ -640,6 +642,7 @@ pub fn svg_to_geometries(
     }
     // println!("Total geo size is: {:?}", multilines.bounding_rect());
     geometries.push(PlotGeometry {
+        id: 0,
         geometry: Geometry::MultiLineString(multilines),
         //hatch: None,
         /*Some(HatchDetail {

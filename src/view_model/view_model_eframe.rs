@@ -172,6 +172,12 @@ impl eframe::App for BAPViewModel {
                     self.set_paper_size(&paper.size, false);
                 }
                 ApplicationStateChangeMsg::PatchViewModel(patch) => self.patch(patch),
+                ApplicationStateChangeMsg::Picked(id) => {
+                    println!("Picked {:?}", id);
+                    if self.display_mode() == BAPDisplayMode::SVG {
+                        self.request_new_source_image();
+                    }
+                }
             }
         }
 

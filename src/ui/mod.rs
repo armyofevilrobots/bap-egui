@@ -64,14 +64,16 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
             match CommandContext::dispatch_space_cmd(model, &keys) {
                 SpaceCommandStatus::Dispatched(dispatched) => {
                     // Special case handling for when we trigger a new command context
-                    if let CommandContext::Space(_) = model.command_context {
-                        model.command_context = CommandContext::None;
-                    }
+                    // if let CommandContext::Space(_) = model.command_context {
+                    //     model.command_context = CommandContext::None;
+                    // }
+                    model.cancel_command_context(false);
                     model.toast_info(dispatched);
                 }
                 SpaceCommandStatus::Ongoing => (),
                 SpaceCommandStatus::Invalid => {
-                    model.command_context = CommandContext::None;
+                    // model.command_context = CommandContext::None;
+                    model.cancel_command_context(false);
                     let msg = format!(
                         "Invalid key sequence - {}",
                         keys.clone()
@@ -310,7 +312,8 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     if let Some(pos) = ctx.pointer_hover_pos() {
                         // model.origin = model.frame_coords_to_mm(pos)
                         model.set_origin(model.frame_coords_to_mm(pos), true);
-                        model.command_context = CommandContext::None;
+                        // model.command_context = CommandContext::None;
+                        model.cancel_command_context(false);
                     }
                 }
                 CommandContext::Clip(_pos2, _pos3) => todo!(),
@@ -342,10 +345,18 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                             (center_mm.x as f64, center_mm.y as f64),
                             degrees as f64,
                         );
-                        model.command_context = CommandContext::None;
+                        // model.command_context = CommandContext::None;
+                        model.cancel_command_context(false);
                     }
                 }
-                _ => model.command_context = CommandContext::None,
+                CommandContext::Space(_) => (),
+                _ => {
+                    if let Some(pos) = ctx.pointer_hover_pos() {
+                        println!("Clicked at {:?}", model.frame_coords_to_mm(pos));
+                        model.pick_at_point(model.frame_coords_to_mm(pos));
+                    }
+                    model.cancel_command_context(true);
+                }
             }
         }
 
@@ -401,19 +412,8 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                         if *pkey == Key::Escape && *pressed {
                             // Only on depress, not release
                             if model.command_context != CommandContext::None {
-                                toasts.add(Toast {
-                                    kind: ToastKind::Info,
-                                    text: format!(
-                                        "Exited command context {:?}",
-                                        model.command_context
-                                    )
-                                    .into(),
-                                    options: ToastOptions::default()
-                                        .duration_in_seconds(5.0)
-                                        .show_progress(true),
-                                    ..Default::default()
-                                });
-                                model.command_context = CommandContext::None;
+                                // model.command_context = CommandContext::None;
+                                model.cancel_command_context(true);
                             }
                         } else if *pkey == Key::Space && *pressed {
                             // println!("SPACE MODE");

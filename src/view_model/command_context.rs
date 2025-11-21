@@ -1,3 +1,5 @@
+use std::fmt::{Debug, Display};
+
 use super::space_commands::{SPACE_CMDS, SpaceCommandBranch};
 use aoer_plotty_rs::plotter::pen::PenDetail;
 use eframe::egui;
@@ -20,6 +22,36 @@ pub enum CommandContext {
     Scale(f64),
     Space(Vec<Key>),
     None,
+}
+
+impl Display for CommandContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Origin => write!(f, "Origin"),
+            Self::PaperChooser => write!(f, "PaperChooser"),
+            Self::MachineEdit(arg0) => f.debug_tuple("MachineEdit").field(arg0).finish(),
+            Self::PenCrib => write!(f, "PenCrib"),
+            Self::PenEdit(arg0, arg1) => f.debug_tuple("PenEdit").field(arg0).field(arg1).finish(),
+            Self::PenDelete(arg0) => f.debug_tuple("PenDelete").field(arg0).finish(),
+            Self::Clip(arg0, arg1) => f.debug_tuple("Clip").field(arg0).field(arg1).finish(),
+            Self::Rotate(arg0, arg1, arg2) => f
+                .debug_tuple("Rotate")
+                .field(arg0)
+                .field(arg1)
+                .field(arg2)
+                .finish(),
+            Self::Scale(arg0) => f.debug_tuple("Scale").field(arg0).finish(),
+            Self::Space(keys) => write!(
+                f,
+                "{}",
+                keys.iter()
+                    .map(|k| format!("[{}]", k.symbol_or_name()))
+                    .collect::<Vec<String>>()
+                    .join(">")
+            ),
+            Self::None => write!(f, "None"),
+        }
+    }
 }
 
 pub enum SpaceCommandStatus {
