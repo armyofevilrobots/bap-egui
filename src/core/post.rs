@@ -1,6 +1,7 @@
 use std::usize;
 
-use crate::core::project::PenDetail;
+use super::project::PenDetail;
+use super::sender::PlotterCommand;
 
 use super::project::Project;
 use anyhow::Result as AnyResult;
@@ -13,12 +14,50 @@ use geo::{Geometry, LineString, MultiLineString};
 use nalgebra::{Affine2, Matrix3};
 use tera::Context;
 
+use super::commands::ApplicationStateChangeMsg;
+
 #[derive(PartialEq, Eq, Clone, Debug)]
 #[allow(unused)]
 pub enum LastMove {
     Move,
     Feed,
     None,
+}
+
+impl super::ApplicationCore {
+    pub fn handle_post(&mut self) {
+        let prep_sender = match post(&self.project) {
+            Ok(program) => {
+                self.program = Some(program.clone());
+                self.project.set_program(Some(Box::new(program.clone())));
+                self.state_change_out
+                    .send(ApplicationStateChangeMsg::PostComplete(
+                        self.program.as_ref().unwrap().len(),
+                    ))
+                    .expect("Failed to send state change up to VM. Dead view?");
+                self.progress = (0, 0, 0); // Reset progress
+                self.gcode =
+                    Some(gcode::parse(self.program.clone().unwrap().join("\n").as_str()).collect());
+                self.ctx.request_repaint();
+                true
+            }
+            Err(err) => {
+                self.state_change_out
+                    .send(ApplicationStateChangeMsg::Error(
+                        format!("Failed to post due to {:?}.", err).into(),
+                    ))
+                    .expect("Failed to send error to viewmodel.");
+
+                self.ctx.request_repaint();
+                false
+            }
+        };
+        if prep_sender {
+            let _resp = self.plot_sender.send(PlotterCommand::Program(Box::new(
+                self.program.as_ref().unwrap().clone(),
+            )));
+        }
+    }
 }
 
 pub fn post(project: &Project) -> AnyResult<Vec<String>> {

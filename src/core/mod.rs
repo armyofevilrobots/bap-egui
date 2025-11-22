@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use egui::{ColorImage, Context};
 
@@ -221,5 +221,59 @@ impl ApplicationCore {
                 self.project.paper.clone(),
             ))
             .unwrap_or_else(|_| eprintln!("Unexpected dead sender/receiver for app state change!"));
+    }
+
+    pub fn yolo_send_plotter_cmd(&mut self, cmd: PlotterCommand) {
+        self.plot_sender.send(cmd).unwrap_or_else(|err| {
+            self.shutdown = true;
+            eprintln!("Plot sender is dead and I cannot connect. Dying: {:?}", err);
+            self.state_change_out
+                .send(ApplicationStateChangeMsg::Dead)
+                .expect(
+                    "Can't even notify ViewModel I'm dead?! YOLO and apparently not for very long.",
+                );
+        });
+    }
+
+    pub fn handle_plotter_response(
+        &mut self,
+        response: PlotterResponse,
+        last_sent_plotter_running_progress: &mut Instant,
+    ) {
+        match &response {
+            PlotterResponse::Ok(_plotter_command, _) => (),
+            PlotterResponse::Err(_plotter_command, _) => {}
+            PlotterResponse::State(plotter_state) => {
+                if let PlotterState::Running(line, of, _something) = plotter_state {
+                    self.progress = (*line as usize, *of as usize, *_something as usize);
+                };
+                self.state = plotter_state.clone();
+            }
+            PlotterResponse::Loaded(_msg) => {
+                // println!("MSG ON PLOTTER REPONSE LOADED: {:?}", msg);
+                self.state_change_out
+                    .send(ApplicationStateChangeMsg::PlotterResponse(
+                        PlotterResponse::Loaded("OK!".into()),
+                    ))
+                    .expect("Failed to send to ViewModel. Dead conn?");
+
+                self.ctx.request_repaint();
+            }
+        }
+        if let PlotterResponse::State(PlotterState::Running(line, of, other)) = &response {
+            if Instant::now() - *last_sent_plotter_running_progress > Duration::from_secs(1) {
+                // println!("Sending progress running stanza.");
+                self.state_change_out
+                    .send(ApplicationStateChangeMsg::PlotterResponse(
+                        PlotterResponse::State(PlotterState::Running(*line, *of, *other)),
+                    ))
+                    .expect("Failed to send to ViewModel. Dead conn?");
+                *last_sent_plotter_running_progress = Instant::now();
+            }
+        } else {
+            self.state_change_out
+                .send(ApplicationStateChangeMsg::PlotterResponse(response.clone()))
+                .expect("Failed to send to ViewModel. Dead conn?");
+        }
     }
 }
