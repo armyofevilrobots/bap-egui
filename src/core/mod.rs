@@ -7,6 +7,7 @@ use egui::{ColorImage, Context};
 
 pub(crate) mod commands;
 pub(crate) mod core_run;
+pub(crate) mod group_ungroup;
 pub(crate) mod machine;
 pub(crate) mod pick_map;
 pub(crate) mod post;

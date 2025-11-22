@@ -120,6 +120,18 @@ impl BAPViewModel {
         }
     }
 
+    pub fn merge_group(&mut self) {
+        if self.picked().is_some() {
+            self.yolo_view_command(ViewCommand::Group);
+        } else {
+            self.toast(
+                "Can't merge/group with no selection".to_string(),
+                ToastKind::Error,
+                5.,
+            );
+        }
+    }
+
     pub fn pick_clear(&self) {
         self.yolo_view_command(ViewCommand::ClearPick);
     }

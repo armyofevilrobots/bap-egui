@@ -377,12 +377,26 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         ),
     );
 
+    let cmd_geometry_group = (
+        Key::G,
+        (
+            "Group".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Group".to_string(),
+                Box::new(|model| {
+                    model.merge_group();
+                }),
+            ),
+        ),
+    );
+
     let cmd_geometry = (
         Key::G,
         (
             "Geometry".to_string(),
             SpaceCommandBranch::Branch(IndexMap::from([
                 cmd_geometry_ungroup,
+                cmd_geometry_group,
                 scb_separator(),
                 cmd_rotate,
                 cmd_scale,
