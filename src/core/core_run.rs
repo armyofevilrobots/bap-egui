@@ -283,9 +283,11 @@ impl ApplicationCore {
                             self.picked = None
                         }
                         ViewCommand::UnGroup => {
+                            self.checkpoint();
                             self.apply_ungroup();
                         }
                         ViewCommand::Group => {
+                            self.checkpoint();
                             self.apply_group();
                         }
                         ViewCommand::TogglePickAt(x, y) => {
@@ -326,6 +328,10 @@ impl ApplicationCore {
                             self.last_rendered = Instant::now()
                                 + Duration::from_millis((PICKED_ROTATE_TIME * 1000.) as u64);
                             self.ctx.request_repaint();
+                        }
+                        ViewCommand::ApplyPenToSelection(tool_id) => {
+                            self.checkpoint();
+                            self.apply_pen_to_selection(tool_id);
                         }
                     }
                 }

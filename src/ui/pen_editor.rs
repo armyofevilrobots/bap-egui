@@ -254,6 +254,7 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                     ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.button("Ok").clicked() {
                             // model.pen_crib_open = false
+                            model.update_pen_details();
                             model.command_context = crate::view_model::CommandContext::PenCrib
                         }
                         if ui.button("Cancel").clicked() {

@@ -50,6 +50,7 @@ pub enum ViewCommand {
     DisconnectPlotter,
     Quit,
     ApplyPens(Vec<PenDetail>),
+    ApplyPenToSelection(usize), // Tool ID.
     Undo,
     ResetProject,
     LoadProject(PathBuf),

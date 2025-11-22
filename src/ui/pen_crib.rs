@@ -45,6 +45,16 @@ pub(crate) fn pen_crib_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                             model.command_context =
                                 crate::view_model::CommandContext::PenEdit(idx, pen.clone());
                         };
+                        if ui
+                            .add_enabled(model.picked.is_some(), Button::new("⤵Apply"))
+                            .clicked()
+                        {
+                            model.yolo_view_command(
+                                crate::core::commands::ViewCommand::ApplyPenToSelection(
+                                    pen.tool_id.clone(),
+                                ),
+                            );
+                        }
                         ui.label(format!("○ {:3.2}mm", pen.stroke_width));
                         ui.label(format!("◑ {:3.2}%", pen.stroke_density * 100.));
                         match pen.feed_rate {

@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::{Duration, Instant};
 
+use aoer_plotty_rs::plotter::pen::PenDetail;
 use egui::{ColorImage, Context};
 
 pub(crate) mod commands;
@@ -23,6 +24,7 @@ use tera::Context as TeraContext;
 
 use crate::core::project::Project;
 use crate::core::render_plot::render_plot_preview;
+use crate::view_model::view_model_patch::ViewModelPatch;
 use machine::MachineConfig;
 use sender::{PlotterCommand, PlotterConnection, PlotterResponse, PlotterState};
 /// The actual application core that does shit.
@@ -99,6 +101,31 @@ impl ApplicationCore {
             picked: None,
         };
         (core, vm_to_app, vm_from_app, cancel_render_sender)
+    }
+
+    pub fn apply_pen_to_selection(&mut self, pen_id: usize) {
+        if let Some(picked) = &self.picked {
+            let mut pen = PenDetail::default();
+            for p in self.project.pens.clone() {
+                if p.tool_id == pen_id {
+                    pen = p.clone();
+                }
+            }
+
+            for (idx, geo) in self.project.geometry.iter_mut().enumerate() {
+                if picked.contains(&(idx as u32)) {
+                    geo.stroke = Some(pen.clone());
+                }
+            }
+
+            self.state_change_out
+                .send(ApplicationStateChangeMsg::PatchViewModel(
+                    ViewModelPatch::from(self.project.clone()),
+                ))
+                .expect("Failed to send error to viewmodel.");
+            self.ctx.request_repaint();
+            self.rebuild_after_content_change();
+        }
     }
 
     pub fn set_pen_position(&mut self, down: bool) {
