@@ -79,8 +79,9 @@ impl super::ApplicationCore {
                         continue;
                     }
                     // println!("Picked a color of {:?}", id);
-                    if let Some(geo) = self.project.geometry.get(*id as usize) {
-                        return Some(geo.id.clone() as u32);
+                    if self.project.geometry.get(*id as usize).is_some() {
+                        return Some(*id);
+                        // return Some(geo.id.clone() as u32);
                     }
                 }
             }
@@ -120,12 +121,12 @@ pub(crate) fn render_pick_map(
         .set_blend_mode(BlendMode::Src)
         .set_alpha(255)
         .set_color(Color::new(u32::MAX));
-    for pg in &geo {
+    for (id, pg) in geo.iter().enumerate() {
         let _mid = extents.center();
 
         let pen = pg.stroke.clone().unwrap_or(PenDetail::default());
         paint.set_stroke_width((pen.stroke_width as f32 * PICKS_PER_MM as f32) / 4.);
-        let geo_color = Color::new(pg.id as u32 | 0xff000000);
+        let geo_color = Color::new(id as u32 | 0xff000000);
         paint.set_color(geo_color);
 
         if let Geometry::MultiLineString(mls) = &pg.geometry {

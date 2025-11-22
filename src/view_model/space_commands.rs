@@ -390,6 +390,31 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         ),
     );
 
+    let cmd_select_all = (
+        Key::A,
+        (
+            "Select All".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Select All".to_string(),
+                Box::new(|model| {
+                    model.pick_all();
+                }),
+            ),
+        ),
+    );
+
+    let cmd_select = (
+        Key::S,
+        (
+            "Select".to_string(),
+            SpaceCommandBranch::Branch(IndexMap::from([
+                cmd_select_all,
+                // cmd_scale,
+                // cmd_rotate,
+            ])),
+        ),
+    );
+
     let cmd_edit = (
         Key::E,
         (
@@ -397,6 +422,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Branch(IndexMap::from([
                 cmd_project_undo,
                 scb_separator(),
+                cmd_select,
                 cmd_geometry,
                 // cmd_scale,
                 // cmd_rotate,

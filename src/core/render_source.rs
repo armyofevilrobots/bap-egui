@@ -132,14 +132,14 @@ pub(crate) fn render_svg_preview(
     canvas.translate((-xofs as f32 * sx, -yofs as f32 * sy));
     canvas.scale((sx, sy));
     let _mid = extents.center();
-    for pg in &geo {
+    for (id, pg) in geo.clone().iter().enumerate() {
         let pen = pg.stroke.clone().unwrap_or(PenDetail::default());
         paint.set_path_effect(None);
         paint.set_stroke_cap(skia_safe::PaintCap::Round);
         paint.set_stroke_width(pen.stroke_width as f32);
         if let Some(pickset) = &picked {
-            let id = pg.id as u32;
-            if pickset.contains(&id) {
+            // let id = pg.id as u32;
+            if pickset.contains(&(id as u32)) {
                 let dash = 16.0 / sx;
                 let phase = phase.rem((dash * 4.) as f64) as f32;
                 // println!("Matched pick with phase {}", phase);

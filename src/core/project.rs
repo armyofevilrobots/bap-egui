@@ -346,10 +346,10 @@ impl Project {
         self.geometry
             .iter()
             .enumerate()
-            .map(|(idx, pg)| {
+            .map(|(_idx, pg)| {
                 let new_geo = pg.geometry.rotate_around_point(angle, Point::new(xc, yc));
                 PlotGeometry {
-                    id: idx as u64,
+                    // id: idx as u64,
                     geometry: new_geo,
                     stroke: pg.stroke.clone(),
                     keepdown_strategy: pg.keepdown_strategy.clone(),
@@ -581,15 +581,15 @@ impl Project {
     }
 
     pub fn reindex_geometry(&mut self) {
-        self.geometry.iter_mut().enumerate().for_each(|(idx, geo)| {
-            // println!(
-            //     "Reindexing Geo #{} to #{} with size of {:?}",
-            //     geo.id,
-            //     idx,
-            //     geo.geometry.bounding_rect()
-            // );
-            geo.id = idx as u64
-        });
+        // self.geometry.iter_mut().enumerate().for_each(|(idx, geo)| {
+        //     // println!(
+        //     //     "Reindexing Geo #{} to #{} with size of {:?}",
+        //     //     geo.id,
+        //     //     idx,
+        //     //     geo.geometry.bounding_rect()
+        //     // );
+        //     geo.id = idx as u64
+        // });
     }
 
     /// Loads a pregenerated plot geo set (Plotter Geometry Format)
@@ -655,7 +655,7 @@ pub fn svg_to_geometries(
     }
     // println!("Total geo size is: {:?}", multilines.bounding_rect());
     geometries.push(PlotGeometry {
-        id: 0,
+        // id: 0,
         geometry: Geometry::MultiLineString(multilines),
         //hatch: None,
         /*Some(HatchDetail {

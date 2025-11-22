@@ -306,7 +306,7 @@ impl ApplicationCore {
                                                     geometry: Geometry::MultiLineString(
                                                         MultiLineString::new(vec![linestring]),
                                                     ),
-                                                    id: u32::MAX as u64,
+                                                    // id: u32::MAX as u64,
                                                     stroke: geo.stroke.clone(),
                                                     keepdown_strategy: geo
                                                         .keepdown_strategy
@@ -363,6 +363,14 @@ impl ApplicationCore {
                                 + Duration::from_millis((PICKED_ROTATE_TIME * 1000.) as u64);
                             self.ctx.request_repaint();
                         }
+                        ViewCommand::SelectAll => {
+                            self.picked = Some(BTreeSet::from_iter(
+                                (0..self.project.geometry.len()).map(|i| i as u32),
+                            ));
+                            self.last_rendered = Instant::now()
+                                + Duration::from_millis((PICKED_ROTATE_TIME * 1000.) as u64);
+                            self.ctx.request_repaint();
+                        }
                     }
                 }
             }
@@ -409,10 +417,16 @@ impl ApplicationCore {
                 PlotterState::Dead => true,
                 PlotterState::Failed(_) => true,
                 PlotterState::Paused(_, _, _) => true,
-                _ => false,
+                PlotterState::Disconnected => true,
+                PlotterState::Connecting(_) => false,
+                PlotterState::Running(_, _, _) => false,
+                PlotterState::Busy => false,
+                PlotterState::Terminating => false,
             };
             // Housekeeping stuffs.
+            // eprintln!("CAN SCAN {} - state {:?}", can_scan, self.state);
             if self.last_serial_scan + Duration::from_secs(10) < Instant::now() && can_scan {
+                // eprintln!("SCAN");
                 self.state_change_out
                     .send(ApplicationStateChangeMsg::FoundPorts(serial::scan_ports()))
                     .expect("Failed to send serial port update. Dead ViewModel?");

@@ -94,7 +94,7 @@ impl ApplicationCore {
             program: None,
             gcode: None,
             progress: (0, 0, 0),
-            state: PlotterState::Busy,
+            state: PlotterState::Disconnected,
             picked: None,
         };
         (core, vm_to_app, vm_from_app, cancel_render_sender)

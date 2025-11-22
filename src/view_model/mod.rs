@@ -132,6 +132,10 @@ impl BAPViewModel {
         self.yolo_view_command(ViewCommand::TogglePickAt(point.x as f64, point.y as f64));
     }
 
+    pub fn pick_all(&self) {
+        self.yolo_view_command(ViewCommand::SelectAll);
+    }
+
     /// Takes a given bounding box (extents) and calculates how big it would be if rotated d degrees.
     #[allow(unused)]
     pub fn calc_rotated_bounding_box(around: Pos2, angle: f32, r: Rect) -> Rect {

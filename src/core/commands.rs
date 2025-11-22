@@ -57,6 +57,7 @@ pub enum ViewCommand {
     SaveProject(Option<PathBuf>),
     TryPickAt(f64, f64),
     TogglePickAt(f64, f64),
+    SelectAll,
     ClearPick,
     UnGroup,
     Group,
