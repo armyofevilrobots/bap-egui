@@ -1,3 +1,5 @@
+use std::ops::BitXor;
+
 use crate::BAPViewModel;
 use crate::core::project::{Orientation, PaperSize};
 use eframe::egui;
@@ -39,11 +41,14 @@ pub(crate) fn paper_chooser_window(
             Stroke::new(1., Color32::from_black_alpha(128)),
             egui::StrokeKind::Inside,
         );
-        let dimensions_text_color = if ui.visuals().dark_mode {
-            Color32::from_white_alpha(200)
-        } else {
-            Color32::from_black_alpha(200)
-        };
+
+        let pcol = model.paper_color().to_tuple();
+        let tcol = (
+            ((pcol.0 as u32 + 85) % 255) as u8,
+            ((pcol.0 as u32 + 85) % 255) as u8,
+            ((pcol.0 as u32 + 85) % 255) as u8,
+        );
+        let dimensions_text_color = Color32::from_rgb(tcol.0, tcol.1, tcol.2);
 
         painter.text(
             pos2(cur.x + prect.width() / 2., cur.y - prect.height() / 2.),
@@ -109,11 +114,21 @@ pub(crate) fn paper_chooser_window(
 }
 
 pub(crate) fn paper_chooser_combobox(model: &mut BAPViewModel, ui: &mut egui::Ui) {
+    let mut psize = model.paper_size();
+    let mut changed = false;
     ComboBox::from_label("")
         .selected_text(format!("{}", model.paper_size()))
         .show_ui(ui, |ui| {
             for ps in PaperSize::all().iter() {
-                ui.selectable_value(&mut model.paper_size(), ps.clone(), format!("{}", ps));
+                if ui
+                    .selectable_value(&mut psize, ps.clone(), format!("{}", ps))
+                    .clicked()
+                {
+                    changed = true;
+                };
             }
         });
+    if changed {
+        model.set_paper_size(&psize, true);
+    }
 }

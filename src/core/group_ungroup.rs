@@ -61,7 +61,7 @@ impl ApplicationCore {
                 return;
             }
             // Make copies of all the stuff we're breaking up.
-            let mut picked_items: Vec<PlotGeometry> = picked
+            let picked_items: Vec<PlotGeometry> = picked
                 .iter()
                 .filter_map(|idx| self.project.geometry.get(*idx as usize))
                 .map(|item| item.clone())

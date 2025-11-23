@@ -1,8 +1,10 @@
+use crate::core::config::DockPosition;
+use crate::core::config::RulerOrigin;
 use crate::core::project::Orientation;
 use crate::core::sender::PlotterState;
-use crate::view_model::{BAPDisplayMode, BAPViewModel, CommandContext, RulerOrigin};
+use crate::view_model::{BAPDisplayMode, BAPViewModel, CommandContext};
 use eframe::egui;
-use egui::{ComboBox, Sense, Slider, TextEdit, vec2};
+use egui::{ComboBox, Pos2, Sense, Slider, TextEdit, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 
 use super::tool_button::tool_button;
@@ -18,25 +20,64 @@ pub(crate) fn floating_tool_window(
         .default_pos((40., 40.))
         .collapsible(false)
         .resizable([false, false]);
-    let win = if !model.docked {
-        win.title_bar(false)
-    } else {
-        let ofs = if model.show_rulers {
-            (25.0, wtop + 49.)
-        } else {
-            (2., wtop)
-        };
-        let default_height = ctx.content_rect().height();
-        win.title_bar(false)
-            .anchor(egui::Align2::LEFT_TOP, ofs)
-            .default_height(default_height)
-            .min_height(default_height)
-            .max_height(default_height)
+    let win = match model.toolbar_position {
+        DockPosition::Floating(x, y) => win.title_bar(false), //.current_pos(Pos2 { x, y }),
+        DockPosition::Left => {
+            let ofs = if model.show_rulers {
+                (25.0, wtop + 49.)
+            } else {
+                (2., wtop + 49.)
+            };
+            let default_height = ctx.content_rect().height();
+            win.title_bar(false)
+                .anchor(egui::Align2::LEFT_TOP, ofs)
+                .default_height(default_height)
+                .min_height(default_height)
+                .max_height(default_height)
+        }
+        DockPosition::Right => {
+            let ofs = if model.show_rulers {
+                (2., wtop + 49.)
+            } else {
+                (2., wtop)
+            };
+
+            let default_height = ctx.content_rect().height();
+            win.title_bar(false)
+                .anchor(egui::Align2::RIGHT_TOP, ofs)
+                .default_height(default_height)
+                .min_height(default_height)
+                .max_height(default_height)
+        }
     };
 
-    win.show(ctx, |ui| {
+    let win_response = win.show(ctx, |ui| {
         ui.horizontal(|ui| {
-            ui.toggle_value(&mut model.docked, "📌");
+            let mut docked = if let DockPosition::Floating(x, y) = model.toolbar_position {
+                false
+            } else {
+                true
+            };
+            let dock_response = ui.toggle_value(&mut docked, "📌");
+            model.toolbar_position = if docked {
+                match model.toolbar_position {
+                    DockPosition::Left => DockPosition::Left,
+                    DockPosition::Right => DockPosition::Right,
+                    DockPosition::Floating(x, _y) => {
+                        if x > ctx.viewport_rect().width() / 2. {
+                            DockPosition::Right
+                        } else {
+                            DockPosition::Left
+                        }
+                    }
+                }
+            } else {
+                let Pos2 { x, y } = ui.min_rect().min;
+                DockPosition::Floating(x, y)
+            };
+            if dock_response.clicked() {
+                model.update_core_config_from_changes();
+            };
         });
         // ui.separator();
         egui::ScrollArea::vertical().show(ui, |ui| {
@@ -140,6 +181,9 @@ pub(crate) fn floating_tool_window(
                             });
                         };
                         ui.end_row();
+                        ui.add_space(0.);
+                        ui.end_row();
+
                         if tool_button(
                             ui,
                             egui::include_image!("../../resources/images/zoom_fit.png"),
@@ -226,16 +270,39 @@ pub(crate) fn floating_tool_window(
                     });
                 ui.add_space(16.);
                 ui.label("Ruler Origin");
-                ui.radio_value(&mut model.ruler_origin, RulerOrigin::Origin, "Origin");
-                // ui.radio_value(&mut model.ruler_origin, RulerOrigin::Machine, "Machine");
-                ui.radio_value(&mut model.ruler_origin, RulerOrigin::Source, "Geometry");
-                // });
+                if ui
+                    .radio_value(&mut model.ruler_origin, RulerOrigin::Origin, "Origin")
+                    .clicked()
+                {
+                    model.update_core_config_from_changes();
+                };
+                if ui
+                    .radio_value(&mut model.ruler_origin, RulerOrigin::Source, "Geometry")
+                    .clicked()
+                {
+                    model.update_core_config_from_changes();
+                };
                 ui.add_space(16.);
                 ui.label("Display...");
-                ui.checkbox(&mut model.show_paper, "Show paper");
-                ui.checkbox(&mut model.show_machine_limits, "Show limits");
-                ui.checkbox(&mut model.show_extents, "Show extents");
-                ui.checkbox(&mut model.show_rulers, "Show rulers");
+                if ui.checkbox(&mut model.show_paper, "Show paper").clicked() {
+                    model.update_core_config_from_changes();
+                };
+                if ui
+                    .checkbox(&mut model.show_machine_limits, "Show limits")
+                    .clicked()
+                {
+                    model.update_core_config_from_changes();
+                };
+
+                if ui
+                    .checkbox(&mut model.show_extents, "Show extents")
+                    .clicked()
+                {
+                    model.update_core_config_from_changes();
+                };
+                if ui.checkbox(&mut model.show_rulers, "Show rulers").clicked() {
+                    model.update_core_config_from_changes();
+                };
             } else
             /* if tool mode is plot mode */
             {
@@ -524,7 +591,9 @@ pub(crate) fn floating_tool_window(
                 });
             };
         });
-        if model.docked {
+        if model.toolbar_position == DockPosition::Left
+            || model.toolbar_position == DockPosition::Right
+        {
             let mut avail = ui.cursor();
             let width = ui.min_rect().width();
             avail.set_height(ui.available_height() - wtop - 90.);
@@ -532,4 +601,14 @@ pub(crate) fn floating_tool_window(
             ui.allocate_rect(avail, Sense::empty());
         };
     });
+    if let Some(response) = win_response {
+        if response.response.drag_stopped() {
+            // println!("DRAG STOP.");
+            if let DockPosition::Floating(_x, _y) = model.toolbar_position.clone() {
+                let Pos2 { x, y } = response.response.rect.min.clone();
+                model.toolbar_position = DockPosition::Floating(x, y);
+                model.update_core_config_from_changes();
+            }
+        }
+    }
 }

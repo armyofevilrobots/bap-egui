@@ -7,6 +7,7 @@ use aoer_plotty_rs::plotter::pen::PenDetail;
 use egui::{ColorImage, Context};
 
 pub(crate) mod commands;
+pub(crate) mod config;
 pub(crate) mod core_run;
 pub(crate) mod group_ungroup;
 pub(crate) mod machine;
@@ -22,6 +23,7 @@ use commands::{ApplicationStateChangeMsg, ViewCommand};
 use gcode::GCode;
 use tera::Context as TeraContext;
 
+use crate::core::config::AppConfig;
 use crate::core::project::Project;
 use crate::core::render_plot::render_plot_preview;
 use crate::view_model::view_model_patch::ViewModelPatch;
@@ -35,7 +37,7 @@ const PICKED_ROTATE_TIME: f64 = 0.1;
 
 #[derive(Debug)]
 pub struct ApplicationCore {
-    config_dir: PathBuf,
+    config: AppConfig,
     view_command_in: Receiver<ViewCommand>,
     state_change_out: Sender<ApplicationStateChangeMsg>,
     cancel_render: Receiver<()>,
@@ -76,10 +78,11 @@ impl ApplicationCore {
         app_to_vm
             .send(ApplicationStateChangeMsg::FoundPorts(serial::scan_ports()))
             .expect("Failed to send serial port list up to view.");
+        let config = AppConfig::preflight(None)
+            .and_then(|_| AppConfig::load_from(None))
+            .expect("Failed to preflight and load config!");
+
         let core = ApplicationCore {
-            config_dir: std::env::home_dir().unwrap_or(
-                std::env::current_dir().expect("Cannot determine homedir OR cwd. Dying."),
-            ),
             view_command_in: app_from_vm,
             state_change_out: app_to_vm,
             cancel_render: cancel_render_receiver,
@@ -99,7 +102,9 @@ impl ApplicationCore {
             progress: (0, 0, 0),
             state: PlotterState::Disconnected,
             picked: None,
+            config,
         };
+
         (core, vm_to_app, vm_from_app, cancel_render_sender)
     }
 

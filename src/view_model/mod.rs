@@ -13,6 +13,7 @@ use rfd::FileDialog;
 
 use crate::core::commands::{ApplicationStateChangeMsg, ViewCommand};
 
+use crate::core::config::{AppConfig, DockPosition};
 use crate::core::machine::MachineConfig;
 use crate::core::project::{Orientation, Paper, PaperSize, PenDetail};
 use crate::core::sender::{PlotterResponse, PlotterState};
@@ -24,6 +25,7 @@ pub(crate) mod space_commands;
 pub(crate) mod util;
 pub(crate) mod view_model_eframe;
 pub(crate) mod view_model_patch;
+use crate::core::config::RulerOrigin;
 pub use command_context::CommandContext;
 pub use util::*;
 
@@ -46,7 +48,8 @@ pub enum FileSelector {
 }
 
 pub struct BAPViewModel {
-    pub docked: bool,
+    pub config: AppConfig,
+    pub toolbar_position: DockPosition,
     display_mode: BAPDisplayMode,
     pub state_in: Option<Receiver<ApplicationStateChangeMsg>>,
     pub cmd_out: Option<Sender<ViewCommand>>,
@@ -98,6 +101,28 @@ pub struct BAPViewModel {
 impl BAPViewModel {
     pub fn name() -> &'static str {
         "Bot-a-Plot"
+    }
+
+    pub fn update_ui_from_config(&mut self, config: AppConfig) {
+        self.toolbar_position = config.ui_config.tool_dock_position.clone();
+        self.ruler_origin = config.ui_config.ruler_origin.clone();
+        self.show_extents = config.ui_config.show_extents;
+        self.show_rulers = config.ui_config.show_rulers;
+        self.show_paper = config.ui_config.show_paper;
+        self.show_machine_limits = config.ui_config.show_limits;
+        self.config = config.clone();
+    }
+    /// This will send a new config package to the core and will
+    /// pull that new config from the current UI state.
+    pub fn update_core_config_from_changes(&mut self) {
+        self.config.ui_config.tool_dock_position = self.toolbar_position.clone();
+        self.config.ui_config.ruler_origin = self.ruler_origin.clone();
+        self.config.ui_config.show_extents = self.show_extents;
+        self.config.ui_config.show_rulers = self.show_rulers;
+        self.config.ui_config.show_paper = self.show_paper;
+        self.config.ui_config.show_limits = self.show_machine_limits;
+
+        self.yolo_view_command(ViewCommand::UpdateConfig(self.config.clone()));
     }
 
     pub fn set_picked(&mut self, picked: Option<Vec<usize>>) {
@@ -770,7 +795,7 @@ impl BAPViewModel {
             };
             let zoom_height = (container_rect.height() - 64.) / extents.height();
             let zoom_width = (container_rect.width() - 64.) / extents.width();
-            let zoom_final = (PIXELS_PER_MM * zoom_height.min(zoom_width)) as f64;
+            let zoom_final = 0.9 * (PIXELS_PER_MM * zoom_height.min(zoom_width)) as f64;
             self.set_zoom(zoom_final);
         }
     }

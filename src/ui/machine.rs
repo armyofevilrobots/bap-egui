@@ -1,7 +1,9 @@
-use egui::{Id, Layout, Slider, Style, TextEdit, Vec2};
+use egui::{
+    Align2, Color32, FontId, Id, Layout, Rect, Slider, Stroke, Style, TextEdit, Vec2, pos2, vec2,
+};
 use indexmap::IndexMap;
 
-use crate::view_model::BAPViewModel;
+use crate::{core::project::Orientation, view_model::BAPViewModel};
 
 pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
     egui::Modal::new(Id::new("Pen Editor")).frame(egui::containers::Frame::window(&Style::default())).show(ctx, |ui| {
@@ -122,6 +124,72 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
             // println!("Scrollarea size: {:?}", scrollarea_resp.content_size);
             ui.add_space(8.);
             // ui.separator();
+            ui.collapsing("Machine Limits", |ui|{
+                let (painter_resp, painter) = ui.allocate_painter(vec2(600., 320.), egui::Sense::all());
+                let ratio = model.machine_config.limits().1 / model.machine_config.limits().0;
+                let (mwidth, mheight) = if ratio > 1. {
+                    (300. / ratio as f32, 300.)
+                } else {
+                    (300., 300. * ratio as f32)
+                };
+                let mrect = painter_resp.rect.clone();
+                let cur = mrect.min.clone();
+
+                painter.rect(
+                    Rect::from_center_size(
+                        pos2(mrect.min.x+300., mrect.min.y+150.-8.),
+                        vec2(mwidth as f32, mheight as f32),
+                    ),
+                    0.,
+                    // Color32::from_white_alpha(128),
+                    model.paper_color(),
+                    Stroke::new(2., Color32::from_black_alpha(128)),
+                    egui::StrokeKind::Inside,
+                );
+                let pcol = model.paper_color().to_tuple();
+                let tcol = (
+                    ((pcol.0 as u32 + 85) % 255) as u8,
+                    ((pcol.0 as u32 + 85) % 255) as u8,
+                    ((pcol.0 as u32 + 85) % 255) as u8,
+                );
+                let dimensions_text_color = Color32::from_rgb(tcol.0, tcol.1, tcol.2);
+
+                painter.text(
+                    pos2(mrect.min.x+300., mrect.min.y+150.+8.),
+                    Align2::CENTER_CENTER,
+                    format!("{:3.2}mm x {:3.2}mm\n", model.machine_config.limits().0, model.machine_config.limits().1),
+                    FontId::default(),
+                    dimensions_text_color.clone(),
+                );
+
+
+                painter.text(
+                    pos2(mrect.min.x+300., mrect.min.y+150.+ mheight/2.-16.),
+                    Align2::CENTER_CENTER,
+                    format!("X:{:3.2}mm", model.machine_config.limits().0), //model.paper_size.dims().0),
+                    FontId::proportional(8.),
+                    dimensions_text_color.clone(),
+                );
+
+                painter.text(
+                    pos2(mrect.min.x+300.+ mwidth/2.-24., mrect.min.y+150.+16.),
+                    Align2::CENTER_BOTTOM,
+                    format!("Y:{:3.2}mm", model.machine_config.limits().1), //model.paper_size.dims().0),
+                    FontId::proportional(8.),
+                    dimensions_text_color.clone(),
+                );
+
+                let (mut xlim,mut ylim) = model.machine_config.limits();
+                ui.horizontal(|ui|{
+                    if ui.add(Slider::new(&mut xlim, 0.0..=2000.0).text("X limit").custom_formatter(|num, _range|format!("{:4.2}mm", num))).changed(){
+                        model.machine_config.set_limits((xlim, ylim));
+                    }
+                    if ui.add(Slider::new(&mut ylim, 0.0..=2000.0).text("Y limit").custom_formatter(|num, _range|format!("{:4.2}mm", num))).changed(){
+                        model.machine_config.set_limits((xlim, ylim));
+                    }
+                });
+
+            });
 
 
             ui.allocate_ui(Vec2::new(scrollarea_resp.content_size.x, 16.), |ui|{

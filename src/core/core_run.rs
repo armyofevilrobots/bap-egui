@@ -1,10 +1,7 @@
 use std::collections::BTreeSet;
 use std::time::{Duration, Instant};
 
-use aoer_plotty_rs::context::pgf_file::PlotGeometry;
-
 use super::commands::{ApplicationStateChangeMsg, ViewCommand};
-use geo::{Geometry, MultiLineString};
 
 use super::ApplicationCore;
 use super::project::Project;
@@ -17,6 +14,9 @@ impl ApplicationCore {
     pub fn run(&mut self) {
         // First, send the default image to display:
         let mut last_sent_plotter_running_progress = Instant::now() - Duration::from_secs(60); // Just pretend it's been a while.
+        self.state_change_out
+            .send(ApplicationStateChangeMsg::NotifyConfig(self.config.clone()))
+            .expect("Failed to send config to viewmodel at start. Bailing.");
 
         while !self.shutdown {
             match self
@@ -244,8 +244,6 @@ impl ApplicationCore {
                         ViewCommand::TryPickAt(x, y) => {
                             let picked = self.try_pick(x, y);
                             if let Some(id) = picked {
-                                // println!("Got a geo pick at {}", geo.id);
-                                //
                                 if self.picked.is_none() {
                                     self.picked = Some(BTreeSet::new());
                                 }
@@ -313,9 +311,6 @@ impl ApplicationCore {
                                             .collect::<Vec<usize>>(),
                                     )))
                                     .expect("OMFG ViewModel is borked sending pick id");
-                            } else {
-                                // self.state_change_out.send(ApplicationStateChangeMsg::Picked(None)).expect("OMFG ViewModel is borked sending pick id");
-                                // self.picked = None
                             }
                             self.last_rendered = Instant::now()
                                 + Duration::from_millis((PICKED_ROTATE_TIME * 1000.) as u64);
@@ -332,6 +327,10 @@ impl ApplicationCore {
                         ViewCommand::ApplyPenToSelection(tool_id) => {
                             self.checkpoint();
                             self.apply_pen_to_selection(tool_id);
+                        }
+                        ViewCommand::UpdateConfig(app_config) => {
+                            self.config = app_config;
+                            self.config.save_to(None);
                         }
                     }
                 }

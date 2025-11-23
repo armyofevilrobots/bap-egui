@@ -15,21 +15,6 @@ impl IsPos2Able for Vec2 {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Debug)]
-pub enum RulerOrigin {
-    Origin,
-    Source,
-}
-
-impl RulerOrigin {
-    pub fn toggle(&self) -> Self {
-        match self {
-            RulerOrigin::Origin => RulerOrigin::Source,
-            RulerOrigin::Source => RulerOrigin::Origin,
-        }
-    }
-}
-
 pub fn rotate_pos2(pos: Pos2, angle: f32) -> Pos2 {
     Pos2::new(
         pos.x * angle.cos() - pos.y * angle.sin(),

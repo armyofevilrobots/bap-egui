@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use crate::{
     core::{
+        config::AppConfig,
         machine::MachineConfig,
         project::{Paper, PenDetail},
         sender::{PlotterResponse, PlotterState},
@@ -62,6 +63,7 @@ pub enum ViewCommand {
     ClearPick,
     UnGroup,
     Group,
+    UpdateConfig(AppConfig),
     None,
 }
 
@@ -70,6 +72,7 @@ pub enum ViewCommand {
 pub enum ApplicationStateChangeMsg {
     #[default]
     Pong,
+    NotifyConfig(AppConfig),
     UpdateSourceImage {
         image: ColorImage,             // The image to draw.
         extents: (f64, f64, f64, f64), //Min.x, Min.y, width, height

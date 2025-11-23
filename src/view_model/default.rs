@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use aoer_plotty_rs::plotter::pen::PenDetail;
 use egui::{Color32, Pos2, pos2};
 
+use crate::core::config::AppConfig;
 use crate::core::machine::MachineConfig;
 use crate::core::project::Orientation;
 use crate::core::project::PaperSize;
@@ -16,7 +17,7 @@ use super::BAPViewModel;
 impl Default for BAPViewModel {
     fn default() -> Self {
         Self {
-            docked: true,
+            toolbar_position: super::DockPosition::Left,
             display_mode: BAPDisplayMode::SVG,
             state_in: None,
             cmd_out: None,
@@ -77,6 +78,7 @@ impl Default for BAPViewModel {
             ruler_origin: RulerOrigin::Source,
             last_pointer_pos: None,
             picked: None,
+            config: AppConfig::default(),
         }
     }
 }

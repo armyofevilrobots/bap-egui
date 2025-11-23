@@ -1,5 +1,6 @@
 // use crate::ui::bottom_panel::bottom_panel;
-use crate::view_model::{BAPViewModel, RulerOrigin};
+use crate::core::config::RulerOrigin;
+use crate::view_model::BAPViewModel;
 use eframe::egui;
 use egui::{Align2, Color32, FontId, Painter, Rect, Response, Stroke, StrokeKind, Ui, pos2, vec2};
 

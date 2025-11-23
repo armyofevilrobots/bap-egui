@@ -10,7 +10,10 @@ pub(crate) mod ui;
 pub(crate) mod view_model;
 
 use crate::{
-    core::project::{Orientation, PaperSize},
+    core::{
+        config::AppConfig,
+        project::{Orientation, PaperSize},
+    },
     view_model::BAPViewModel,
 };
 
@@ -38,6 +41,9 @@ fn main() -> eframe::Result<()> {
             let ctx_app = ctx.egui_ctx.clone();
             let (mut application, cmd_out, state_in, cancel_render_sender) =
                 ApplicationCore::new(ctx_app);
+
+            // let config = AppConfig::default();
+
             let mut model = BAPViewModel::default();
             model.state_in = Some(state_in);
             model.cmd_out = Some(cmd_out);

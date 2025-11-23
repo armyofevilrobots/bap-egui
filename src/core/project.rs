@@ -262,9 +262,10 @@ impl Project {
         // Write the file
         {
             let writer = std::fs::File::create(&path)?;
-            let writer = Box::new(BufWriter::new(writer));
+            // let writer = Box::new(BufWriter::new(writer));
+            //
             // println!("Writer...");
-            ron::ser::to_writer_pretty(writer, self, PrettyConfig::default())?;
+            ron::Options::default().to_io_writer_pretty(writer, self, PrettyConfig::default())?;
             // println!("Written...");
         } // Falls out of scope, closes file, we hope.
         // writer.sync_all()?;
