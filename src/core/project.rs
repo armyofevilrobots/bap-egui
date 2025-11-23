@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use std::ffi::OsString;
 use std::fmt::Display;
 use std::fs::File;
-use std::io::BufWriter;
 use std::str::FromStr;
 use std::{collections::HashMap, path::PathBuf};
 use usvg::{Tree, WriteOptions};

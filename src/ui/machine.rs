@@ -3,7 +3,7 @@ use egui::{
 };
 use indexmap::IndexMap;
 
-use crate::{core::project::Orientation, view_model::BAPViewModel};
+use crate::view_model::BAPViewModel;
 
 pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
     egui::Modal::new(Id::new("Pen Editor")).frame(egui::containers::Frame::window(&Style::default())).show(ctx, |ui| {
@@ -133,7 +133,7 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                     (300., 300. * ratio as f32)
                 };
                 let mrect = painter_resp.rect.clone();
-                let cur = mrect.min.clone();
+                let _cur = mrect.min.clone();
 
                 painter.rect(
                     Rect::from_center_size(

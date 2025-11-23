@@ -10,10 +10,7 @@ pub(crate) mod ui;
 pub(crate) mod view_model;
 
 use crate::{
-    core::{
-        config::AppConfig,
-        project::{Orientation, PaperSize},
-    },
+    core::project::{Orientation, PaperSize},
     view_model::BAPViewModel,
 };
 

@@ -1,10 +1,9 @@
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use dirs::config_dir;
 use rand;
-use ron::options::Options;
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
-use std::{env::home_dir, fs::create_dir_all, io::Read, path::PathBuf};
+use std::{fs::create_dir_all, io::Read, path::PathBuf};
 
 #[derive(PartialEq, Clone, Serialize, Deserialize, Debug, Default)]
 pub enum RulerOrigin {
@@ -138,7 +137,7 @@ impl AppConfig {
         let writer = std::fs::File::create(tmp_path.clone())?;
         // ron::ser::to_io_writer_pretty(writer, self, PrettyConfig::default())?;
         // ron::Options::default().to_io_writer_pretty(writer, &self, PrettyConfig::default())?;
-        ron::Options::default().to_io_writer(writer, &self)?;
+        ron::Options::default().to_io_writer_pretty(writer, &self, PrettyConfig::default())?;
         std::fs::rename(&tmp_path, &path)?;
         println!("Renamed to {:?}", path);
         Ok(())

@@ -21,7 +21,7 @@ pub(crate) fn floating_tool_window(
         .collapsible(false)
         .resizable([false, false]);
     let win = match model.toolbar_position {
-        DockPosition::Floating(x, y) => win.title_bar(false), //.current_pos(Pos2 { x, y }),
+        DockPosition::Floating(_x, _y) => win.title_bar(false), //.current_pos(Pos2 { x, y }),
         DockPosition::Left => {
             let ofs = if model.show_rulers {
                 (25.0, wtop + 49.)
@@ -53,7 +53,7 @@ pub(crate) fn floating_tool_window(
 
     let win_response = win.show(ctx, |ui| {
         ui.horizontal(|ui| {
-            let mut docked = if let DockPosition::Floating(x, y) = model.toolbar_position {
+            let mut docked = if let DockPosition::Floating(_x, _y) = model.toolbar_position {
                 false
             } else {
                 true
@@ -181,7 +181,7 @@ pub(crate) fn floating_tool_window(
                             });
                         };
                         ui.end_row();
-                        ui.add_space(0.);
+                        // ui.add_space(0.);
                         ui.end_row();
 
                         if tool_button(

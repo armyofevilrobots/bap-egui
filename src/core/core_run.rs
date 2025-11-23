@@ -362,7 +362,12 @@ impl ApplicationCore {
                         }
                         ViewCommand::UpdateConfig(app_config) => {
                             self.config = app_config;
-                            self.config.save_to(None);
+                            self.config.save_to(None).unwrap_or_else(|err| {
+                                self.yolo_app_state_change(ApplicationStateChangeMsg::Error(
+                                    format!("Failed to save config to disk! Err:{}", err)
+                                        .to_string(),
+                                ))
+                            });
                         }
                     }
                 }

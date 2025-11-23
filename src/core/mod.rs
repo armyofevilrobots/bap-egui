@@ -1,5 +1,4 @@
 use std::collections::BTreeSet;
-use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::{Duration, Instant};
 
@@ -131,6 +130,12 @@ impl ApplicationCore {
             self.ctx.request_repaint();
             self.rebuild_after_content_change();
         }
+    }
+
+    pub fn yolo_app_state_change(&self, msg: ApplicationStateChangeMsg) {
+        self.state_change_out
+            .send(msg)
+            .expect("Failed to yolo a message back to the ViewModel.");
     }
 
     pub fn set_pen_position(&mut self, down: bool) {
