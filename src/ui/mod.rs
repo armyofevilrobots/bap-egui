@@ -361,7 +361,9 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                         if !mods.shift && !mods.ctrl {
                             model.pick_clear();
                         }
-                        if ctx.input(|i| i.modifiers.clone()).ctrl {
+                        if ctx.input(|i| i.modifiers.clone()).shift {
+                            model.add_pick_at_point(model.frame_coords_to_mm(pos));
+                        } else if ctx.input(|i| i.modifiers.clone()).ctrl {
                             model.toggle_pick_at_point(model.frame_coords_to_mm(pos));
                         } else {
                             model.pick_at_point(model.frame_coords_to_mm(pos));

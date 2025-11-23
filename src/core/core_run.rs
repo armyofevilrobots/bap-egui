@@ -241,6 +241,38 @@ impl ApplicationCore {
                                 .expect("Failed to send error to viewmodel.");
                             self.rebuild_after_content_change();
                         }
+                        ViewCommand::AddPickAt(x, y) => {
+                            let picked = self.try_pick(x, y);
+                            if let Some(id) = picked {
+                                if self.picked.is_none() {
+                                    self.picked = Some(BTreeSet::new());
+                                }
+
+                                self.picked.as_mut().unwrap().insert(id as u32);
+                                self.state_change_out
+                                    .send(ApplicationStateChangeMsg::Picked(Some(
+                                        self.picked
+                                            .as_ref()
+                                            .unwrap()
+                                            .iter()
+                                            .map(|i| *i as usize)
+                                            .collect::<Vec<usize>>(),
+                                    )))
+                                    .expect("OMFG ViewModel is borked sending pick id");
+                            } else {
+                                self.state_change_out
+                                .send(ApplicationStateChangeMsg::Picked(None))
+                                .unwrap_or_else(|_err| if self.shutdown {
+                                    eprintln!("Cannot update pick image while shutting down...")
+                                }else{
+                                    eprintln!("Cannot send pick image because ViewModel has hung up.")
+                                });
+                                // .expect("OMFG ViewModel is borked sending pick id");
+                            }
+                            self.last_rendered = Instant::now()
+                                + Duration::from_millis((PICKED_ROTATE_TIME * 1000.) as u64);
+                            self.ctx.request_repaint();
+                        }
                         ViewCommand::TryPickAt(x, y) => {
                             let picked = self.try_pick(x, y);
                             if let Some(id) = picked {
