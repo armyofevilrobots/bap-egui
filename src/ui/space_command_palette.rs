@@ -116,7 +116,7 @@ pub fn space_command_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
 
                     // The columns for the keys.
                     ui.horizontal(|ui| {
-                        for (idx, col) in coldata.iter().enumerate() {
+                        for (_idx, col) in coldata.iter().enumerate() {
                             ui.vertical(|ui| {
                                 for (key, stack, name, selected, enabled) in col {
                                     // eprintln!("CMD {} enabled? {} ", name, enabled);

@@ -12,28 +12,11 @@ use serde::{Deserialize, Serialize};
 use std::ffi::OsString;
 use std::fmt::Display;
 use std::fs::File;
+use std::io::BufWriter;
 use std::str::FromStr;
+use std::time::{SystemTime, UNIX_EPOCH};
 use std::{collections::HashMap, path::PathBuf};
 use usvg::{Tree, WriteOptions};
-
-// #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-// pub struct PenDetail {
-//     #[serde(default)]
-//     pub tool_id: usize,
-//     #[serde(default)]
-//     pub name: String,
-//     pub stroke_width: f64,
-//     pub stroke_density: f64,
-//     pub feed_rate: Option<f64>, //mm/min
-//     pub color: String,
-// }
-
-// #[derive(Serialize, Deserialize, Debug, Clone)]
-// pub struct HatchDetail {
-//     pub hatch_pattern: String, // This is just informational //Arc<Box<dyn HatchPattern>>,
-//     pub geometry: Geometry,
-//     pub pen: Option<PenDetail>,
-// }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub enum Orientation {
@@ -249,26 +232,25 @@ impl Project {
     /// Saves to a destination path. Makes a new temp file and moves
     /// it to the destination after writing it.
     pub fn save_to_path(&self, path: &PathBuf) -> Result<PathBuf> {
-        // println!("Saving...");
         let mut path = path.clone(); //std::fs::canonicalize(path)?;
-        // println!("Canonicalized.");
         let mut dest_path = path.clone();
         dest_path.set_extension(OsString::from_str("bap2")?);
         // We save, then move, to ensure we don't accidentally delete if something bad happens.
-        path.set_extension(OsString::from_str("bap.tmp")?);
-        // println!("Saving tmp to {:?} and final to {:?}", &path, &dest_path);
+        let tmptime = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+        path.set_extension(OsString::from_str(format!("bap.{tmptime}.tmp").as_str())?);
 
         // Write the file
         {
             let writer = std::fs::File::create(&path)?;
-            // let writer = Box::new(BufWriter::new(writer));
+            let writer = Box::new(BufWriter::new(writer));
             //
-            // println!("Writer...");
+            // Turns out writer_pretty is hella slow too.
+            // Or... Actually it was the lack of a bufwriter. Wups.
             ron::Options::default().to_io_writer_pretty(writer, self, PrettyConfig::default())?;
-            // println!("Written...");
         } // Falls out of scope, closes file, we hope.
-        // writer.sync_all()?;
-        // println!("Synced...");
         std::fs::rename(&path, &dest_path)?;
         // println!("Renamed.");
         Ok(dest_path)

@@ -3,7 +3,11 @@ use dirs::config_dir;
 use rand;
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
-use std::{fs::create_dir_all, io::Read, path::PathBuf};
+use std::{
+    fs::create_dir_all,
+    io::{BufWriter, Read},
+    path::PathBuf,
+};
 
 #[derive(PartialEq, Clone, Serialize, Deserialize, Debug, Default)]
 pub enum RulerOrigin {
@@ -135,6 +139,7 @@ impl AppConfig {
         println!("Tmp save dest is {:?}", tmp_path);
         // let content = self.to_string();
         let writer = std::fs::File::create(tmp_path.clone())?;
+        let writer = Box::new(BufWriter::new(writer));
         // ron::ser::to_io_writer_pretty(writer, self, PrettyConfig::default())?;
         // ron::Options::default().to_io_writer_pretty(writer, &self, PrettyConfig::default())?;
         ron::Options::default().to_io_writer_pretty(writer, &self, PrettyConfig::default())?;

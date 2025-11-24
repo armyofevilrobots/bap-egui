@@ -1,4 +1,3 @@
-
 use crate::BAPViewModel;
 use crate::core::project::{Orientation, PaperSize};
 use eframe::egui;

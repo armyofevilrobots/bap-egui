@@ -44,7 +44,7 @@ pub enum FileSelector {
     LoadPGF(PathBuf),
     OpenProject(PathBuf),
     SaveProjectAs(PathBuf),
-    SaveProject,
+    //SaveProject,
 }
 
 pub struct BAPViewModel {
@@ -474,7 +474,6 @@ impl BAPViewModel {
         if let Some(cmd_out) = &self.cmd_out {
             self.origin = origin;
             if create_history {
-                // println!("Sending vm origin {:?}", origin);
                 cmd_out
                     .send(ViewCommand::SetOrigin(origin.x as f64, origin.y as f64))
                     .expect("Failed to send ORIGIN command?");
@@ -495,9 +494,6 @@ impl BAPViewModel {
                         }
                         FileSelector::SaveProjectAs(path_buf) => {
                             self.yolo_view_command(ViewCommand::SaveProject(Some(path_buf)))
-                        }
-                        FileSelector::SaveProject => {
-                            self.yolo_view_command(ViewCommand::SaveProject(None))
                         }
                         FileSelector::LoadPGF(path_buf) => {
                             self.yolo_view_command(ViewCommand::LoadPGF(path_buf))
@@ -926,9 +922,6 @@ impl BAPViewModel {
                                 Some(Instant::now() + Duration::from_secs(3));
                         // } else if hs[0] / 5 > resolution.0 / 4 || hs[1] / 5 > resolution.1 / 4 {
                         } else if hs[0] > resolution.0 || hs[1] > resolution.1 {
-                            //eprintln!(
-                            //    "Requesting WAY smaller than current image to avoid jaggies."
-                            //);
                             sender
                                 .send(ViewCommand::RequestSourceImage {
                                     // extents: cmd_extents,
