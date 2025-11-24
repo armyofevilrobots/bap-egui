@@ -3,10 +3,24 @@ use egui::{Align2, Key, Link, WidgetText, Window, vec2};
 use crate::view_model::space_commands::{SPACE_CMDS, SpaceCommandBranch};
 use crate::view_model::{BAPViewModel, CommandContext};
 
+fn is_subtree_enabled(model: &mut BAPViewModel, sc: &SpaceCommandBranch) -> bool {
+    match sc {
+        SpaceCommandBranch::Branch(_) => true,
+        SpaceCommandBranch::Leaf(_, _, opt_fun) => {
+            if let Some(fun) = opt_fun {
+                fun(model)
+            } else {
+                true
+            }
+        }
+        SpaceCommandBranch::Stub(_) => true,
+    }
+}
+
 // Let's try this again from scratch
 pub fn space_command_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
     if let CommandContext::Space(mut keys) = model.command_context.clone() {
-        let mut coldata: Vec<Vec<(Key, Vec<Key>, String, bool)>> = Vec::new(); // Key, name, current?
+        let mut coldata: Vec<Vec<(Key, Vec<Key>, String, bool, bool)>> = Vec::new(); // Key, name, current?
         let mut tree = &*SPACE_CMDS.lock(); //.expect("Couldn't take over CMDS list");
         let pressed_keys = keys.clone();
         keys.reverse();
@@ -14,7 +28,7 @@ pub fn space_command_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
         loop {
             let key = keys.pop();
             let mut next: Option<&SpaceCommandBranch> = None;
-            let subtree: Vec<(Key, Vec<Key>, String, bool)> = match tree {
+            let subtree: Vec<(Key, Vec<Key>, String, bool, bool)> = match tree {
                 SpaceCommandBranch::Branch(cmds) => {
                     let ccmds = cmds;
                     ccmds
@@ -24,18 +38,36 @@ pub fn space_command_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
                             stackc.push(ckey.clone());
                             if Some(*ckey) == key {
                                 next = Some(&cmd.1);
-                                (ckey.clone(), stackc.clone(), cmd.0.clone(), true)
+                                (
+                                    ckey.clone(),
+                                    stackc.clone(),
+                                    cmd.0.clone(),
+                                    true,
+                                    is_subtree_enabled(model, &cmd.1),
+                                )
                             } else {
-                                (ckey.clone(), stackc.clone(), cmd.0.clone(), false)
+                                (
+                                    ckey.clone(),
+                                    stackc.clone(),
+                                    cmd.0.clone(),
+                                    false,
+                                    is_subtree_enabled(model, &cmd.1),
+                                )
                             }
                         })
                         .collect()
                 }
-                SpaceCommandBranch::Leaf(name, _) => {
-                    vec![(Key::Pipe, stack.clone(), name.clone(), true)]
+                SpaceCommandBranch::Leaf(name, _, opt_enabled_fn) => {
+                    // println!("LEAF");
+                    let enabled = match opt_enabled_fn {
+                        Some(enabled_fn) => enabled_fn(model),
+                        None => true,
+                    };
+
+                    vec![(Key::Pipe, stack.clone(), name.clone(), true, enabled)]
                 }
                 SpaceCommandBranch::Stub(name) => {
-                    vec![(Key::Pipe, stack.clone(), name.clone(), true)]
+                    vec![(Key::Pipe, stack.clone(), name.clone(), true, true)]
                 }
             };
             coldata.push(subtree);
@@ -86,7 +118,8 @@ pub fn space_command_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
                     ui.horizontal(|ui| {
                         for (idx, col) in coldata.iter().enumerate() {
                             ui.vertical(|ui| {
-                                for (key, stack, name, selected) in col {
+                                for (key, stack, name, selected, enabled) in col {
+                                    // eprintln!("CMD {} enabled? {} ", name, enabled);
                                     let rt = WidgetText::from(format!(
                                         "{}-{}",
                                         key.symbol_or_name(),
@@ -94,13 +127,13 @@ pub fn space_command_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
                                     ));
                                     let rt = if *selected { rt.strong() } else { rt };
                                     let response = ui.add_enabled(
-                                        *selected || idx == (coldata.len() - 1),
+                                        // *selected || idx == (coldata.len() - 1),
+                                        *enabled || *selected,
                                         Link::new(rt),
                                     );
                                     if response.clicked() {
-                                        model.command_context =
-                                            CommandContext::Space(stack.clone());
                                         // println!("STACK: {:?}", stack);
+                                        CommandContext::Space(stack.clone());
                                     }
                                 }
                             });

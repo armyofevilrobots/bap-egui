@@ -65,6 +65,7 @@ impl CommandContext {
     /// viable to continue, and dispatches if possible.
     /// Returns a bool to tell the parent to either
     pub fn dispatch_space_cmd(model: &mut BAPViewModel, keys: &Vec<Key>) -> SpaceCommandStatus {
+        // println!("Dispatching command: {}", model.command_context);
         let mut tree = &*SPACE_CMDS.lock(); //.expect("Failed to lock space commands!");
         let _allkeys = keys.clone();
         let mut keys = keys.clone();
@@ -84,7 +85,7 @@ impl CommandContext {
                         }
                     });
                 }
-                SpaceCommandBranch::Leaf(_name, cmd) => {
+                SpaceCommandBranch::Leaf(_name, cmd, _opt_enabled_fn) => {
                     cmd(model);
                     return SpaceCommandStatus::Dispatched(cmd_display);
                 }

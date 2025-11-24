@@ -9,10 +9,11 @@ use crate::{
 };
 
 type SpaceCommandFn = Box<dyn Fn(&mut BAPViewModel)>;
+type SCEnabledFn = Box<dyn Fn(&mut BAPViewModel) -> bool>;
 
 pub enum SpaceCommandBranch {
     Branch(IndexMap<Key, (String, SpaceCommandBranch)>),
-    Leaf(String, SpaceCommandFn),
+    Leaf(String, SpaceCommandFn, Option<SCEnabledFn>),
     Stub(String),
 }
 unsafe impl Send for SpaceCommandBranch {}
@@ -20,9 +21,11 @@ unsafe impl Send for SpaceCommandBranch {}
 impl std::fmt::Debug for SpaceCommandBranch {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Branch(arg0) => f.debug_tuple("Branch").field(arg0).finish(),
-            Self::Leaf(arg0, _arg1) => f.debug_tuple("Leaf").field(arg0).finish(),
-            Self::Stub(arg0) => f.debug_tuple("Stub").field(arg0).finish(),
+            Self::Branch(branch_map) => f.debug_tuple("Branch").field(branch_map).finish(),
+            Self::Leaf(leaf_name, _leaf_fn, _valid_fn) => {
+                f.debug_tuple("Leaf").field(leaf_name).finish()
+            }
+            Self::Stub(stub_name) => f.debug_tuple("Stub").field(stub_name).finish(),
         }
     }
 }
@@ -50,6 +53,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 "Quit".to_string(),
                 // Box::new(|model: &mut BAPViewModel| {}),
                 Box::new(quit_fn),
+                None,
             ),
         ),
     );
@@ -61,6 +65,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Open Project".to_string(),
                 Box::new(|model| model.open_project_with_dialog()),
+                None,
             ),
         ),
     );
@@ -72,6 +77,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Load PGF".to_string(),
                 Box::new(|model| model.load_pgf_with_dialog()),
+                None,
             ),
         ),
     );
@@ -83,6 +89,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Import SVG".to_string(),
                 Box::new(|model| model.import_svg_with_dialog()),
+                None,
             ),
         ),
     );
@@ -94,6 +101,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Save Project As".to_string(),
                 Box::new(|model| model.save_project_with_dialog()),
+                None,
             ),
         ),
     );
@@ -105,6 +113,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Save Project".to_string(),
                 Box::new(|model| model.save_project(None)),
+                Some(Box::new(|model| model.file_path.is_some())),
             ),
         ),
     );
@@ -143,7 +152,11 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         Key::F,
         (
             "Zoom Fit".to_string(),
-            SpaceCommandBranch::Leaf("Zoom Fit".to_string(), Box::new(|model| model.zoom_fit())),
+            SpaceCommandBranch::Leaf(
+                "Zoom Fit".to_string(),
+                Box::new(|model| model.zoom_fit()),
+                None,
+            ),
         ),
     );
 
@@ -154,6 +167,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Toggle Rulers".to_string(),
                 Box::new(|model| model.show_rulers = !model.show_rulers),
+                None,
             ),
         ),
     );
@@ -165,6 +179,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Zero rulers to...".to_string(),
                 Box::new(|model| model.ruler_origin = model.ruler_origin.toggle()),
+                None,
             ),
         ),
     );
@@ -176,6 +191,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Toggle Extents".to_string(),
                 Box::new(|model| model.show_extents = !model.show_extents),
+                None,
             ),
         ),
     );
@@ -186,6 +202,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Toggle Machine".to_string(),
                 Box::new(|model| model.show_machine_limits = !model.show_machine_limits),
+                None,
             ),
         ),
     );
@@ -196,6 +213,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Toggle Paper".to_string(),
                 Box::new(|model| model.show_paper = !model.show_paper),
+                None,
             ),
         ),
     );
@@ -223,6 +241,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Smart Arrange".to_string(),
                 Box::new(|model| model.center_smart()),
+                None,
             ),
         ),
     );
@@ -234,6 +253,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Align to paper".to_string(),
                 Box::new(|model| model.center_paper()),
+                None,
             ),
         ),
     );
@@ -245,6 +265,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Align to machine".to_string(),
                 Box::new(|model| model.center_machine()),
+                None,
             ),
         ),
     );
@@ -256,6 +277,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Set Origin".to_string(),
                 Box::new(|model| model.command_context = CommandContext::Origin),
+                None,
             ),
         ),
     );
@@ -264,7 +286,11 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         Key::U,
         (
             "Undo".to_string(),
-            SpaceCommandBranch::Leaf("Undo".to_string(), Box::new(|model| model.undo())),
+            SpaceCommandBranch::Leaf(
+                "Undo".to_string(),
+                Box::new(|model| model.undo()),
+                Some(Box::new(|model| model.undo_available.clone())),
+            ),
         ),
     );
 
@@ -275,6 +301,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Scale by factor".to_string(),
                 Box::new(|model| model.command_context = CommandContext::Scale(1.)),
+                None,
             ),
         ),
     );
@@ -286,6 +313,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Rotate".to_string(),
                 Box::new(|model| model.command_context = CommandContext::Rotate(None, None, None)),
+                None,
             ),
         ),
     );
@@ -319,7 +347,8 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             "Edit Paper".to_string(),
             SpaceCommandBranch::Leaf(
                 "Edit Paper".to_string(),
-                Box::new(|model| model.command_context = CommandContext::PaperChooser),
+                Box::new(|model| model.set_command_context(CommandContext::PaperChooser)),
+                None,
             ),
         ),
     );
@@ -331,6 +360,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Pen (C)rib".to_string(),
                 Box::new(|model| model.command_context = CommandContext::PenCrib),
+                None,
             ),
         ),
     );
@@ -347,6 +377,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                         Orientation::Portrait => Orientation::Landscape,
                     }
                 }),
+                None,
             ),
         ),
     );
@@ -360,6 +391,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 Box::new(|model| {
                     model.request_post();
                 }),
+                None,
             ),
         ),
     );
@@ -373,6 +405,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 Box::new(|model| {
                     model.ungroup();
                 }),
+                Some(Box::new(|model| model.picked().is_some())),
             ),
         ),
     );
@@ -386,6 +419,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 Box::new(|model| {
                     model.merge_group();
                 }),
+                Some(Box::new(|model| model.picked().is_some())),
             ),
         ),
     );
@@ -413,6 +447,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 Box::new(|model| {
                     model.pick_all();
                 }),
+                None,
             ),
         ),
     );

@@ -181,7 +181,7 @@ impl eframe::App for BAPViewModel {
                 }
                 ApplicationStateChangeMsg::NotifyConfig(app_config) => {
                     // self.config = app_config.clone();
-                    eprintln!("Received new config from app core: {:?}", app_config);
+                    // eprintln!("Received new config from app core: {:?}", app_config);
                     self.update_ui_from_config(app_config.clone());
                 }
             }

@@ -120,7 +120,7 @@ impl AppConfig {
         let mut data = String::new();
         reader.read_to_string(&mut data)?;
         let app_config = ron::from_str(data.as_str())?;
-        eprintln!("Read config from file: {:?}", from);
+        // eprintln!("Read config from file: {:?}", from);
         Ok(app_config)
     }
 
@@ -144,30 +144,30 @@ impl AppConfig {
     }
 
     pub fn preflight(dest: Option<PathBuf>) -> Result<()> {
-        eprintln!("Preflight...");
+        // eprintln!("Preflight...");
         let path = match dest {
             Some(path) => path,
             None => Self::default().config_dir,
         };
-        eprintln!("Preflight save-to path is {:?}", path);
+        // eprintln!("Preflight save-to path is {:?}", path);
         if !path.is_dir() {
-            eprintln!("Creating new config path at {:?}", path);
+            // eprintln!("Creating new config path at {:?}", path);
             create_dir_all(path.clone())?;
         }
-        eprintln!("Path exists and is a dir.");
+        // eprintln!("Path exists and is a dir.");
         let cfgpath = path.join("config.bap"); //.with_extension("bap");
-        eprintln!("Will save to {:?}", cfgpath);
+        // eprintln!("Will save to {:?}", cfgpath);
         if !cfgpath.is_file() {
-            eprintln!("No config. Creating default.");
+            // eprintln!("No config. Creating default.");
             let cfg = AppConfig {
                 config_dir: path.clone(),
                 ..Default::default()
             };
             cfg.save_to(None)?;
         } else {
-            eprintln!("Config already exists.");
+            // eprintln!("Config already exists.");
         };
-        eprintln!("Done preflight.");
+        // eprintln!("Done preflight.");
         Ok(())
     }
 }

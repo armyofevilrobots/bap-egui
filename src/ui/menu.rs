@@ -3,88 +3,110 @@ use std::sync::mpsc::{self};
 
 use crate::BAPViewModel;
 use crate::core::commands::ViewCommand;
-use crate::view_model::FileSelector;
+use crate::view_model::space_commands::{SPACE_CMDS, SpaceCommandBranch};
+use crate::view_model::{CommandContext, FileSelector};
 use eframe::egui;
-use egui::{Button, Rect, Separator, Visuals};
+use egui::{Button, InnerResponse, Key, Rect, Separator, Ui, Visuals};
+
+fn grow_stack(stack: &Vec<Key>, key: &Key) -> Vec<Key> {
+    let mut new_stack = stack.clone();
+    new_stack.push(key.clone());
+    new_stack
+}
+
+fn format_name_and_key_as_menu_string(
+    name: &str,
+    stack: &Vec<Key>,
+    key: &Key,
+    space_mode: bool,
+) -> String {
+    let stack = grow_stack(stack, key);
+    let key_combo = stack
+        .into_iter()
+        .map(|k| k.symbol_or_name().to_string())
+        .collect::<Vec<String>>()
+        .join("-");
+
+    let out = if space_mode {
+        format!("{} [{}]", name, key_combo)
+    } else {
+        format!("{}", name)
+    };
+    // println!("Generated {} as key combo", out);
+    out
+}
+
+fn menu_from_tree(
+    model: &mut BAPViewModel,
+    ui: &mut Ui,
+    key: &Key,
+    stack: &Vec<Key>,
+    tree: &SpaceCommandBranch,
+) {
+    let space_mode: bool = if let CommandContext::Space(_) = model.command_context {
+        true
+    } else {
+        false
+    };
+    match tree {
+        SpaceCommandBranch::Branch(cmd_map) => {
+            for (key, (name, subtree)) in cmd_map.iter() {
+                if let SpaceCommandBranch::Branch(subtree_map) = subtree {
+                    ui.menu_button(
+                        format_name_and_key_as_menu_string(name, stack, key, space_mode),
+                        |ui| menu_from_tree(model, ui, key, &grow_stack(stack, key), subtree),
+                    );
+                } else {
+                    menu_from_tree(model, ui, key, stack, subtree);
+                }
+            }
+        }
+        SpaceCommandBranch::Leaf(name, command_fn, opt_enabled_fn) => {
+            let response = ui.add_enabled(
+                match opt_enabled_fn {
+                    Some(enfn) => enfn(model),
+                    None => true,
+                },
+                Button::new(format_name_and_key_as_menu_string(
+                    name, stack, key, space_mode,
+                )),
+            );
+            if response.clicked() {
+                command_fn(model)
+            };
+            // InnerResponse::new(Some(()), response)
+        }
+        SpaceCommandBranch::Stub(_name) => {
+            ui.label(_name);
+        }
+    }
+    // ui.menu_button("FOO", |ui| {
+    //     ui.button("bar");
+    // })
+}
+/// Unlike the main_menu, this one pulls from the Space menu structure.
+pub(crate) fn space_menu(model: &mut BAPViewModel, ctx: &egui::Context) -> Rect {
+    let tbp = egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+        // egui::MenuBar::new().ui(ui, |ui| {});
+        egui::MenuBar::new().ui(ui, |ui| space_menu(model, ctx));
+
+        // Return the rect for the menu.;
+        ui.cursor()
+    });
+    tbp.inner
+}
 
 pub(crate) fn main_menu(model: &mut BAPViewModel, ctx: &egui::Context) -> Rect {
     let tbp = egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
         egui::MenuBar::new().ui(ui, |ui| {
-            ui.menu_button("File", |ui| {
-                if ui.button("New project [spc-p-n]").clicked() {
-                    model.yolo_view_command(ViewCommand::ResetProject);
-                }
-                if ui.button("Open Project [spc-p-o]").clicked() {
-                    model.open_project_with_dialog();
-                }
-                if ui
-                    .add_enabled(
-                        model.file_path.is_some(),
-                        Button::new("Save Project [spc-p-s]"),
-                    )
-                    .clicked()
-                {
-                    //functionality
-                    let (tx, rx) = mpsc::channel::<FileSelector>();
-                    model.file_selector = Some(rx);
-                    tx.send(FileSelector::SaveProject)
-                        .expect("failed to send project load signal");
-                }
-                if ui.button("Save Project As [spc-p-a]").clicked() {
-                    //functionality
-                    model.save_project_with_dialog();
-                }
-                ui.add(Separator::default());
-                if ui.button("Import SVG [spc f i]").clicked() {
-                    model.import_svg_with_dialog();
-                };
-                if ui.button("Load PGF [space f p]").clicked() {
-                    model.load_pgf_with_dialog();
-                };
-                if ui.button("Quit [cmd-Q]").clicked() {
-                    if let Some(cmd_out) = &model.cmd_out {
-                        cmd_out.send(ViewCommand::Quit).unwrap_or_else(|err| {
-                            eprintln!("Failed to quit due to: {:?}. Terminating.", err);
-                            exit(-1);
-                        })
-                    };
-                }
-            });
-
-            ui.menu_button("Edit", |ui| {
-                // if ui.button("Undo").clicked() {
-                //     if let Some(cmd_out) = &model.cmd_out {
-                //         cmd_out.send(ViewCommand::Undo).unwrap_or_else(|err| {
-                //             eprintln!("Failed to undo due to: {:?}. Terminating.", err);
-                //             exit(-1);
-                //         })
-                //     };
-                // }
-                if ui
-                    .add_enabled(model.undo_available, Button::new("Undo [u]"))
-                    .clicked()
-                {
-                    model.undo();
-                };
-            });
-
-            let mut dark_mode = ui.visuals().dark_mode.clone();
-
-            ui.menu_button("View", |ui| {
-                // if ui.tobutton("Dark")..clicked() {
-                if ui
-                    .toggle_value(&mut dark_mode, "Dark mode [space t d]")
-                    .clicked()
-                {
-                    ctx.set_visuals(if dark_mode {
-                        Visuals::dark()
-                    } else {
-                        Visuals::light()
-                    });
-                };
-            })
-        });
-        ui.cursor()
+            menu_from_tree(
+                model,
+                ui,
+                &Key::Space,
+                &vec![Key::Space],
+                &*SPACE_CMDS.lock(),
+            )
+        })
     });
-    tbp.inner
+    tbp.response.rect
 }

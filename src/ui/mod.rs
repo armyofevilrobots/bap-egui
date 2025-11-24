@@ -67,7 +67,9 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     // if let CommandContext::Space(_) = model.command_context {
                     //     model.command_context = CommandContext::None;
                     // }
-                    model.cancel_command_context(false);
+                    if let CommandContext::Space(_) = model.command_context {
+                        model.cancel_command_context(false);
+                    } // Otherwise, we changed contexts in the command itself.
                     model.toast_info(dispatched);
                 }
                 SpaceCommandStatus::Ongoing => (),
