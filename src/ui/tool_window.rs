@@ -20,10 +20,10 @@ pub(crate) fn floating_tool_window(
         .default_pos((40., 40.))
         .collapsible(false)
         .resizable([false, false]);
-    let win = match model.toolbar_position {
+    let win = match model.toolbar_position() {
         DockPosition::Floating(_x, _y) => win.title_bar(false), //.current_pos(Pos2 { x, y }),
         DockPosition::Left => {
-            let ofs = if model.show_rulers {
+            let ofs = if model.show_rulers() {
                 (25.0, wtop + 49.)
             } else {
                 (2., wtop + 49.)
@@ -36,7 +36,7 @@ pub(crate) fn floating_tool_window(
                 .max_height(default_height)
         }
         DockPosition::Right => {
-            let ofs = if model.show_rulers {
+            let ofs = if model.show_rulers() {
                 (2., wtop + 49.)
             } else {
                 (2., wtop)
@@ -53,14 +53,14 @@ pub(crate) fn floating_tool_window(
 
     let win_response = win.show(ctx, |ui| {
         ui.horizontal(|ui| {
-            let mut docked = if let DockPosition::Floating(_x, _y) = model.toolbar_position {
+            let mut docked = if let DockPosition::Floating(_x, _y) = model.toolbar_position() {
                 false
             } else {
                 true
             };
             let dock_response = ui.toggle_value(&mut docked, "📌");
-            model.toolbar_position = if docked {
-                match model.toolbar_position {
+            model.set_toolbar_position(&if docked {
+                match model.toolbar_position() {
                     DockPosition::Left => DockPosition::Left,
                     DockPosition::Right => DockPosition::Right,
                     DockPosition::Floating(x, _y) => {
@@ -74,7 +74,7 @@ pub(crate) fn floating_tool_window(
             } else {
                 let Pos2 { x, y } = ui.min_rect().min;
                 DockPosition::Floating(x, y)
-            };
+            });
             if dock_response.clicked() {
                 model.update_core_config_from_changes();
             };
@@ -97,7 +97,7 @@ pub(crate) fn floating_tool_window(
                         {
                             // println!("Showing paper chooser w indow.");
                             // model.paper_modal_open = true;
-                            model.command_context = CommandContext::PaperChooser;
+                            model.set_command_context(CommandContext::PaperChooser);
                         }
                         if tool_button(
                             ui,
@@ -108,7 +108,7 @@ pub(crate) fn floating_tool_window(
                         .clicked()
                         {
                             // println!("Switching to origin context.");
-                            model.command_context = CommandContext::Origin;
+                            model.set_command_context(CommandContext::Origin);
                         };
                         let portrait_landscape_button = match model.paper_orientation() {
                             Orientation::Landscape => tool_button(
@@ -143,7 +143,7 @@ pub(crate) fn floating_tool_window(
                         .clicked()
                         {
                             // model.pen_crib_open = true;
-                            model.command_context = CommandContext::PenCrib;
+                            model.set_command_context(CommandContext::PenCrib);
                         };
 
                         if tool_button(
@@ -155,18 +155,19 @@ pub(crate) fn floating_tool_window(
                         .clicked()
                         {
                             // model.pen_crib_open = true;
-                            model.command_context =
-                                CommandContext::MachineEdit(Some(model.machine_config.clone()));
+                            model.set_command_context(CommandContext::MachineEdit(Some(
+                                model.machine_config().clone(),
+                            )));
                         };
 
                         if tool_button(
                             ui,
                             egui::include_image!("../../resources/images/print.png"),
                             Some("Post to plot engine.".into()),
-                            match model.plotter_state {
+                            match model.plotter_state() {
                                 PlotterState::Running(_, _, _) => false,
                                 _ => true,
-                            } && model.source_image_extents.is_some(),
+                            } && model.source_image_extents().is_some(),
                         )
                         .clicked()
                         {
@@ -206,7 +207,7 @@ pub(crate) fn floating_tool_window(
                             ui,
                             egui::include_image!("../../resources/images/align_center_paper.png"),
                             Some("Center to paper".into()),
-                            model.source_image_extents.is_some(),
+                            model.source_image_extents().is_some(),
                         )
                         .clicked()
                         {
@@ -216,7 +217,7 @@ pub(crate) fn floating_tool_window(
                             ui,
                             egui::include_image!("../../resources/images/align_center_limits.png"),
                             Some("Center to machine limits".into()),
-                            model.source_image_extents.is_some(),
+                            model.source_image_extents().is_some(),
                         )
                         .clicked()
                         {
@@ -226,7 +227,7 @@ pub(crate) fn floating_tool_window(
                             ui,
                             egui::include_image!("../../resources/images/smart_center.png"),
                             Some("Optimal center for paper size and machine limits".into()),
-                            model.source_image_extents.is_some(),
+                            model.source_image_extents().is_some(),
                         )
                         .clicked()
                         {
@@ -237,70 +238,78 @@ pub(crate) fn floating_tool_window(
                             ui,
                             egui::include_image!("../../resources/images/scale.png"),
                             Some("Scale by a factor".into()),
-                            model.source_image_extents.is_some(),
+                            model.source_image_extents().is_some(),
                         )
                         .clicked()
                         {
-                            model.command_context = CommandContext::Scale(1.);
+                            model.set_command_context(CommandContext::Scale(1.));
                         }
 
                         if tool_button(
                             ui,
                             egui::include_image!("../../resources/images/rotate_right.png"),
                             Some("Free Rotate".into()),
-                            model.source_image_extents.is_some(),
+                            model.source_image_extents().is_some(),
                         )
                         .clicked()
                         {
-                            model.command_context = CommandContext::Rotate(None, None, None);
+                            model.set_command_context(CommandContext::Rotate(None, None, None));
                         }
 
                         if tool_button(
                             ui,
                             egui::include_image!("../../resources/images/expand.png"),
                             Some("Scale to fit paper/machine with matting".into()),
-                            model.source_image_extents.is_some(),
+                            model.source_image_extents().is_some(),
                         )
                         .clicked()
                         {
-                            model.command_context = CommandContext::Scale(1.);
+                            model.set_command_context(CommandContext::Scale(1.));
                         }
 
                         ui.end_row();
                     });
                 ui.add_space(16.);
                 ui.label("Ruler Origin");
+                let mut ro = model.ruler_origin();
                 if ui
-                    .radio_value(&mut model.ruler_origin, RulerOrigin::Origin, "Origin")
+                    .radio_value(&mut ro, RulerOrigin::Origin, "Origin")
                     .clicked()
                 {
+                    model.set_ruler_origin(&ro);
                     model.update_core_config_from_changes();
                 };
                 if ui
-                    .radio_value(&mut model.ruler_origin, RulerOrigin::Source, "Geometry")
+                    .radio_value(&mut ro, RulerOrigin::Source, "Geometry")
                     .clicked()
                 {
+                    model.set_ruler_origin(&ro);
                     model.update_core_config_from_changes();
                 };
                 ui.add_space(16.);
                 ui.label("Display...");
-                if ui.checkbox(&mut model.show_paper, "Show paper").clicked() {
+                let mut show_paper = model.show_paper();
+                if ui.checkbox(&mut show_paper, "Show paper").clicked() {
+                    model.set_show_paper(show_paper);
                     model.update_core_config_from_changes();
                 };
+                let mut show_machine_limits = model.show_machine_limits();
                 if ui
-                    .checkbox(&mut model.show_machine_limits, "Show limits")
+                    .checkbox(&mut show_machine_limits, "Show limits")
                     .clicked()
                 {
+                    model.set_show_machine_limits(show_machine_limits);
                     model.update_core_config_from_changes();
                 };
 
-                if ui
-                    .checkbox(&mut model.show_extents, "Show extents")
-                    .clicked()
-                {
+                let mut show_extents = model.show_extents();
+                if ui.checkbox(&mut show_extents, "Show extents").clicked() {
+                    model.set_show_extents(show_extents);
                     model.update_core_config_from_changes();
                 };
-                if ui.checkbox(&mut model.show_rulers, "Show rulers").clicked() {
+                let mut show_rulers = model.show_rulers();
+                if ui.checkbox(&mut show_rulers, "Show rulers").clicked() {
+                    model.set_show_rulers(show_rulers);
                     model.update_core_config_from_changes();
                 };
             } else
@@ -310,29 +319,32 @@ pub(crate) fn floating_tool_window(
                 // The 'serial' connection selector.
                 // let mut plotter = "/dev/acm0";
                 // let plotters = vec!["/dev/acm0", "magic-phaery-dust"];
-                let last_port = model.current_port.clone();
+                let last_port = model.current_port();
+                let mut tmp_port = last_port.clone();
                 ui.horizontal(|ui| {
                     let cb_resp = ComboBox::from_id_salt("Plotter Connection")
                         .selected_text(format!(
                             "{}",
-                            model.current_port.replace("serial:///dev/", "")
+                            model.current_port().replace("serial:///dev/", "")
                         ))
                         .width(72.)
                         .truncate()
                         .show_ui(ui, |ui| {
-                            for plt in model.serial_ports.iter() {
+                            for plt in model.serial_ports().iter() {
                                 if ui
                                     .selectable_value(
-                                        &mut model.current_port,
+                                        &mut tmp_port,
                                         plt.clone(),
                                         format!("{}", plt.replace("serial:///dev/", "")),
                                     )
                                     .clicked()
                                 {
-                                    match model.plotter_state {
-                                        PlotterState::Disconnected => (),
+                                    match model.plotter_state() {
+                                        PlotterState::Disconnected => {
+                                            model.set_current_port(tmp_port.clone());
+                                        }
                                         _ => {
-                                            model.current_port = last_port.clone();
+                                            model.set_current_port(last_port.clone());
                                             toasts.add(Toast {
                                                 kind: ToastKind::Error,
                                                 text: format!(
@@ -349,13 +361,13 @@ pub(crate) fn floating_tool_window(
                         });
                     if cb_resp.response.changed() {
                         //println!("Got a change on serial selector.");
-                        match model.plotter_state {
-                            PlotterState::Disconnected => model.current_port = last_port.clone(),
-                            _ => (),
+                        match model.plotter_state() {
+                            PlotterState::Disconnected => model.set_current_port(last_port.clone()),
+                            _ => model.set_current_port(tmp_port),
                         }
                     }
                     if ui
-                        .button(match model.plotter_state {
+                        .button(match model.plotter_state() {
                             PlotterState::Disconnected => {
                                 egui::include_image!("../../resources/images/plotter_connect.png")
                             }
@@ -368,9 +380,9 @@ pub(crate) fn floating_tool_window(
                         })
                         .clicked()
                     {
-                        match model.plotter_state {
-                            PlotterState::Disconnected => model.set_serial(&model.current_port),
-                            PlotterState::Dead => model.set_serial(&model.current_port),
+                        match model.plotter_state() {
+                            PlotterState::Disconnected => model.set_serial(&model.current_port()),
+                            PlotterState::Dead => model.set_serial(&model.current_port()),
                             PlotterState::Running(_, _, _) => {
                                 toasts.add(Toast {
                                     kind: ToastKind::Error,
@@ -398,7 +410,7 @@ pub(crate) fn floating_tool_window(
                             ui,
                             egui::include_image!("../../resources/images/pen_up.png"),
                             Some("Pen Up (from paper)".into()),
-                            match model.plotter_state {
+                            match model.plotter_state() {
                                 PlotterState::Ready => true,
                                 PlotterState::Paused(_, _, _) => true,
                                 _ => false,
@@ -412,7 +424,7 @@ pub(crate) fn floating_tool_window(
                             ui,
                             egui::include_image!("../../resources/images/move_arrow_up.png"),
                             Some("Move pen up (Y+)".into()),
-                            match model.plotter_state {
+                            match model.plotter_state() {
                                 PlotterState::Ready => true,
                                 PlotterState::Paused(_, _, _) => true,
                                 _ => false,
@@ -420,13 +432,13 @@ pub(crate) fn floating_tool_window(
                         )
                         .clicked()
                         {
-                            model.request_relative_move(vec2(0., model.move_increment));
+                            model.request_relative_move(vec2(0., model.move_increment()));
                         };
                         if tool_button(
                             ui,
                             egui::include_image!("../../resources/images/cancel.png"),
                             Some("Cancel".into()),
-                            match model.plotter_state {
+                            match model.plotter_state() {
                                 PlotterState::Running(_, _, _) => true,
                                 PlotterState::Paused(_, _, _) => true,
                                 _ => false,
@@ -443,7 +455,7 @@ pub(crate) fn floating_tool_window(
                             ui,
                             egui::include_image!("../../resources/images/move_arrow_left.png"),
                             Some("Move pen left (X-)".into()),
-                            match model.plotter_state {
+                            match model.plotter_state() {
                                 PlotterState::Ready => true,
                                 PlotterState::Paused(_, _, _) => true,
                                 _ => false,
@@ -451,14 +463,14 @@ pub(crate) fn floating_tool_window(
                         )
                         .clicked()
                         {
-                            model.request_relative_move(vec2(-model.move_increment, 0.));
+                            model.request_relative_move(vec2(-model.move_increment(), 0.));
                         };
 
                         if tool_button(
                             ui,
                             egui::include_image!("../../resources/images/home.png"),
                             Some("Go Home (G28 X0 Y0)".into()),
-                            match model.plotter_state {
+                            match model.plotter_state() {
                                 PlotterState::Ready => true,
                                 _ => false,
                             },
@@ -471,7 +483,7 @@ pub(crate) fn floating_tool_window(
                             ui,
                             egui::include_image!("../../resources/images/move_arrow_right.png"),
                             Some("Move pen right (X+)".into()),
-                            match model.plotter_state {
+                            match model.plotter_state() {
                                 PlotterState::Ready => true,
                                 PlotterState::Paused(_, _, _) => true,
                                 _ => false,
@@ -479,7 +491,7 @@ pub(crate) fn floating_tool_window(
                         )
                         .clicked()
                         {
-                            model.request_relative_move(vec2(model.move_increment, 0.));
+                            model.request_relative_move(vec2(model.move_increment(), 0.));
                         }
                         ui.end_row();
 
@@ -487,7 +499,7 @@ pub(crate) fn floating_tool_window(
                             ui,
                             egui::include_image!("../../resources/images/pen_down.png"),
                             Some("Pen down (on paper)".into()),
-                            match model.plotter_state {
+                            match model.plotter_state() {
                                 PlotterState::Ready => true,
                                 PlotterState::Paused(_, _, _) => true,
                                 _ => false,
@@ -501,7 +513,7 @@ pub(crate) fn floating_tool_window(
                             ui,
                             egui::include_image!("../../resources/images/move_arrow_down.png"),
                             Some("Move pen down (Y-)".into()),
-                            match model.plotter_state {
+                            match model.plotter_state() {
                                 PlotterState::Ready => true,
                                 PlotterState::Paused(_, _, _) => true,
                                 _ => false,
@@ -509,18 +521,18 @@ pub(crate) fn floating_tool_window(
                         )
                         .clicked()
                         {
-                            model.request_relative_move(vec2(0., -model.move_increment));
+                            model.request_relative_move(vec2(0., -model.move_increment()));
                         }
 
                         if tool_button(
                             ui,
-                            if let PlotterState::Running(_, _, _) = model.plotter_state {
+                            if let PlotterState::Running(_, _, _) = model.plotter_state() {
                                 egui::include_image!("../../resources/images/pause_circle.png")
                             } else {
                                 egui::include_image!("../../resources/images/play_circle.png")
                             },
                             Some("Start/Resume plotting".into()),
-                            match model.plotter_state {
+                            match model.plotter_state() {
                                 PlotterState::Ready => true,
                                 PlotterState::Paused(_, _, _) => true,
                                 PlotterState::Running(_, _, _) => true,
@@ -530,7 +542,7 @@ pub(crate) fn floating_tool_window(
                         )
                         .clicked()
                         {
-                            match model.plotter_state {
+                            match model.plotter_state() {
                                 PlotterState::Running(_, _, _) => model.plot_pause(),
                                 PlotterState::Paused(_, _, _) => model.plot_start(),
                                 PlotterState::Ready => model.plot_start(),
@@ -541,29 +553,39 @@ pub(crate) fn floating_tool_window(
                     });
                 ui.add_space(8.);
                 ui.horizontal(|ui| {
+                    let mut move_increment = model.move_increment();
                     ui.style_mut().spacing.slider_width = 48.;
-                    ui.add(
-                        Slider::new(&mut model.move_increment, 0.1..=100.0)
-                            .suffix("mm")
-                            .logarithmic(true)
-                            .fixed_decimals(1),
-                    );
+                    if ui
+                        .add(
+                            Slider::new(&mut move_increment, 0.1..=100.0)
+                                .suffix("mm")
+                                .logarithmic(true)
+                                .fixed_decimals(1),
+                        )
+                        .changed()
+                    {
+                        model.set_move_increment(move_increment);
+                    };
                 });
                 ui.add_space(8.);
+                let mut edit_cmd = model.edit_cmd();
                 ui.horizontal(|ui| {
                     let cmd_response = ui.add_enabled(
-                        match model.plotter_state {
+                        match model.plotter_state() {
                             PlotterState::Ready => true,
                             PlotterState::Paused(_, _, _) => true,
                             _ => false,
                         },
-                        TextEdit::singleline(&mut model.edit_cmd)
+                        TextEdit::singleline(&mut edit_cmd)
                             .min_size(vec2(72., 16.))
                             .desired_width(72.),
                     );
                     let mut viz_cue = false;
+                    if cmd_response.changed() {
+                        model.set_edit_cmd(edit_cmd.clone());
+                    }
                     if cmd_response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                        model.send_command(&model.edit_cmd);
+                        model.send_command(&edit_cmd);
                         viz_cue = true;
                     }
                     let mut but_resp =
@@ -573,9 +595,9 @@ pub(crate) fn floating_tool_window(
                     }
 
                     if but_resp.clicked() {
-                        match model.plotter_state {
-                            PlotterState::Ready => model.send_command(&model.edit_cmd),
-                            PlotterState::Paused(_, _, _) => model.send_command(&model.edit_cmd),
+                        match model.plotter_state() {
+                            PlotterState::Ready => model.send_command(&edit_cmd),
+                            PlotterState::Paused(_, _, _) => model.send_command(&edit_cmd),
                             _ => {
                                 toasts.add(Toast {
                                     kind: ToastKind::Warning,
@@ -591,8 +613,8 @@ pub(crate) fn floating_tool_window(
                 });
             };
         });
-        if model.toolbar_position == DockPosition::Left
-            || model.toolbar_position == DockPosition::Right
+        if model.toolbar_position() == DockPosition::Left
+            || model.toolbar_position() == DockPosition::Right
         {
             let mut avail = ui.cursor();
             let width = ui.min_rect().width();
@@ -604,9 +626,9 @@ pub(crate) fn floating_tool_window(
     if let Some(response) = win_response {
         if response.response.drag_stopped() {
             // println!("DRAG STOP.");
-            if let DockPosition::Floating(_x, _y) = model.toolbar_position.clone() {
+            if let DockPosition::Floating(_x, _y) = model.toolbar_position() {
                 let Pos2 { x, y } = response.response.rect.min.clone();
-                model.toolbar_position = DockPosition::Floating(x, y);
+                model.set_toolbar_position(&DockPosition::Floating(x, y));
                 model.update_core_config_from_changes();
             }
         }

@@ -1,7 +1,6 @@
-
 use crate::BAPViewModel;
-use crate::view_model::space_commands::{SPACE_CMDS, SpaceCommandBranch};
 use crate::view_model::CommandContext;
+use crate::view_model::space_commands::{SPACE_CMDS, SpaceCommandBranch};
 use eframe::egui;
 use egui::{Button, Key, Rect, Ui};
 
@@ -40,7 +39,7 @@ fn menu_from_tree(
     stack: &Vec<Key>,
     tree: &SpaceCommandBranch,
 ) {
-    let space_mode: bool = if let CommandContext::Space(_) = model.command_context {
+    let space_mode: bool = if let CommandContext::Space(_) = model.command_context() {
         true
     } else {
         false

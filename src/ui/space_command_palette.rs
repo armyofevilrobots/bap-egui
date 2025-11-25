@@ -19,7 +19,7 @@ fn is_subtree_enabled(model: &mut BAPViewModel, sc: &SpaceCommandBranch) -> bool
 
 // Let's try this again from scratch
 pub fn space_command_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
-    if let CommandContext::Space(mut keys) = model.command_context.clone() {
+    if let CommandContext::Space(mut keys) = model.command_context() {
         let mut coldata: Vec<Vec<(Key, Vec<Key>, String, bool, bool)>> = Vec::new(); // Key, name, current?
         let mut tree = &*SPACE_CMDS.lock(); //.expect("Couldn't take over CMDS list");
         let pressed_keys = keys.clone();
@@ -95,19 +95,19 @@ pub fn space_command_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
                         // println!("PRessed keys are: {:?}", pressed_keys);
 
                         if ui.link("<SPACE>").clicked() {
-                            model.command_context = CommandContext::Space(Vec::new());
+                            model.set_command_context(CommandContext::Space(Vec::new()));
                         };
 
                         for (idx, key) in pressed_keys.clone().iter().enumerate() {
                             if ui.link(key.symbol_or_name()).clicked() {
-                                model.command_context = CommandContext::Space(
+                                model.set_command_context(CommandContext::Space(
                                     pressed_keys
                                         .clone()
                                         .iter()
                                         .take(idx + 1)
                                         .map(|x| x.clone())
                                         .collect(),
-                                )
+                                ));
                             };
                         }
                     });

@@ -4,6 +4,7 @@ use super::space_commands::{SPACE_CMDS, SpaceCommandBranch};
 use aoer_plotty_rs::plotter::pen::PenDetail;
 use eframe::egui;
 use egui::{Key, Pos2};
+use egui_toast::{Toast, ToastKind, ToastOptions};
 
 use crate::{core::machine::MachineConfig, view_model::BAPViewModel};
 // use crate::view_model::project_ops::project_ops;
@@ -103,5 +104,92 @@ impl CommandContext {
             }
         }
         return SpaceCommandStatus::Ongoing;
+    }
+}
+
+impl BAPViewModel {
+    pub fn cancel_command_context(&mut self, was_cancel: bool) {
+        if was_cancel {
+            if self.command_context != CommandContext::None {
+                self.queued_toasts.push_back(Toast {
+                    kind: ToastKind::Info,
+                    text: format!("Exited command context {}", self.command_context).into(),
+                    options: ToastOptions::default()
+                        .duration_in_seconds(3.0)
+                        .show_progress(true),
+                    ..Default::default()
+                });
+            }
+        };
+
+        self.command_context = match &self.command_context {
+            CommandContext::Origin => CommandContext::None,
+            CommandContext::PaperChooser => CommandContext::None,
+            CommandContext::MachineEdit(machine_config) => {
+                if was_cancel {
+                    self.machine_config = match machine_config {
+                        Some(cfg) => cfg.clone(),
+                        None => self.machine_config.clone(),
+                    };
+                };
+                CommandContext::None
+            }
+            CommandContext::PenCrib => CommandContext::None,
+            CommandContext::PenEdit(_, _pen_detail) => CommandContext::PenCrib,
+            CommandContext::PenDelete(_) => CommandContext::PenCrib,
+            CommandContext::Clip(_pos2, _pos3) => CommandContext::None,
+            CommandContext::Rotate(pos2, pos3, pos4) => {
+                if was_cancel {
+                    if let Some(_p4) = pos4 {
+                        CommandContext::Rotate(pos2.clone(), pos3.clone(), None)
+                    } else if let Some(_p3) = pos3 {
+                        CommandContext::Rotate(pos2.clone(), None, None)
+                    } else {
+                        CommandContext::None
+                    }
+                } else {
+                    CommandContext::None
+                }
+            }
+            CommandContext::Scale(_) => CommandContext::None,
+            CommandContext::Space(items) => {
+                if was_cancel {
+                    if items.len() > 0 {
+                        CommandContext::Space(Vec::from_iter(
+                            items[0..(items.len() - 1)].iter().map(|i| i.clone()),
+                        ))
+                    } else {
+                        CommandContext::None
+                    }
+                } else {
+                    CommandContext::None
+                }
+            }
+            CommandContext::None => CommandContext::None,
+        };
+    }
+
+    pub fn set_command_context(&mut self, ctx: CommandContext) {
+        self.command_context = match &self.command_context {
+            CommandContext::Origin => ctx,
+            CommandContext::PaperChooser => ctx,
+            CommandContext::MachineEdit(_machine_config) => ctx,
+            CommandContext::PenCrib => ctx,
+            CommandContext::PenEdit(_idx, _pen_detail) => ctx,
+            CommandContext::PenDelete(_idx) => ctx,
+            CommandContext::Clip(_pos2, _pos3) => ctx,
+            CommandContext::Rotate(_pos2, _pos3, _pos4) => ctx,
+            CommandContext::Scale(_scale) => ctx,
+            CommandContext::Space(_items) => ctx,
+            CommandContext::None => ctx,
+        };
+    }
+
+    pub fn command_context(&self) -> CommandContext {
+        self.command_context.clone()
+    }
+
+    pub fn command_context_mut(&mut self) -> &mut CommandContext {
+        &mut self.command_context
     }
 }

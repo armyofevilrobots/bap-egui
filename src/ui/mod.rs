@@ -50,7 +50,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
     let wtop = tbp.top();
     floating_tool_window(model, ctx, wtop, &mut toasts);
 
-    match &model.command_context {
+    match &model.command_context() {
         CommandContext::PaperChooser => paper_chooser_window(model, ctx),
         CommandContext::PenCrib => pen_crib_window(model, ctx),
         CommandContext::PenEdit(pen_idx, _pen) => {
@@ -67,7 +67,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     // if let CommandContext::Space(_) = model.command_context {
                     //     model.command_context = CommandContext::None;
                     // }
-                    if let CommandContext::Space(_) = model.command_context {
+                    if let CommandContext::Space(_) = model.command_context() {
                         model.cancel_command_context(false);
                     } // Otherwise, we changed contexts in the command itself.
                     model.toast_info(dispatched);
@@ -98,18 +98,18 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
         let precursor = ui.cursor();
         // let painter = ui.painter();
         let (painter_resp, painter) = ui.allocate_painter(ui.available_size(), egui::Sense::all());
-        let painter_resp = painter_resp.on_hover_cursor(match model.command_context {
+        let painter_resp = painter_resp.on_hover_cursor(match model.command_context() {
             CommandContext::Origin => egui::CursorIcon::Crosshair,
             _ => egui::CursorIcon::Default,
         });
 
-        model.container_rect = Some(painter_resp.rect.clone());
+        model.set_container_rect(painter_resp.rect.clone());
 
         let (min, max) = (painter_resp.rect.min, painter_resp.rect.max);
-        model.center_coords = pos2((min.x + max.x) / 2.0_f32, (min.y + max.y) / 2.0_f32);
+        model.set_center_coords(pos2((min.x + max.x) / 2.0_f32, (min.y + max.y) / 2.0_f32));
 
         // // Draw the paper
-        if model.show_paper {
+        if model.show_paper() {
             let paper_rect = model.mm_rect_to_screen_rect(model.get_paper_rect());
             painter.rect(
                 paper_rect,
@@ -119,8 +119,8 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                 egui::StrokeKind::Outside,
             );
         }
-        if let Some(imghandle) = &model.source_image_handle {
-            if let Some(svgrect) = model.source_image_extents {
+        if let Some(imghandle) = model.source_image_handle() {
+            if let Some(svgrect) = model.source_image_extents() {
                 let rect = Rect::from_min_size(
                     model.mm_to_frame_coords(svgrect.min),
                     model.scale_mm_to_screen(svgrect.size()),
@@ -136,7 +136,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
         }
 
         // Draw these lines _last_ so they overlap the drawing itself.
-        if model.command_context == CommandContext::Origin {
+        if model.command_context() == CommandContext::Origin {
             if let Some(pos) = ctx.pointer_latest_pos() {
                 let p1 = painter_resp.rect.min.clone();
                 let p2 = painter_resp.rect.max.clone();
@@ -152,7 +152,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                 let paper_tmp_rect =
                     model.mm_rect_to_screen_rect(model.calc_paper_rect(tmp_origin));
 
-                if model.show_paper {
+                if model.show_paper() {
                     painter.rect(
                         paper_tmp_rect,
                         0.,
@@ -166,14 +166,14 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                 let machine_rect = model.mm_rect_to_screen_rect(Rect::from_min_max(
                     pos2(
                         tmp_origin.x,
-                        tmp_origin.y - model.machine_config.limits().1 as f32,
+                        tmp_origin.y - model.machine_config().limits().1 as f32,
                     ),
                     pos2(
-                        tmp_origin.x + model.machine_config.limits().0 as f32,
+                        tmp_origin.x + model.machine_config().limits().0 as f32,
                         tmp_origin.y,
                     ),
                 ));
-                if model.show_machine_limits {
+                if model.show_machine_limits() {
                     painter.rect(
                         machine_rect,
                         0.,
@@ -186,7 +186,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
         }
 
         // The rotation tool.
-        if let CommandContext::Rotate(center, ref1, _ref2) = model.command_context {
+        if let CommandContext::Rotate(center, ref1, _ref2) = model.command_context() {
             if let Some(pos) = ctx.pointer_latest_pos() {
                 let p1 = painter_resp.rect.min.clone();
                 let p2 = painter_resp.rect.max.clone();
@@ -269,15 +269,15 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
 
         let machine_rect = model.mm_rect_to_screen_rect(Rect::from_min_max(
             pos2(
-                model.origin.x,
-                model.origin.y - model.machine_config.limits().1 as f32,
+                model.origin().x,
+                model.origin().y - model.machine_config().limits().1 as f32,
             ),
             pos2(
-                model.origin.x + model.machine_config.limits().0 as f32,
-                model.origin.y,
+                model.origin().x + model.machine_config().limits().0 as f32,
+                model.origin().y,
             ),
         ));
-        if model.show_machine_limits {
+        if model.show_machine_limits() {
             painter.rect(
                 machine_rect,
                 0.,
@@ -286,30 +286,30 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                 StrokeKind::Outside,
             );
         }
-        if model.show_extents {
-            if let Some(extents) = model.source_image_extents {
+        if model.show_extents() {
+            if let Some(extents) = model.source_image_extents() {
                 let extents_rect = model.mm_rect_to_screen_rect(extents);
-                if model.show_extents {
-                    painter.rect(
-                        extents_rect,
-                        0.,
-                        Color32::TRANSPARENT,
-                        Stroke::new(1., Color32::BLUE),
-                        StrokeKind::Outside,
-                    );
-                }
+                // if model.show_extents {
+                painter.rect(
+                    extents_rect,
+                    0.,
+                    Color32::TRANSPARENT,
+                    Stroke::new(1., Color32::BLUE),
+                    StrokeKind::Outside,
+                );
             }
+            // }
         }
 
         // The ruler display bit.
-        if model.show_rulers {
+        if model.show_rulers() {
             rulers::draw_rulers(model, &ui, ctx, &painter, &painter_resp)
         };
 
         // The rotation thing.
 
         if painter_resp.clicked() {
-            match model.command_context {
+            match model.command_context() {
                 CommandContext::Origin => {
                     if let Some(pos) = ctx.pointer_hover_pos() {
                         // model.origin = model.frame_coords_to_mm(pos)
@@ -377,9 +377,8 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
         }
 
         if painter_resp.dragged() {
-            model.look_at =
-                // model.look_at - (PIXELS_PER_MM * painter_resp.drag_delta() / model.view_zoom as f32)
-                model.look_at - model.scale_screen_to_mm(painter_resp.drag_delta())
+            model
+                .set_look_at(model.look_at() - model.scale_screen_to_mm(painter_resp.drag_delta()));
         }
 
         if painter_resp.contains_pointer() {
@@ -407,7 +406,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                             let mouse_pos_post_mm = model.frame_coords_to_mm(mouse_pos.clone());
                             let delta = mouse_pos_pre_mm - mouse_pos_post_mm;
                             // let drag = model.scale_mm_to_screen(delta);
-                            model.look_at = model.look_at + delta;
+                            model.set_look_at(model.look_at() + delta);
                         }
                     }
                     _ => (),
@@ -427,17 +426,17 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     if let Some(pkey) = physical_key {
                         if *pkey == Key::Escape && *pressed {
                             // Only on depress, not release
-                            if model.command_context != CommandContext::None {
+                            if model.command_context() != CommandContext::None {
                                 // model.command_context = CommandContext::None;
                                 model.cancel_command_context(true);
                             }
                         } else if *pkey == Key::Space && *pressed {
                             // println!("SPACE MODE");
-                            if model.command_context == CommandContext::None {
+                            if model.command_context() == CommandContext::None {
                                 model.set_command_context(CommandContext::Space(vec![]));
                             }
                         } else if *pressed
-                            && let CommandContext::Space(keys) = &mut model.command_context
+                            && let CommandContext::Space(keys) = model.command_context_mut()
                         {
                             if *pkey == Key::Backspace || *pkey == Key::Delete {
                                 keys.pop();
@@ -455,10 +454,8 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
         space_command_palette::space_command_panel(model, ctx);
 
         bottom_panel::bottom_panel(model, ctx);
-        while !model.queued_toasts.is_empty() {
-            if let Some(toast) = model.queued_toasts.pop_front() {
-                toasts.add(toast);
-            }
+        while let Some(toast) = model.next_toast() {
+            toasts.add(toast);
         }
         toasts.show(ctx);
         (precursor, ui.cursor())

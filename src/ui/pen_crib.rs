@@ -15,7 +15,7 @@ pub(crate) fn pen_crib_window(model: &mut BAPViewModel, ctx: &egui::Context) {
         let frame = Frame::default().inner_margin(4.0);
 
         let (_, dropped_payload) = ui.dnd_drop_zone::<usize, ()>(frame, |ui| {
-            let mut pens = model.pen_crib.clone();
+            let mut pens = model.pen_crib(); //.clone();
             for (idx, pen) in pens.iter_mut().enumerate() {
                 pen.tool_id = idx + 1;
             }
@@ -42,11 +42,13 @@ pub(crate) fn pen_crib_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                             )
                             .clicked()
                         {
-                            model.command_context =
-                                crate::view_model::CommandContext::PenEdit(idx, pen.clone());
+                            model.set_command_context(crate::view_model::CommandContext::PenEdit(
+                                idx,
+                                pen.clone(),
+                            ));
                         };
                         if ui
-                            .add_enabled(model.picked.is_some(), Button::new("⤵Apply"))
+                            .add_enabled(model.picked().is_some(), Button::new("⤵Apply"))
                             .clicked()
                         {
                             model.yolo_view_command(
@@ -63,7 +65,7 @@ pub(crate) fn pen_crib_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                         };
                         ui.label(format!("🆔 {}", pen.tool_id));
                         if ui.button("♻Delete").clicked() {
-                            model.command_context = CommandContext::PenDelete(idx);
+                            model.set_command_context(CommandContext::PenDelete(idx));
                         }
                         ui.end_row();
                         if let (Some(pointer), Some(hovered_payload)) = (
@@ -89,7 +91,7 @@ pub(crate) fn pen_crib_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                                 // println!("BELOW");
                                 ui.painter().hline(rect.x_range(), rect.bottom(), stroke);
                                 // Because we move the destination UP when we remove the source
-                                idx.min(model.pen_crib.len() - 1)
+                                idx.min(model.pen_crib().len() - 1)
                                     + if *hovered_payload < idx { 0 } else { 1 }
                             };
                             // println!("Dragging from {} to {}", hovered_payload, insert_idx);
@@ -107,29 +109,30 @@ pub(crate) fn pen_crib_window(model: &mut BAPViewModel, ctx: &egui::Context) {
         } else if let Some(from) = drag_from
             && let Some(to) = drag_to
         {
-            let tmp = model.pen_crib.remove(*from);
-            model.pen_crib.insert(*to, tmp);
+            let tmp = model.pen_crib_mut().remove(*from);
+            model.pen_crib_mut().insert(*to, tmp);
         }
-        for (idx, pen) in model.pen_crib.iter_mut().enumerate() {
+        for (idx, pen) in model.pen_crib_mut().iter_mut().enumerate() {
             pen.tool_id = idx + 1;
         }
 
         if ui.button("⊞ADD").clicked() {
-            let pen_id = model.pen_crib.len() + 1;
-            model.pen_crib.push(PenDetail {
+            let pen_id = model.pen_crib().len() + 1;
+            model.pen_crib_mut().push(PenDetail {
                 tool_id: pen_id,
                 ..PenDetail::default()
             });
-            model.command_context = crate::view_model::CommandContext::PenEdit(
+            model.set_command_context(crate::view_model::CommandContext::PenEdit(
                 pen_id - 1,
-                model.pen_crib.last().unwrap().clone(),
-            );
+                model.pen_crib().last().unwrap().clone(),
+            ));
         };
 
         ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
             if ui.button("Ok").clicked() {
                 model.update_pen_details();
-                model.command_context = crate::view_model::CommandContext::None
+                //model.set_command_context(crate::view_model::CommandContext::None)
+                model.cancel_command_context(false);
             }
         });
     });

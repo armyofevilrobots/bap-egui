@@ -12,7 +12,7 @@ pub(crate) fn draw_rulers(
     painter_resp: &Response,
 ) {
     // This is the ruler display
-    if model.show_rulers {
+    if model.show_rulers() {
         let p1 = painter_resp.rect.min;
         let p2 = painter_resp.rect.max;
         let p3 = pos2(p2.x, p1.y + 16.);
@@ -42,13 +42,13 @@ pub(crate) fn draw_rulers(
             (100., 20., 4)
         };
 
-        let (mut major_x, mut major_y) = match model.ruler_origin {
+        let (mut major_x, mut major_y) = match model.ruler_origin() {
             RulerOrigin::Source => (0., 0.),
-            RulerOrigin::Origin => (model.origin.x, model.origin.y),
+            RulerOrigin::Origin => (model.origin().x, model.origin().y),
         };
 
-        let rofs = match model.ruler_origin {
-            RulerOrigin::Origin => model.origin - pos2(0., 0.),
+        let rofs = match model.ruler_origin() {
+            RulerOrigin::Origin => model.origin() - pos2(0., 0.),
             RulerOrigin::Source => vec2(0., 0.),
         };
 
@@ -129,9 +129,9 @@ pub(crate) fn draw_rulers(
             major_y += ruler_major;
         }
 
-        let (mut major_x, major_y) = match model.ruler_origin {
+        let (mut major_x, major_y) = match model.ruler_origin() {
             RulerOrigin::Source => (0., 0.),
-            RulerOrigin::Origin => (model.origin.x, model.origin.y),
+            RulerOrigin::Origin => (model.origin().x, model.origin().y),
         };
         major_x = major_x - ruler_major;
         let mm_left = model.frame_coords_to_mm(pos2(left_limit, 0.)).x;

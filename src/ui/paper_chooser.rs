@@ -92,7 +92,8 @@ pub(crate) fn paper_chooser_window(
             // }
             if ui.button("Ok").clicked() {
                 // model.paper_modal_open = false
-                model.command_context = crate::view_model::CommandContext::None;
+                // model.set_command_context(crate::view_model::CommandContext::None);
+                model.cancel_command_context(false);
             }
 
             let mut orientation = model.paper_orientation();

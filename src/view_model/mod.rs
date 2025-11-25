@@ -2,8 +2,8 @@ use std::collections::VecDeque;
 use std::f32;
 use std::path::PathBuf;
 use std::process::exit;
-use std::sync::mpsc::{self, Receiver, Sender};
-use std::thread::{JoinHandle, sleep, spawn};
+use std::sync::mpsc::{Receiver, Sender};
+use std::thread::{JoinHandle, sleep};
 use std::time::{Duration, Instant};
 
 use eframe::egui;
@@ -15,15 +15,20 @@ use crate::core::commands::{ApplicationStateChangeMsg, ViewCommand};
 
 use crate::core::config::{AppConfig, DockPosition};
 use crate::core::machine::MachineConfig;
-use crate::core::project::{Orientation, Paper, PaperSize, PenDetail};
+use crate::core::project::{Orientation, PaperSize, PenDetail};
 use crate::core::sender::{PlotterResponse, PlotterState};
 use crate::view_model::view_model_patch::ViewModelPatch;
 pub(crate) mod command_context;
 // pub(crate) mod project_ops;
 pub(crate) mod default;
+pub(crate) mod file_ops;
+pub(crate) mod paper;
+pub(crate) mod pick;
 pub(crate) mod space_commands;
 pub(crate) mod util;
+pub(crate) mod view_core_update;
 pub(crate) mod view_model_eframe;
+pub(crate) mod view_model_get_set;
 pub(crate) mod view_model_patch;
 use crate::core::config::RulerOrigin;
 pub use command_context::CommandContext;
@@ -48,89 +53,58 @@ pub enum FileSelector {
 }
 
 pub struct BAPViewModel {
-    pub config: AppConfig,
-    pub toolbar_position: DockPosition,
+    config: AppConfig,
+    toolbar_position: DockPosition,
     display_mode: BAPDisplayMode,
-    pub state_in: Option<Receiver<ApplicationStateChangeMsg>>,
-    pub cmd_out: Option<Sender<ViewCommand>>,
-    pub status_msg: Option<String>,
-    pub progress: Option<(String, usize)>,
-    pub file_selector: Option<Receiver<FileSelector>>,
-    pub source_image_handle: Option<Box<TextureHandle>>,
-    // pub overlay_image_handle: Option<Box<TextureHandle>>,
-    pub source_image_extents: Option<Rect>, // Again, this is in mm, and needs conversion before display.
-    // pub overlay_image_extents: Option<Rect>, // Again, this is in mm, and needs conversion before display.
-    pub timeout_for_source_image: Option<Instant>,
+    state_in: Option<Receiver<ApplicationStateChangeMsg>>,
+    cmd_out: Option<Sender<ViewCommand>>,
+    status_msg: Option<String>,
+    progress: Option<(String, usize)>,
+    file_selector: Option<Receiver<FileSelector>>,
+    source_image_handle: Option<Box<TextureHandle>>,
+    source_image_extents: Option<Rect>, // Again, this is in mm, and needs conversion before display.
+    timeout_for_source_image: Option<Instant>,
     dirty: bool, // If we request a new image while one is already rendering, we set this so that it retries right after.
-    pub look_at: Pos2, // What coordinate is currently at the center of the screen
-    pub center_coords: Pos2, // Where in the window (cursor) is the center of the view
+    look_at: Pos2, // What coordinate is currently at the center of the screen
+    center_coords: Pos2, // Where in the window (cursor) is the center of the view
     view_zoom: f64, // What is our coordinate/zoom multiplier
     ppp: f32,    // Pixels per point.
-    pub command_context: CommandContext,
+    command_context: CommandContext,
     paper_orientation: Orientation,
     paper_size: PaperSize,
     paper_color: Color32,
-    // pub paper_modal_open: bool,
-    // pub pen_crib_open: bool,
-    // pub paper: Paper,
-    pub origin: Pos2,
-    pub machine_config: MachineConfig,
-    pub show_machine_limits: bool,
-    pub show_paper: bool,
-    pub show_rulers: bool,
-    pub show_extents: bool,
-    pub edit_cmd: String,
-    pub container_rect: Option<Rect>,
-    pub serial_ports: Vec<String>,
-    pub current_port: String,
-    pub move_increment: f32,
+    origin: Pos2,
+    machine_config: MachineConfig,
+    show_machine_limits: bool,
+    show_paper: bool,
+    show_rulers: bool,
+    show_extents: bool,
+    edit_cmd: String,
+    container_rect: Option<Rect>,
+    serial_ports: Vec<String>,
+    current_port: String,
+    move_increment: f32,
     join_handle: Option<JoinHandle<()>>,
-    pub plotter_state: PlotterState,
-    pub queued_toasts: VecDeque<Toast>,
-    pub pen_crib: Vec<PenDetail>,
-    // pub scale_factor_temp: f64,
-    pub cancel_render: Option<Sender<()>>,
-    pub undo_available: bool,
-    pub file_path: Option<PathBuf>,
-    pub ruler_origin: RulerOrigin,
+    plotter_state: PlotterState,
+    queued_toasts: VecDeque<Toast>,
+    pen_crib: Vec<PenDetail>,
+    cancel_render: Option<Sender<()>>,
+    undo_available: bool,
+    file_path: Option<PathBuf>,
+    ruler_origin: RulerOrigin,
     last_pointer_pos: Option<Pos2>,
-    pub picked: Option<Vec<usize>>,
-    // pub modifiers: Vec<Key>,
+    picked: Option<Vec<usize>>,
 }
 
 impl BAPViewModel {
-    pub fn name() -> &'static str {
-        "Bot-a-Plot"
+    pub fn with_appstate_recv(mut self, state: Receiver<ApplicationStateChangeMsg>) -> Self {
+        self.state_in = Some(state);
+        self
     }
 
-    pub fn update_ui_from_config(&mut self, config: AppConfig) {
-        self.toolbar_position = config.ui_config.tool_dock_position.clone();
-        self.ruler_origin = config.ui_config.ruler_origin.clone();
-        self.show_extents = config.ui_config.show_extents;
-        self.show_rulers = config.ui_config.show_rulers;
-        self.show_paper = config.ui_config.show_paper;
-        self.show_machine_limits = config.ui_config.show_limits;
-        self.config = config.clone();
-    }
-    /// This will send a new config package to the core and will
-    /// pull that new config from the current UI state.
-    pub fn update_core_config_from_changes(&mut self) {
-        self.config.ui_config.tool_dock_position = self.toolbar_position.clone();
-        self.config.ui_config.ruler_origin = self.ruler_origin.clone();
-        self.config.ui_config.show_extents = self.show_extents;
-        self.config.ui_config.show_rulers = self.show_rulers;
-        self.config.ui_config.show_paper = self.show_paper;
-        self.config.ui_config.show_limits = self.show_machine_limits;
-
-        self.yolo_view_command(ViewCommand::UpdateConfig(self.config.clone()));
-    }
-
-    pub fn set_picked(&mut self, picked: Option<Vec<usize>>) {
-        self.picked = picked;
-    }
-
-    pub fn picked(&self) -> Option<Vec<usize>> {
-        self.picked.clone()
+    pub fn with_viewcommand_send(mut self, state: Sender<ViewCommand>) -> Self {
+        self.cmd_out = Some(state);
+        self
     }
 
     pub fn ungroup(&mut self) {
@@ -157,26 +131,6 @@ impl BAPViewModel {
         }
     }
 
-    pub fn pick_clear(&self) {
-        self.yolo_view_command(ViewCommand::ClearPick);
-    }
-
-    pub fn pick_at_point(&self, point: Pos2) {
-        self.yolo_view_command(ViewCommand::TryPickAt(point.x as f64, point.y as f64));
-    }
-
-    pub fn toggle_pick_at_point(&self, point: Pos2) {
-        self.yolo_view_command(ViewCommand::TogglePickAt(point.x as f64, point.y as f64));
-    }
-
-    pub fn add_pick_at_point(&self, point: Pos2) {
-        self.yolo_view_command(ViewCommand::AddPickAt(point.x as f64, point.y as f64));
-    }
-
-    pub fn pick_all(&self) {
-        self.yolo_view_command(ViewCommand::SelectAll);
-    }
-
     /// Takes a given bounding box (extents) and calculates how big it would be if rotated d degrees.
     #[allow(unused)]
     pub fn calc_rotated_bounding_box(around: Pos2, angle: f32, r: Rect) -> Rect {
@@ -187,84 +141,6 @@ impl BAPViewModel {
             rotate_pos2_around_pos2(r.left_bottom(), around, angle),
         ];
         todo!()
-    }
-
-    #[allow(unused)]
-    pub fn cancel_command_context(&mut self, was_cancel: bool) {
-        if was_cancel {
-            if self.command_context != CommandContext::None {
-                self.queued_toasts.push_back(Toast {
-                    kind: ToastKind::Info,
-                    text: format!("Exited command context {}", self.command_context).into(),
-                    options: ToastOptions::default()
-                        .duration_in_seconds(3.0)
-                        .show_progress(true),
-                    ..Default::default()
-                });
-            }
-        };
-
-        self.command_context = match &self.command_context {
-            CommandContext::Origin => CommandContext::None,
-            CommandContext::PaperChooser => CommandContext::None,
-            CommandContext::MachineEdit(machine_config) => {
-                if was_cancel {
-                    self.machine_config = match machine_config {
-                        Some(cfg) => cfg.clone(),
-                        None => self.machine_config.clone(),
-                    };
-                };
-                CommandContext::None
-            }
-            CommandContext::PenCrib => CommandContext::None,
-            CommandContext::PenEdit(_, pen_detail) => CommandContext::PenCrib,
-            CommandContext::PenDelete(_) => CommandContext::PenCrib,
-            CommandContext::Clip(pos2, pos3) => CommandContext::None,
-            CommandContext::Rotate(pos2, pos3, pos4) => {
-                if was_cancel {
-                    if let Some(p4) = pos4 {
-                        CommandContext::Rotate(pos2.clone(), pos3.clone(), None)
-                    } else if let Some(p3) = pos3 {
-                        CommandContext::Rotate(pos2.clone(), None, None)
-                    } else {
-                        CommandContext::None
-                    }
-                } else {
-                    CommandContext::None
-                }
-            }
-            CommandContext::Scale(_) => CommandContext::None,
-            CommandContext::Space(items) => {
-                if was_cancel {
-                    if items.len() > 0 {
-                        CommandContext::Space(Vec::from_iter(
-                            items[0..(items.len() - 1)].iter().map(|i| i.clone()),
-                        ))
-                    } else {
-                        CommandContext::None
-                    }
-                } else {
-                    CommandContext::None
-                }
-            }
-            CommandContext::None => CommandContext::None,
-        };
-    }
-
-    pub fn set_command_context(&mut self, ctx: CommandContext) {
-        self.command_context = match &self.command_context {
-            CommandContext::Origin => ctx,
-            CommandContext::PaperChooser => ctx,
-            CommandContext::MachineEdit(_machine_config) => ctx,
-            CommandContext::PenCrib => ctx,
-            CommandContext::PenEdit(_idx, _pen_detail) => ctx,
-            CommandContext::PenDelete(_idx) => ctx,
-            CommandContext::Clip(_pos2, _pos3) => ctx,
-            CommandContext::Rotate(_pos2, _pos3, _pos4) => ctx,
-            CommandContext::Scale(_scale) => ctx,
-            CommandContext::Space(_items) => ctx,
-            CommandContext::None => ctx,
-        };
     }
 
     pub fn undo(&self) {
@@ -327,106 +203,6 @@ impl BAPViewModel {
         }
     }
 
-    pub fn save_project(&mut self, path: Option<PathBuf>) {
-        if let Some(cmd_out) = &self.cmd_out {
-            cmd_out
-                .send(ViewCommand::SaveProject(path))
-                .expect("Failed to send SaveProject command?");
-        }
-    }
-
-    #[allow(unused)]
-    pub fn load_project(&mut self, path: PathBuf) {
-        if let Some(cmd_out) = &self.cmd_out {
-            cmd_out
-                .send(ViewCommand::LoadProject(path))
-                .expect("Failed to send Loadt command?");
-        }
-    }
-
-    pub fn paper_size(&self) -> PaperSize {
-        self.paper_size.clone()
-    }
-
-    pub fn paper_orientation(&self) -> Orientation {
-        self.paper_orientation.clone()
-    }
-
-    pub fn paper_color(&self) -> Color32 {
-        self.paper_color.clone()
-    }
-
-    pub fn set_paper_color(&mut self, color: &Color32, create_history: bool) {
-        // println!("Setting paper color to {:?}", color.clone());
-        self.paper_color = color.clone();
-        if let Some(cmd_out) = &self.cmd_out
-            && create_history
-        {
-            let paper_out = ViewCommand::SetPaper(Paper {
-                weight_gsm: 120.,
-                rgb: (
-                    color.r() as f64 / 255.0,
-                    color.g() as f64 / 255.0,
-                    color.b() as f64 / 255.0,
-                ),
-                size: self.paper_size.clone(),
-                orientation: self.paper_orientation.clone(),
-            });
-            // println!("COLOR paper out {:?}", paper_out);
-            cmd_out
-                .send(paper_out)
-                .expect("Failed to send SetPaper command?");
-        };
-        self.request_new_source_image();
-    }
-
-    pub fn set_paper_size(&mut self, paper_size: &PaperSize, create_history: bool) {
-        self.paper_size = paper_size.clone();
-        if let Some(cmd_out) = &self.cmd_out
-            && create_history
-        {
-            let color = self.paper_color.clone();
-            let paper_out = ViewCommand::SetPaper(Paper {
-                weight_gsm: 120.,
-                rgb: (
-                    color.r() as f64 / 255.0,
-                    color.g() as f64 / 255.0,
-                    color.b() as f64 / 255.0,
-                ),
-                size: self.paper_size.clone(),
-                orientation: self.paper_orientation.clone(),
-            });
-            // println!("SIZE Paper out: {:?}", paper_out);
-            cmd_out
-                .send(paper_out)
-                .expect("Failed to send SetPaper command?");
-        };
-    }
-
-    pub fn set_paper_orientation(&mut self, orientation: &Orientation, create_history: bool) {
-        // println!("Setting paper orientation: {:?}", orientation);
-        self.paper_orientation = orientation.clone();
-        if let Some(cmd_out) = &self.cmd_out
-            && create_history
-        {
-            let color = self.paper_color.clone();
-            let paper_out = ViewCommand::SetPaper(Paper {
-                weight_gsm: 120.,
-                rgb: (
-                    color.r() as f64 / 255.0,
-                    color.g() as f64 / 255.0,
-                    color.b() as f64 / 255.0,
-                ),
-                size: self.paper_size.clone(),
-                orientation: self.paper_orientation.clone(),
-            });
-            // println!("ORIENTATION Paper out: {:?}", paper_out);
-            cmd_out
-                .send(paper_out)
-                .expect("Failed to send SetPaper command?");
-        };
-    }
-
     pub fn degrees_between_two_vecs(a: Vec2, b: Vec2) -> f32 {
         Self::radians_between_two_vecs(a, b) * (180.0 / f32::consts::PI)
     }
@@ -470,108 +246,6 @@ impl BAPViewModel {
         }
     }
 
-    pub fn set_origin(&mut self, origin: Pos2, create_history: bool) {
-        if let Some(cmd_out) = &self.cmd_out {
-            self.origin = origin;
-            if create_history {
-                cmd_out
-                    .send(ViewCommand::SetOrigin(origin.x as f64, origin.y as f64))
-                    .expect("Failed to send ORIGIN command?");
-            }
-        }
-    }
-
-    pub fn handle_file_selector(&mut self) {
-        if let Some(msg_in) = &self.file_selector {
-            match msg_in.try_recv() {
-                Ok(path_selector) => {
-                    match path_selector {
-                        FileSelector::ImportSVG(path_buf) => {
-                            self.yolo_view_command(ViewCommand::ImportSVG(path_buf))
-                        }
-                        FileSelector::OpenProject(path_buf) => {
-                            self.yolo_view_command(ViewCommand::LoadProject(path_buf))
-                        }
-                        FileSelector::SaveProjectAs(path_buf) => {
-                            self.yolo_view_command(ViewCommand::SaveProject(Some(path_buf)))
-                        }
-                        FileSelector::LoadPGF(path_buf) => {
-                            self.yolo_view_command(ViewCommand::LoadPGF(path_buf))
-                        }
-                    }
-                    self.file_selector = None; // Delete it now that the command is done.
-                }
-                Err(_) => (),
-            }
-        }
-    }
-
-    pub fn set_join_handle(&mut self, handle: JoinHandle<()>) {
-        self.join_handle = Some(handle);
-    }
-
-    pub fn load_pgf_with_dialog(&mut self) {
-        let (tx, rx) = mpsc::channel::<FileSelector>();
-        self.file_selector = Some(rx);
-        spawn(move || {
-            let file = FileDialog::new()
-                .add_filter("pgf", &["pgf"])
-                .set_directory("")
-                .pick_file();
-            if let Some(path) = file {
-                tx.send(FileSelector::LoadPGF(path.into()))
-                    .expect("Failed to send SVG import over MPSC.");
-            }
-        });
-    }
-
-    pub fn import_svg_with_dialog(&mut self) {
-        let (tx, rx) = mpsc::channel::<FileSelector>();
-        self.file_selector = Some(rx);
-        spawn(move || {
-            let file = FileDialog::new()
-                .add_filter("svg", &["svg"])
-                .add_filter("hpgl", &["hpgl"])
-                .add_filter("wkt", &["wkt"])
-                .set_directory("")
-                .pick_file();
-            if let Some(path) = file {
-                tx.send(FileSelector::ImportSVG(path.into()))
-                    .expect("Failed to send SVG import over MPSC.");
-            }
-        });
-    }
-
-    pub fn save_project_with_dialog(&mut self) {
-        let (tx, rx) = mpsc::channel::<FileSelector>();
-        self.file_selector = Some(rx);
-        spawn(move || {
-            let file = FileDialog::new()
-                .add_filter("bap2", &["bap2"])
-                .set_directory("")
-                .save_file();
-            if let Some(path) = file {
-                tx.send(FileSelector::SaveProjectAs(path.into()))
-                    .expect("Failed to e project");
-            }
-        });
-    }
-
-    pub fn open_project_with_dialog(&mut self) {
-        let (tx, rx) = mpsc::channel::<FileSelector>();
-        self.file_selector = Some(rx);
-        spawn(move || {
-            let file = FileDialog::new()
-                .add_filter("bap2", &["bap2"])
-                .set_directory("")
-                .pick_file();
-            if let Some(path) = file {
-                tx.send(FileSelector::OpenProject(path.into()))
-                    .expect("Failed to load project");
-            }
-        });
-    }
-
     pub fn quit(&mut self) {
         if let Some(cmd_out) = &self.cmd_out {
             cmd_out.send(ViewCommand::Quit).unwrap_or_else(|err| {
@@ -588,10 +262,6 @@ impl BAPViewModel {
 
         eprintln!("Terminating BAP.");
         exit(-1);
-    }
-
-    pub fn ppp(&self) -> f32 {
-        self.ppp
     }
 
     pub fn request_post(&self) {
@@ -671,12 +341,6 @@ impl BAPViewModel {
                 .send(ViewCommand::SendCommand(cmd.clone()))
                 .expect("Failed to send port selection due to dead app-socket.")
         }
-    }
-
-    #[allow(unused)]
-    pub fn set_ppp(&mut self, ppp: f32) {
-        self.ppp = ppp;
-        // TODO: Reload the svg preview.
     }
 
     /// Just checks if the source image is too big for either paper or machine.
@@ -800,10 +464,6 @@ impl BAPViewModel {
         }
     }
 
-    pub fn zoom(&self) -> f64 {
-        self.view_zoom
-    }
-
     fn cancel_render(&mut self) {
         if let Some(_timeout) = &self.timeout_for_source_image {
             if let Some(cancel) = &self.cancel_render {
@@ -815,29 +475,9 @@ impl BAPViewModel {
             }
         }
     }
-    pub fn set_zoom(&mut self, zoom: f64) {
-        self.view_zoom = zoom.min(200.).max(1.);
-
-        self.cancel_render();
-
-        if let Some(_sender) = &self.cmd_out {
-            // We know the extents of the svg, so we just need to
-            // calculate a new image size for the current zoom level.
-            self.request_new_source_image();
-        }
-    }
 
     pub fn request_new_source_image(&mut self) {
         self.dirty = true
-    }
-
-    pub fn display_mode(&self) -> BAPDisplayMode {
-        self.display_mode.clone()
-    }
-
-    pub fn set_display_mode(&mut self, mode: BAPDisplayMode) {
-        self.dirty = true;
-        self.display_mode = mode;
     }
 
     pub fn check_for_new_source_image(&mut self) {
@@ -920,7 +560,6 @@ impl BAPViewModel {
                                 });
                             self.timeout_for_source_image =
                                 Some(Instant::now() + Duration::from_secs(3));
-                        // } else if hs[0] / 5 > resolution.0 / 4 || hs[1] / 5 > resolution.1 / 4 {
                         } else if hs[0] > resolution.0 || hs[1] > resolution.1 {
                             sender
                                 .send(ViewCommand::RequestSourceImage {
@@ -941,47 +580,6 @@ impl BAPViewModel {
                     }
                     self.dirty = false;
                 }
-            }
-        }
-    }
-
-    /// Orients the rect for the paper to the origin, and
-    /// the landscape/portrait config
-    ///
-    pub fn get_paper_rect(&self) -> Rect {
-        self.calc_paper_rect(self.origin)
-    }
-
-    pub fn get_paper_size(&self) -> Vec2 {
-        match self.paper_orientation {
-            Orientation::Portrait => vec2(
-                self.paper_size.dims().0 as f32,
-                self.paper_size.dims().1 as f32,
-            ),
-            Orientation::Landscape => vec2(
-                self.paper_size.dims().1 as f32,
-                self.paper_size.dims().0 as f32,
-            ),
-        }
-    }
-
-    pub fn calc_paper_rect(&self, origin: Pos2) -> Rect {
-        match self.paper_orientation {
-            Orientation::Portrait => {
-                let tl = pos2(origin.x, origin.y - self.paper_size.dims().1 as f32);
-                let size = vec2(
-                    self.paper_size.dims().0 as f32,
-                    self.paper_size.dims().1 as f32,
-                );
-                Rect::from_min_size(tl, size)
-            }
-            Orientation::Landscape => {
-                let tl = pos2(origin.x, origin.y - self.paper_size.dims().0 as f32);
-                let size = vec2(
-                    self.paper_size.dims().1 as f32,
-                    self.paper_size.dims().0 as f32,
-                );
-                Rect::from_min_size(tl, size)
             }
         }
     }

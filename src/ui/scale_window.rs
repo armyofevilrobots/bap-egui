@@ -13,27 +13,28 @@ pub(crate) fn scale_window(
         ui.set_width(250.);
         ui.heading("Scale by factor");
 
-        if let CommandContext::Scale(factor) = &mut model.command_context {
-            let mut tmp_factor = *factor * 100.0f64;
+        if let CommandContext::Scale(factor) = model.command_context() {
+            let mut tmp_factor = factor * 100.0f64;
             ui.add(
                 Slider::new(&mut tmp_factor, 0.1..=1000.0)
                     .custom_formatter(|val, _range| format!("{:0.1}%", val))
                     .logarithmic(true)
                     .text("Percent"),
             );
-            *factor = tmp_factor / 100.;
-        }
-        if let CommandContext::Scale(factor) = model.command_context {
+            tmp_factor = tmp_factor / 100.;
+            model.set_command_context(CommandContext::Scale(tmp_factor));
             ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
                 if ui.button("Ok").clicked() {
                     // model.pen_crib_open = false
                     model.scale_by_factor(factor.clone());
-                    model.command_context = crate::view_model::CommandContext::None
+                    //model.set_command_context(crate::view_model::CommandContext::None)
+                    model.cancel_command_context(false);
                 }
                 if ui.button("Cancel").clicked() {
                     // model.pen_crib_open = false
                     // println!("Not scaling. Quitting modal.");
-                    model.command_context = crate::view_model::CommandContext::None
+                    // model.set_command_context(crate::view_model::CommandContext::None)
+                    model.cancel_command_context(true);
                 }
             });
         }

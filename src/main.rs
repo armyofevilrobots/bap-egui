@@ -41,11 +41,13 @@ fn main() -> eframe::Result<()> {
 
             // let config = AppConfig::default();
 
-            let mut model = BAPViewModel::default();
-            model.state_in = Some(state_in);
-            model.cmd_out = Some(cmd_out);
-            model.origin = pos2(0., 279.);
-            model.cancel_render = Some(cancel_render_sender);
+            let mut model = BAPViewModel::default()
+                .with_appstate_recv(state_in)
+                .with_viewcommand_send(cmd_out);
+            // model.state_in = Some(state_in);
+            // model.cmd_out = Some(cmd_out);
+            model.set_origin(pos2(0., 279.), false);
+            model.set_cancel_render(cancel_render_sender);
 
             // We need some kind of placeholder due to the API. How bout a secret pixel?
             let tmp_svg_image = ColorImage::filled([3, 3], Color32::TRANSPARENT);
@@ -54,11 +56,7 @@ fn main() -> eframe::Result<()> {
                 tmp_svg_image,
                 egui::TextureOptions::NEAREST,
             );
-            // let tex2 = tex.clone();
-            model.source_image_handle = Some(Box::new(tex));
-            model.source_image_extents = None;
-            // model.overlay_image_handle = Some(Box::new(tex2));
-            // model.overlay_image_extents = None;
+            model.set_source_image_handle(Box::new(tex));
             model.set_origin(pos2(0., 0.), false);
             model.update_pen_details();
             model.set_paper_color(&Color32::WHITE, false);

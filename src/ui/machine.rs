@@ -15,22 +15,22 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                 // ui.set_height(600.);
 
                 ui.set_width(600.);
-                ui.heading(format!("Edit Machine {}", model.machine_config.name()));
+                ui.heading(format!("Edit Machine {}", model.machine_config_mut().name()));
                 // Editor for the TOOL ID (this is a tracking ID, not the machine ID)
                 ui.label("Name:");
-                let mut tmp_name = model.machine_config.name();
+                let mut tmp_name = model.machine_config_mut().name();
                 if ui.text_edit_singleline(&mut tmp_name).changed() {
-                    model.machine_config.set_name(tmp_name);
+                    model.machine_config_mut().set_name(tmp_name);
                 };
 
                 // This is the skim height section. It handles how high we lift
                 // the pen when doing rapids between lines.
                 ui.collapsing("Configuration", |ui|{
                     {
-                        let mut skim = model.machine_config.skim().unwrap_or(0.0);
+                        let mut skim = model.machine_config_mut().skim().unwrap_or(0.0);
                         ui.add(
                             Slider::new(&mut skim, 0.0f64..=50.0f64)
-                                .text(if model.machine_config.skim().unwrap_or(0.0) > 0.0 {
+                                .text(if model.machine_config_mut().skim().unwrap_or(0.0) > 0.0 {
                                     "Skim height"
                                 } else {
                                     "Skim disabled"
@@ -45,19 +45,19 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                                 }),
                         );
                         if skim == 0.0 {
-                            model.machine_config.set_skim(None);
+                            model.machine_config_mut().set_skim(None);
                         } else {
-                            model.machine_config.set_skim(Some(skim));
+                            model.machine_config_mut().set_skim(Some(skim));
                         }
                         ui.label("Skim defines the height above the media that the pen will rise to before high-speed travel moves between lines.");
                         ui.add_space(4.);
                     } //skim height
                     // Keepdown
                     {
-                        let mut tmp_keepdown=model.machine_config.keepdown().unwrap_or(0.);
+                        let mut tmp_keepdown=model.machine_config_mut().keepdown().unwrap_or(0.);
                         ui.add(
                             Slider::new(&mut tmp_keepdown, 0.0f64..=5.0f64)
-                                .text(if model.machine_config.keepdown().unwrap_or(0.0) > 0.0 {
+                                .text(if model.machine_config_mut().keepdown().unwrap_or(0.0) > 0.0 {
                                     "Keepdown"
                                 } else {
                                     "Keepdown Disabled"
@@ -71,7 +71,7 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                                     }
                                 }),
                         );
-                        model.machine_config.set_keepdown(if tmp_keepdown>0.0 {Some(tmp_keepdown)}else{None});
+                        model.machine_config_mut().set_keepdown(if tmp_keepdown>0.0 {Some(tmp_keepdown)}else{None});
 
 
 
@@ -83,12 +83,12 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
 
                     // Feedrate
                     {
-                        let mut tmp_vel = model.machine_config.feedrate();
+                        let mut tmp_vel = model.machine_config_mut().feedrate();
                         ui.horizontal(|ui| {
                             ui.add(Slider::new(&mut tmp_vel, 100.0..=10000.0))
                                 .labelled_by(ui.label("Feed(mm/s)").id);
                         }); //Feedrate
-                        model.machine_config.set_feedrate(tmp_vel);
+                        model.machine_config_mut().set_feedrate(tmp_vel);
                         ui.label("Feedrate is the speed at which the pen moves by default. You can tune this per-pen in the pen-crib. \
                             Units are in millimeters/second, and usually 1200 or so is a good safe speed for most pens. Too high a number\
                             can result in fading or tearing.");
@@ -99,7 +99,7 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
 
                 ui.collapsing("Post Templates", |ui|{
                     let mut templates: IndexMap<String, String> = IndexMap::from_iter(
-                        model.machine_config.get_post_template()
+                        model.machine_config_mut().get_post_template()
                             .iter()
                             .map(|(k,v)| (k.clone(), v.clone())));
                     let mut update=false;
@@ -110,7 +110,7 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                     }
 
                     if update{
-                        model.machine_config.set_post_template(&templates.iter().map(|(k,v)|(k.clone(), v.clone())).collect());
+                        model.machine_config_mut().set_post_template(&templates.iter().map(|(k,v)|(k.clone(), v.clone())).collect());
 
                     }
                     // The painter for the machine mockup
@@ -126,7 +126,8 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
             // ui.separator();
             ui.collapsing("Machine Limits", |ui|{
                 let (painter_resp, painter) = ui.allocate_painter(vec2(600., 320.), egui::Sense::all());
-                let ratio = model.machine_config.limits().1 / model.machine_config.limits().0;
+                let limits = model.machine_config().limits();
+                let ratio = limits.1 / limits.0;
                 let (mwidth, mheight) = if ratio > 1. {
                     (300. / ratio as f32, 300.)
                 } else {
@@ -157,7 +158,7 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                 painter.text(
                     pos2(mrect.min.x+300., mrect.min.y+150.+8.),
                     Align2::CENTER_CENTER,
-                    format!("{:3.2}mm x {:3.2}mm\n", model.machine_config.limits().0, model.machine_config.limits().1),
+                    format!("{:3.2}mm x {:3.2}mm\n", limits.0, limits.1),
                     FontId::default(),
                     dimensions_text_color.clone(),
                 );
@@ -166,7 +167,7 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                 painter.text(
                     pos2(mrect.min.x+300., mrect.min.y+150.+ mheight/2.-16.),
                     Align2::CENTER_CENTER,
-                    format!("X:{:3.2}mm", model.machine_config.limits().0), //model.paper_size.dims().0),
+                    format!("X:{:3.2}mm", limits.0), //model.paper_size.dims().0),
                     FontId::proportional(8.),
                     dimensions_text_color.clone(),
                 );
@@ -174,18 +175,18 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                 painter.text(
                     pos2(mrect.min.x+300.+ mwidth/2.-24., mrect.min.y+150.+16.),
                     Align2::CENTER_BOTTOM,
-                    format!("Y:{:3.2}mm", model.machine_config.limits().1), //model.paper_size.dims().0),
+                    format!("Y:{:3.2}mm", limits.1), //model.paper_size.dims().0),
                     FontId::proportional(8.),
                     dimensions_text_color.clone(),
                 );
 
-                let (mut xlim,mut ylim) = model.machine_config.limits();
+                let (mut xlim,mut ylim) = limits.clone();
                 ui.horizontal(|ui|{
                     if ui.add(Slider::new(&mut xlim, 0.0..=2000.0).text("X limit").custom_formatter(|num, _range|format!("{:4.2}mm", num))).changed(){
-                        model.machine_config.set_limits((xlim, ylim));
+                        model.machine_config_mut().set_limits((xlim, ylim));
                     }
                     if ui.add(Slider::new(&mut ylim, 0.0..=2000.0).text("Y limit").custom_formatter(|num, _range|format!("{:4.2}mm", num))).changed(){
-                        model.machine_config.set_limits((xlim, ylim));
+                        model.machine_config_mut().set_limits((xlim, ylim));
                     }
                 });
 

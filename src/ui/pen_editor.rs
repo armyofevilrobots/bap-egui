@@ -11,22 +11,20 @@ use crate::{
 pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx: usize) {
     egui::Modal::new(Id::new("Pen Editor")).show(ctx, |ui| {
         ui.vertical(|ui| {
+            let crib = model.pen_crib();
             ui.set_width(400.);
             ui.heading(format!(
                 "Edit Pen #{} - {}",
                 pen_idx,
-                model
-                    .pen_crib
-                    .get(pen_idx)
-                    .unwrap_or(&PenDetail::default())
-                    .name
+                crib.get(pen_idx).unwrap_or(&PenDetail::default()).name
             ));
             let (painter_resp, painter) = ui.allocate_painter(vec2(390., 460.), egui::Sense::all());
             let prect = painter_resp.rect;
             let ofs = (prect.min.clone() + vec2(10., 10.)).to_vec2();
-            let pen_crib_len = model.pen_crib.len();
+            let pen_crib_len = crib.len();
             let paper_color = model.paper_color();
-            let pen = model.pen_crib.get_mut(pen_idx).expect(
+            let crib = model.pen_crib_mut();
+            let pen = crib.get_mut(pen_idx).expect(
                 format!(
                     "Somehow pen indexes got mangled getting pen {} from pen crib of length {}",
                     pen_idx, pen_crib_len
@@ -255,16 +253,17 @@ pub fn pen_editor_window(model: &mut BAPViewModel, ctx: &egui::Context, pen_idx:
                         if ui.button("Ok").clicked() {
                             // model.pen_crib_open = false
                             model.update_pen_details();
-                            model.command_context = crate::view_model::CommandContext::PenCrib
+                            model.set_command_context(crate::view_model::CommandContext::PenCrib)
                         }
                         if ui.button("Cancel").clicked() {
                             // model.pen_crib_open = false
                             //
-                            if let CommandContext::PenEdit(idx, pen) = &model.command_context {
+                            if let CommandContext::PenEdit(idx, pen) = &model.command_context() {
                                 eprintln!("Dropping changes.");
-                                model.pen_crib[*idx] = pen.clone()
+                                let crib = model.pen_crib_mut();
+                                crib[*idx] = pen.clone()
                             }
-                            model.command_context = crate::view_model::CommandContext::PenCrib
+                            model.set_command_context(crate::view_model::CommandContext::PenCrib)
                         }
                     });
                 },
