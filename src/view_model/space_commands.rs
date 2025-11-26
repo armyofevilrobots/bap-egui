@@ -452,15 +452,26 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         ),
     );
 
+    let cmd_select_by_color = (
+        Key::C,
+        (
+            "Select by Color".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Select by Color".to_string(),
+                Box::new(|model| {
+                    // model.select_by_color_pick();
+                    model.set_command_context(CommandContext::SelectColorAt(None))
+                }),
+                None,
+            ),
+        ),
+    );
+
     let cmd_select = (
         Key::S,
         (
             "Select".to_string(),
-            SpaceCommandBranch::Branch(IndexMap::from([
-                cmd_select_all,
-                // cmd_scale,
-                // cmd_rotate,
-            ])),
+            SpaceCommandBranch::Branch(IndexMap::from([cmd_select_all, cmd_select_by_color])),
         ),
     );
 

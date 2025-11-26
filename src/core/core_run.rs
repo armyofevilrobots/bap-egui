@@ -369,6 +369,9 @@ impl ApplicationCore {
                                 ))
                             });
                         }
+                        ViewCommand::SelectByColorPick(_x, _y) => {
+                            todo!()
+                        }
                     }
                 }
             }

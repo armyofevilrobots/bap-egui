@@ -22,6 +22,7 @@ pub enum CommandContext {
     Rotate(Option<Pos2>, Option<Pos2>, Option<Pos2>), // center, reference, angle
     Scale(f64),
     Space(Vec<Key>),
+    SelectColorAt(Option<Pos2>),
     None,
 }
 
@@ -50,7 +51,15 @@ impl Display for CommandContext {
                     .collect::<Vec<String>>()
                     .join(">")
             ),
-            Self::None => write!(f, "None"),
+            CommandContext::None => write!(f, "None"),
+            CommandContext::SelectColorAt(pos2) => write!(
+                f,
+                "SelectColorAt({})",
+                match pos2 {
+                    Some(Pos2 { x, y }) => format!("{},{}", x, y),
+                    None => "...".to_string(),
+                }
+            ),
         }
     }
 }
@@ -165,6 +174,7 @@ impl BAPViewModel {
                     CommandContext::None
                 }
             }
+            CommandContext::SelectColorAt(_pos2) => CommandContext::None,
             CommandContext::None => CommandContext::None,
         };
     }
@@ -181,6 +191,7 @@ impl BAPViewModel {
             CommandContext::Rotate(_pos2, _pos3, _pos4) => ctx,
             CommandContext::Scale(_scale) => ctx,
             CommandContext::Space(_items) => ctx,
+            CommandContext::SelectColorAt(_opt_pos2) => ctx,
             CommandContext::None => ctx,
         };
     }
