@@ -33,11 +33,8 @@ impl BAPViewModel {
         self.yolo_view_command(ViewCommand::SelectAll);
     }
 
-    #[allow(unused)]
     pub fn select_by_color_pick(&self, point: Pos2) {
-        self.yolo_view_command(ViewCommand::SelectByColorPick(
-            point.x as f64,
-            point.y as f64,
-        ))
+        let Pos2 { x, y } = self.frame_coords_to_mm(point);
+        self.yolo_view_command(ViewCommand::SelectByColorPick(x as f64, y as f64))
     }
 }

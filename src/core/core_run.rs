@@ -1,7 +1,6 @@
+use super::commands::{ApplicationStateChangeMsg, ViewCommand};
 use std::collections::BTreeSet;
 use std::time::{Duration, Instant};
-
-use super::commands::{ApplicationStateChangeMsg, ViewCommand};
 
 use super::ApplicationCore;
 use super::project::Project;
@@ -242,75 +241,31 @@ impl ApplicationCore {
                             self.rebuild_after_content_change();
                         }
                         ViewCommand::AddPickAt(x, y) => {
-                            let picked = self.try_pick(x, y);
-                            if let Some(id) = picked {
-                                if self.picked.is_none() {
-                                    self.picked = Some(BTreeSet::new());
-                                }
-
-                                self.picked.as_mut().unwrap().insert(id as u32);
-                                self.state_change_out
-                                    .send(ApplicationStateChangeMsg::Picked(Some(
-                                        self.picked
-                                            .as_ref()
-                                            .unwrap()
-                                            .iter()
-                                            .map(|i| *i as usize)
-                                            .collect::<Vec<usize>>(),
-                                    )))
-                                    .expect("OMFG ViewModel is borked sending pick id");
-                            } else {
-                                self.state_change_out
-                                .send(ApplicationStateChangeMsg::Picked(None))
-                                .unwrap_or_else(|_err| if self.shutdown {
-                                    eprintln!("Cannot update pick image while shutting down...")
-                                }else{
-                                    eprintln!("Cannot send pick image because ViewModel has hung up.")
-                                });
-                                // .expect("OMFG ViewModel is borked sending pick id");
-                            }
-                            self.last_rendered = Instant::now()
-                                + Duration::from_millis((PICKED_ROTATE_TIME * 1000.) as u64);
+                            self.add_pick_at(x, y);
                             self.ctx.request_repaint();
                         }
                         ViewCommand::TryPickAt(x, y) => {
-                            let picked = self.try_pick(x, y);
-                            if let Some(id) = picked {
-                                if self.picked.is_none() {
-                                    self.picked = Some(BTreeSet::new());
-                                }
-
-                                self.picked.as_mut().unwrap().insert(id as u32);
-                                self.state_change_out
-                                    .send(ApplicationStateChangeMsg::Picked(Some(
-                                        self.picked
-                                            .as_ref()
-                                            .unwrap()
-                                            .iter()
-                                            .map(|i| *i as usize)
-                                            .collect::<Vec<usize>>(),
-                                    )))
-                                    .expect("OMFG ViewModel is borked sending pick id");
-                            } else {
-                                self.state_change_out
-                                .send(ApplicationStateChangeMsg::Picked(None))
-                                .unwrap_or_else(|_err| if self.shutdown {
-                                    eprintln!("Cannot update pick image while shutting down...")
-                                }else{
-                                    eprintln!("Cannot send pick image because ViewModel has hung up.")
-                                });
-                                // .expect("OMFG ViewModel is borked sending pick id");
-                                self.picked = None
-                            }
-                            self.last_rendered = Instant::now()
-                                + Duration::from_millis((PICKED_ROTATE_TIME * 1000.) as u64);
+                            self.try_pick_at(x, y);
                             self.ctx.request_repaint();
                         }
                         ViewCommand::ClearPick => {
-                            self.state_change_out
-                                .send(ApplicationStateChangeMsg::Picked(None))
-                                .expect("OMFG ViewModel is borked sending pick id");
-                            self.picked = None
+                            self.clear_pick();
+                        }
+                        ViewCommand::TogglePickAt(x, y) => {
+                            self.toggle_pick_at(x, y);
+                            self.ctx.request_repaint();
+                        }
+                        ViewCommand::SelectAll => {
+                            self.select_all();
+                            self.ctx.request_repaint();
+                        }
+                        ViewCommand::SelectByColorPick(x, y) => {
+                            self.select_by_color_at(x, y);
+                            self.ctx.request_repaint();
+                        }
+                        ViewCommand::ApplyPenToSelection(tool_id) => {
+                            self.checkpoint();
+                            self.apply_pen_to_selection(tool_id);
                         }
                         ViewCommand::UnGroup => {
                             self.checkpoint();
@@ -320,46 +275,6 @@ impl ApplicationCore {
                             self.checkpoint();
                             self.apply_group();
                         }
-                        ViewCommand::TogglePickAt(x, y) => {
-                            let picked = self.try_pick(x, y);
-                            if let Some(id) = picked {
-                                //
-                                if self.picked.is_none() {
-                                    self.picked = Some(BTreeSet::new());
-                                }
-
-                                if self.picked.as_mut().unwrap().contains(&id) {
-                                    self.picked.as_mut().unwrap().remove(&id);
-                                } else {
-                                    self.picked.as_mut().unwrap().insert(id.clone());
-                                }
-                                self.state_change_out
-                                    .send(ApplicationStateChangeMsg::Picked(Some(
-                                        self.picked
-                                            .as_ref()
-                                            .unwrap()
-                                            .iter()
-                                            .map(|i| *i as usize)
-                                            .collect::<Vec<usize>>(),
-                                    )))
-                                    .expect("OMFG ViewModel is borked sending pick id");
-                            }
-                            self.last_rendered = Instant::now()
-                                + Duration::from_millis((PICKED_ROTATE_TIME * 1000.) as u64);
-                            self.ctx.request_repaint();
-                        }
-                        ViewCommand::SelectAll => {
-                            self.picked = Some(BTreeSet::from_iter(
-                                (0..self.project.geometry.len()).map(|i| i as u32),
-                            ));
-                            self.last_rendered = Instant::now()
-                                + Duration::from_millis((PICKED_ROTATE_TIME * 1000.) as u64);
-                            self.ctx.request_repaint();
-                        }
-                        ViewCommand::ApplyPenToSelection(tool_id) => {
-                            self.checkpoint();
-                            self.apply_pen_to_selection(tool_id);
-                        }
                         ViewCommand::UpdateConfig(app_config) => {
                             self.config = app_config;
                             self.config.save_to(None).unwrap_or_else(|err| {
@@ -368,9 +283,6 @@ impl ApplicationCore {
                                         .to_string(),
                                 ))
                             });
-                        }
-                        ViewCommand::SelectByColorPick(_x, _y) => {
-                            todo!()
                         }
                     }
                 }

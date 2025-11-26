@@ -355,6 +355,12 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     }
                 }
                 CommandContext::Space(_) => (),
+                CommandContext::SelectColorAt(_) => {
+                    if let Some(pos) = ctx.pointer_hover_pos() {
+                        model.select_by_color_pick(pos);
+                        model.cancel_command_context(false);
+                    }
+                }
                 _ => {
                     if let Some(pos) = ctx.pointer_hover_pos() {
                         // println!("Clicked at {:?}", model.frame_coords_to_mm(pos));

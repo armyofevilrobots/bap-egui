@@ -15,6 +15,7 @@ pub(crate) mod post;
 pub(crate) mod project;
 pub(crate) mod render_plot;
 pub(crate) mod render_source;
+pub(crate) mod selections;
 pub(crate) mod sender;
 pub(crate) mod serial;
 
