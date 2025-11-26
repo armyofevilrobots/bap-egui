@@ -1,3 +1,6 @@
 [submodule "deps/egui-toast"]
 	path = deps/egui-toast
 	url = git@github.com:LazerSharkk/egui-toast.git
+[submodule "deps/svg2polylines"]
+	path = deps/svg2polylines
+	url = git@github.com:armyofevilrobots/svg2polylines.git

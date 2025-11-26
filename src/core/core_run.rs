@@ -1,5 +1,4 @@
 use super::commands::{ApplicationStateChangeMsg, ViewCommand};
-use std::collections::BTreeSet;
 use std::time::{Duration, Instant};
 
 use super::ApplicationCore;

@@ -2,7 +2,6 @@ use std::collections::BTreeSet;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::{Duration, Instant};
 
-use aoer_plotty_rs::plotter::pen::PenDetail;
 use egui::{ColorImage, Context};
 
 pub(crate) mod commands;
@@ -26,7 +25,6 @@ use tera::Context as TeraContext;
 use crate::core::config::AppConfig;
 use crate::core::project::Project;
 use crate::core::render_plot::render_plot_preview;
-use crate::view_model::view_model_patch::ViewModelPatch;
 use machine::MachineConfig;
 use sender::{PlotterCommand, PlotterConnection, PlotterResponse, PlotterState};
 /// The actual application core that does shit.
