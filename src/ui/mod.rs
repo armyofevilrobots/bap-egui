@@ -449,6 +449,8 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                             } else {
                                 keys.push(pkey.clone());
                             }
+                        } else if *pressed && *pkey == Key::Delete {
+                            model.delete_selection();
                         }
                     };
                     // None

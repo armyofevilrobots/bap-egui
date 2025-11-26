@@ -108,31 +108,6 @@ impl ApplicationCore {
         (core, vm_to_app, vm_from_app, cancel_render_sender)
     }
 
-    pub fn apply_pen_to_selection(&mut self, pen_id: usize) {
-        if let Some(picked) = &self.picked {
-            let mut pen = PenDetail::default();
-            for p in self.project.pens.clone() {
-                if p.tool_id == pen_id {
-                    pen = p.clone();
-                }
-            }
-
-            for (idx, geo) in self.project.geometry.iter_mut().enumerate() {
-                if picked.contains(&(idx as u32)) {
-                    geo.stroke = Some(pen.clone());
-                }
-            }
-
-            self.state_change_out
-                .send(ApplicationStateChangeMsg::PatchViewModel(
-                    ViewModelPatch::from(self.project.clone()),
-                ))
-                .expect("Failed to send error to viewmodel.");
-            self.ctx.request_repaint();
-            self.rebuild_after_content_change();
-        }
-    }
-
     pub fn yolo_app_state_change(&self, msg: ApplicationStateChangeMsg) {
         self.state_change_out
             .send(msg)

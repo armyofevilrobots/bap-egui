@@ -65,6 +65,7 @@ pub enum ViewCommand {
     ClearPick,
     UnGroup,
     Group,
+    DeleteSelection,
     UpdateConfig(AppConfig),
     None,
 }

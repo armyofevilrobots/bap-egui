@@ -101,6 +101,18 @@ impl BAPViewModel {
         self
     }
 
+    pub fn delete_selection(&mut self) {
+        if self.picked().is_some() {
+            self.yolo_view_command(ViewCommand::DeleteSelection);
+        } else {
+            self.toast(
+                "Can't delete with no selection".to_string(),
+                ToastKind::Error,
+                5.,
+            );
+        }
+    }
+
     pub fn with_viewcommand_send(mut self, state: Sender<ViewCommand>) -> Self {
         self.cmd_out = Some(state);
         self

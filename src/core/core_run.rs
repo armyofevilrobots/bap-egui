@@ -275,6 +275,10 @@ impl ApplicationCore {
                             self.checkpoint();
                             self.apply_group();
                         }
+                        ViewCommand::DeleteSelection => {
+                            self.delete_selection();
+                            self.ctx.request_repaint();
+                        }
                         ViewCommand::UpdateConfig(app_config) => {
                             self.config = app_config;
                             self.config.save_to(None).unwrap_or_else(|err| {
