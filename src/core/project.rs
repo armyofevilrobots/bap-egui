@@ -598,7 +598,8 @@ impl Project {
                 let svg_string = rtree.to_string(&usvg::WriteOptions::default());
                 // println!("{:?}", rtree.root());
                 self.svg = Some(svg_string);
-                self.geometry = svg_to_geometries(&rtree, scale_x, scale_y, keepdown, &self.pens);
+                self.geometry =
+                    svg_to_geometries(&rtree, scale_x, scale_y, keepdown, &mut self.pens);
                 // self.extents = self.calc_extents();
                 self.regenerate_extents();
             }
@@ -617,67 +618,69 @@ pub fn svg_to_geometries(
     scale_x: f64,
     scale_y: f64,
     keepdown: bool,
-    pens: &Vec<PenDetail>,
+    pens: &mut Vec<PenDetail>,
 ) -> Vec<PlotGeometry> {
     // println!("I received pens: {:?}", pens);
     let mut geometries: Vec<PlotGeometry> = vec![];
-    let mut multilines: MultiLineString<f64> = MultiLineString::new(vec![]);
+    // let mut multilines: MultiLineString<f64> = MultiLineString::new(vec![]);
+
     // TODO: We should look at parsing WITH preprocessing if it makes things more reliable
-    if let Ok(out) = svg2polylines::parse(&*tree.to_string(&WriteOptions::default()), 0.1, false) {
-        for linestring in out {
+    if let Ok(out) =
+        svg2polylines::parse_with_meta(&*tree.to_string(&WriteOptions::default()), 0.1, false)
+    {
+        // let mut pens: Vec<PenDetail> = vec![];
+        for (idx, (linestring, meta)) in out.iter().enumerate() {
             let tmp_ls = LineString::new(
                 linestring
                     .iter()
                     .map(|x| coord! {x: scale_x * x.x as f64, y: scale_y * x.y as f64})
                     .collect(),
             );
-            // println!("Parsed geo size is: {:?}", tmp_ls.bounding_rect());
-            multilines.0.push(tmp_ls);
+            // println!("Got geometry of: {:?}", tmp_ls);
+            let this_pen = PenDetail {
+                tool_id: 1 + pens.len(),
+                name: format!("svg-auto-{}", idx + 1),
+                stroke_width: 1.,
+                stroke_density: 1.,
+                feed_rate: None,
+                color: match &meta.stroke {
+                    Some(stroke_string) => csscolorparser::parse(stroke_string.as_str())
+                        .unwrap_or(csscolorparser::parse("black").unwrap()),
+                    None => csscolorparser::parse("black").unwrap(),
+                },
+            };
+            // println!("This pen: {:?}", this_pen);
+            let mut pen_idx = usize::MAX;
+            for (idx, pen) in pens.iter().enumerate() {
+                if (pen.color == this_pen.color)
+                    && (pen.stroke_width == this_pen.stroke_width)
+                    && (pen.stroke_density == this_pen.stroke_density)
+                {
+                    pen_idx = idx
+                }
+            }
+            let pen_out = if pen_idx != usize::MAX {
+                pens[pen_idx].clone()
+            } else {
+                pens.push(this_pen.clone());
+                this_pen
+            };
+
+            geometries.push(PlotGeometry {
+                geometry: Geometry::MultiLineString(MultiLineString::new(vec![tmp_ls])),
+                stroke: Some(pen_out),
+                keepdown_strategy: if keepdown {
+                    KeepdownStrategy::PenWidthAuto
+                } else {
+                    KeepdownStrategy::None
+                },
+                // meta: HashMap::new(),
+            });
         }
     }
     // println!("Total geo size is: {:?}", multilines.bounding_rect());
-    geometries.push(PlotGeometry {
-        // id: 0,
-        geometry: Geometry::MultiLineString(multilines),
-        //hatch: None,
-        /*Some(HatchDetail {
-            hatch_pattern: "".to_string(), //Hatches::none(),
-            // TODO: This should in the future be copied from pen settings.
-            /* */
-            geometry: None,
-            pen: Some(
-                pens.first()
-                    .unwrap_or(&PenDetail {
-                        stroke_width: 0.5,
-                        stroke_density: 1.0,
-                        feed_rate: None,
-                        color: "black".to_string(),
-                        tool_id: 1,
-                        name: "PEN1".to_string(),
-                    })
-                    .clone(),
-            ),
-        })*/
-        stroke: Some(
-            pens.first()
-                .unwrap_or(&PenDetail {
-                    stroke_width: 0.5,
-                    stroke_density: 1.0,
-                    feed_rate: None,
-                    color: csscolorparser::Color::from_rgba8(0, 0, 0, 1),
-                    tool_id: 1,
-                    name: "PEN1".to_string(),
-                })
-                .clone(),
-        ),
-        keepdown_strategy: if keepdown {
-            KeepdownStrategy::PenWidthAuto
-        } else {
-            KeepdownStrategy::None
-        },
-        // meta: HashMap::new(),
-    });
 
+    // println!("After import, pens are: {:?}", pens);
     geometries
 }
 

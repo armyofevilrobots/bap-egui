@@ -42,6 +42,11 @@ impl ApplicationCore {
                         ViewCommand::ImportSVG(path_buf) => {
                             self.checkpoint();
                             self.project.import_svg(&path_buf, true);
+                            self.state_change_out
+                                .send(ApplicationStateChangeMsg::PatchViewModel(
+                                    ViewModelPatch::from(self.project.clone()),
+                                ))
+                                .expect("Failed to send error to viewmodel.");
                             self.rebuild_after_content_change();
                         }
                         ViewCommand::SetOrigin(x, y) => {

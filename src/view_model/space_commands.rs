@@ -4,7 +4,7 @@ use egui::{Key, mutex::Mutex};
 use indexmap::IndexMap;
 
 use crate::{
-    core::project::Orientation,
+    core::{commands::ViewCommand, project::Orientation},
     view_model::{BAPViewModel, CommandContext},
 };
 
@@ -118,6 +118,18 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         ),
     );
 
+    let cmd_project_new = (
+        Key::N,
+        (
+            "New Project".to_string(),
+            SpaceCommandBranch::Leaf(
+                "New Project".to_string(),
+                Box::new(|model| model.yolo_view_command(ViewCommand::ResetProject)),
+                None,
+            ),
+        ),
+    );
+
     let _cmd_file_project = (
         Key::P,
         (
@@ -136,6 +148,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             "File".to_string(),
             SpaceCommandBranch::Branch(IndexMap::from([
                 // cmd_file_project,
+                cmd_project_new,
                 cmd_project_open,
                 cmd_project_save,
                 cmd_project_saveas,

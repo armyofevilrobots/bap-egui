@@ -134,9 +134,9 @@ impl AppConfig {
             None => self.config_dir.clone(),
         };
         let path = path.join("config.bap");
-        println!("Final save dest is {:?}", path);
+        // println!("Final save dest is {:?}", path);
         let tmp_path = path.with_added_extension(format!("tmp-bap-{}", rand::random::<u64>()));
-        println!("Tmp save dest is {:?}", tmp_path);
+        // println!("Tmp save dest is {:?}", tmp_path);
         // let content = self.to_string();
         let writer = std::fs::File::create(tmp_path.clone())?;
         let writer = Box::new(BufWriter::new(writer));
@@ -144,7 +144,7 @@ impl AppConfig {
         // ron::Options::default().to_io_writer_pretty(writer, &self, PrettyConfig::default())?;
         ron::Options::default().to_io_writer_pretty(writer, &self, PrettyConfig::default())?;
         std::fs::rename(&tmp_path, &path)?;
-        println!("Renamed to {:?}", path);
+        // println!("Renamed to {:?}", path);
         Ok(())
     }
 

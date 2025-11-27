@@ -335,7 +335,7 @@ mod tests {
         let mut opt = usvg::Options::default();
         opt.dpi = 25.4;
         if let Ok(rtree) = usvg::Tree::from_data(svg_data, &opt) {
-            let geometry = svg_to_geometries(&rtree, 1., 1., true, &vec![PenDetail::default()]);
+            let geometry = svg_to_geometries(&rtree, 1., 1., true, &mut vec![PenDetail::default()]);
             for geo in geometry {
                 let _lines = geo.geometry.to_multi_line_strings();
                 // println!("Lines are: {:?}", lines);

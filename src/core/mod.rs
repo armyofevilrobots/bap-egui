@@ -25,6 +25,7 @@ use tera::Context as TeraContext;
 use crate::core::config::AppConfig;
 use crate::core::project::Project;
 use crate::core::render_plot::render_plot_preview;
+use crate::view_model::view_model_patch::ViewModelPatch;
 use machine::MachineConfig;
 use sender::{PlotterCommand, PlotterConnection, PlotterResponse, PlotterState};
 /// The actual application core that does shit.
@@ -187,6 +188,11 @@ impl ApplicationCore {
                 self.project.extents().height(),
             ),
         };
+        self.state_change_out
+            .send(ApplicationStateChangeMsg::PatchViewModel(
+                ViewModelPatch::from(self.project.clone()),
+            ))
+            .expect("Failed to send error to viewmodel.");
         // println!("Going to send AppSCMSG: {:?}", app_extents);
         self.state_change_out
             .send(app_extents)
