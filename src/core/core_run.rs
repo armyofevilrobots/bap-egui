@@ -52,6 +52,7 @@ impl ApplicationCore {
                         ViewCommand::SetOrigin(x, y) => {
                             self.checkpoint();
                             self.project.set_origin(&Some((x, y)));
+                            self.rebuild_after_content_change();
                         }
                         ViewCommand::SetClipBoundary {
                             min: _min,

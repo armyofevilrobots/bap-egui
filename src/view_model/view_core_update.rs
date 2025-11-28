@@ -1,8 +1,5 @@
 use super::BAPViewModel;
-use crate::{
-    core::{commands::ViewCommand, config::AppConfig},
-    ui::themes::egui_nord::visuals,
-};
+use crate::core::{commands::ViewCommand, config::AppConfig};
 
 impl BAPViewModel {
     pub fn update_ui_from_config(&mut self, config: AppConfig) {

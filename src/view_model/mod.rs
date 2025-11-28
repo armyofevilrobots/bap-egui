@@ -7,7 +7,7 @@ use std::thread::{JoinHandle, sleep};
 use std::time::{Duration, Instant};
 
 use eframe::egui;
-use egui::{Color32, Pos2, Rect, Style, TextureHandle, Vec2, Visuals, pos2, vec2};
+use egui::{Color32, Pos2, Rect, TextureHandle, Vec2, Visuals, pos2, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
 use rfd::FileDialog;
 
@@ -181,13 +181,15 @@ impl BAPViewModel {
             self.origin = match opt_origin {
                 Some(origin) => pos2(origin.0 as f32, origin.1 as f32),
                 None => pos2(0., 0.),
-            }
+            };
+            self.request_new_source_image();
         }
         if let Some(extents) = patch.extents {
             self.source_image_extents = Some(Rect::from_min_max(
                 pos2(extents.0 as f32, extents.1 as f32),
                 pos2(extents.2 as f32, extents.3 as f32),
             ));
+            self.request_new_source_image();
         }
         if let Some(opt_machine) = patch.machine_config {
             self.machine_config = match opt_machine {

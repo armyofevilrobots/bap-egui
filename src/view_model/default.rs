@@ -2,7 +2,6 @@ use std::collections::VecDeque;
 
 use aoer_plotty_rs::plotter::pen::PenDetail;
 use egui::{Color32, Pos2, pos2};
-use egui::{Visuals, style};
 
 use crate::core::config::AppConfig;
 use crate::core::machine::MachineConfig;

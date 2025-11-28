@@ -1,7 +1,7 @@
 use std::process::exit;
 
 use eframe::egui;
-use egui::{Color32, Rect, Theme, Visuals, pos2, vec2};
+use egui::{Color32, Rect, pos2, vec2};
 use egui::{Pos2, Vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
 

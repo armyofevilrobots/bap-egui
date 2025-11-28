@@ -159,7 +159,7 @@ impl ApplicationCore {
     }
 
     fn rebuild_after_content_change(&mut self) {
-        self.project.reindex_geometry();
+        // self.project.reindex_geometry();
         self.project.regenerate_extents();
         let (pick_image, tmp_extents) =
             pick_map::render_pick_map(&self.project, &self.state_change_out)
@@ -180,26 +180,26 @@ impl ApplicationCore {
                 tmp_extents.height(),
             ),
         ));
-        let app_extents = ApplicationStateChangeMsg::SourceChanged {
-            extents: (
-                self.project.extents().min().x,
-                self.project.extents().min().y,
-                self.project.extents().width(),
-                self.project.extents().height(),
-            ),
-        };
+        // let app_extents = ApplicationStateChangeMsg::SourceChanged {
+        //     extents: (
+        //         self.project.extents().min().x,
+        //         self.project.extents().min().y,
+        //         self.project.extents().width(),
+        //         self.project.extents().height(),
+        //     ),
+        // };
         self.state_change_out
             .send(ApplicationStateChangeMsg::PatchViewModel(
                 ViewModelPatch::from(self.project.clone()),
             ))
             .expect("Failed to send error to viewmodel.");
         // println!("Going to send AppSCMSG: {:?}", app_extents);
-        self.state_change_out
-            .send(app_extents)
-            .unwrap_or_else(|_err| {
-                self.shutdown = true;
-                eprintln!("Failed to send message from bap core. Shutting down.");
-            });
+        // self.state_change_out
+        //     .send(app_extents)
+        //     .unwrap_or_else(|_err| {
+        //         self.shutdown = true;
+        //         eprintln!("Failed to send message from bap core. Shutting down.");
+        //     });
 
         self.ctx.request_repaint();
     }

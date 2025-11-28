@@ -61,16 +61,6 @@ impl Display for CommandContext {
                     None => "...".to_string(),
                 }
             ),
-            CommandContext::Origin => todo!(),
-            CommandContext::PaperChooser => todo!(),
-            CommandContext::MachineEdit(machine_config) => todo!(),
-            CommandContext::PenCrib => todo!(),
-            CommandContext::PenEdit(_, pen_detail) => todo!(),
-            CommandContext::PenDelete(_) => todo!(),
-            CommandContext::Clip(pos2, pos3) => todo!(),
-            CommandContext::Rotate(pos2, pos3, pos4) => todo!(),
-            CommandContext::Scale(_) => todo!(),
-            CommandContext::Space(items) => todo!(),
             CommandContext::SelectTheme => write!(f, "Select Theme"),
         }
     }

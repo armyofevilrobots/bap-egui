@@ -9,7 +9,7 @@ use std::{
     path::PathBuf,
 };
 
-use crate::ui::themes::{default_theme, themes};
+use crate::ui::themes::default_theme;
 
 #[derive(PartialEq, Clone, Serialize, Deserialize, Debug, Default)]
 pub enum RulerOrigin {
