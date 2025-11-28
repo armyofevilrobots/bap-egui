@@ -1,6 +1,6 @@
-use crate::view_model::{BAPViewModel, CommandContext};
+use crate::view_model::BAPViewModel;
 use eframe::egui;
-use egui::{ComboBox, Id, Layout, Slider};
+use egui::{ComboBox, Id};
 use std::collections::HashMap;
 
 use egui::Visuals;
