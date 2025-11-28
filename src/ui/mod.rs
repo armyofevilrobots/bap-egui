@@ -4,6 +4,7 @@ use crate::ui::menu::main_menu;
 use crate::ui::paper_chooser::paper_chooser_window;
 use crate::ui::pen_crib::pen_crib_window;
 use crate::ui::pen_delete::pen_delete_window;
+use crate::ui::themes::theme_window;
 use crate::view_model::command_context::SpaceCommandStatus;
 use crate::view_model::{BAPViewModel, CommandContext};
 use eframe::egui;
@@ -59,6 +60,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
         CommandContext::Scale(_factor) => scale_window::scale_window(model, ctx),
         CommandContext::PenDelete(pen_idx) => pen_delete_window(model, ctx, *pen_idx),
         CommandContext::MachineEdit(_opt_machine) => machine_editor_window(model, ctx),
+        CommandContext::SelectTheme => theme_window(model, ctx),
         CommandContext::Space(keys) => {
             let keys = keys.clone();
             match CommandContext::dispatch_space_cmd(model, &keys) {

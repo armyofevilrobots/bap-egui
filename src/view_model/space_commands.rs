@@ -231,6 +231,20 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         ),
     );
 
+    let cmd_select_theme = (
+        Key::T,
+        (
+            "Select Theme".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Select Theme".to_string(),
+                Box::new(|model| {
+                    model.set_command_context(CommandContext::SelectTheme);
+                }),
+                None,
+            ),
+        ),
+    );
+
     let cmd_view = (
         Key::V,
         (
@@ -243,6 +257,8 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 cmd_view_extents,
                 cmd_view_machine,
                 cmd_view_paper,
+                scb_separator(),
+                cmd_select_theme, // cmd_toggle_dark_light,
             ])),
         ),
     );

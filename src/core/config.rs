@@ -9,6 +9,8 @@ use std::{
     path::PathBuf,
 };
 
+use crate::ui::themes::{default_theme, themes};
+
 #[derive(PartialEq, Clone, Serialize, Deserialize, Debug, Default)]
 pub enum RulerOrigin {
     #[default]
@@ -73,6 +75,8 @@ pub struct UIConfig {
     pub show_extents: bool,
     #[serde(default)]
     pub show_rulers: bool,
+    #[serde(default)]
+    pub theme: String,
 }
 
 impl Default for UIConfig {
@@ -84,6 +88,7 @@ impl Default for UIConfig {
             show_limits: true,
             show_extents: true,
             show_rulers: true,
+            theme: default_theme(),
         }
     }
 }

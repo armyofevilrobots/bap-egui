@@ -1,7 +1,7 @@
 use std::process::exit;
 
 use eframe::egui;
-use egui::{Color32, Rect, pos2, vec2};
+use egui::{Color32, Rect, Theme, Visuals, pos2, vec2};
 use egui::{Pos2, Vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
 
@@ -12,6 +12,15 @@ use super::BAPViewModel;
 
 impl eframe::App for BAPViewModel {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        ctx.style_mut(|style_mut| {
+            // style_mut.visuals = match self.visuals.1 {
+            //     Theme::Dark => Visuals::dark(),
+            //     Theme::Light => Visuals::light(),
+            // }
+            style_mut.visuals = self.visuals.1.clone();
+        });
+        // ctx.set_style(crate::ui::themes::egui_nord::style());
+        // ctx.set_style(egui::style::Style::default());
         self.last_pointer_pos = ctx.pointer_hover_pos();
         if let Some(handle) = &self.join_handle {
             if handle.is_finished() {

@@ -9,6 +9,148 @@ use eframe::egui::{
 };
 use egui::Margin;
 
+pub fn visuals() -> Visuals {
+    Visuals {
+        dark_mode: true,
+        override_text_color: Some(Color32::from_rgba_premultiplied(229, 233, 240, 255)),
+        widgets: Widgets {
+            noninteractive: WidgetVisuals {
+                bg_fill: Color32::from_rgba_premultiplied(67, 76, 94, 255),
+                weak_bg_fill: Color32::from_rgba_premultiplied(67, 76, 94, 255),
+                bg_stroke: Stroke {
+                    width: 2.0,
+                    color: Color32::from_rgba_premultiplied(76, 86, 107, 255),
+                },
+                fg_stroke: Stroke {
+                    width: 1.0,
+                    color: Color32::from_rgba_premultiplied(236, 239, 244, 255),
+                },
+                expansion: 0.0,
+                corner_radius: egui::CornerRadius {
+                    nw: 4,
+                    ne: 4,
+                    sw: 4,
+                    se: 4,
+                },
+                // ..Default::default()
+            },
+            inactive: WidgetVisuals {
+                bg_fill: Color32::from_rgba_premultiplied(76, 86, 107, 255),
+                weak_bg_fill: Color32::from_rgba_premultiplied(76, 86, 107, 255),
+                bg_stroke: Stroke {
+                    width: 0.0,
+                    color: Color32::from_rgba_premultiplied(0, 0, 0, 0),
+                },
+                corner_radius: egui::CornerRadius {
+                    nw: 4,
+                    ne: 4,
+                    sw: 4,
+                    se: 4,
+                },
+                fg_stroke: Stroke {
+                    width: 1.5,
+                    color: Color32::from_rgba_premultiplied(236, 239, 244, 255),
+                },
+                expansion: 0.0,
+            },
+            hovered: WidgetVisuals {
+                bg_fill: Color32::from_rgba_premultiplied(67, 76, 94, 255),
+                weak_bg_fill: Color32::from_rgba_premultiplied(67, 76, 94, 255),
+                bg_stroke: Stroke {
+                    width: 1.5,
+                    color: Color32::from_rgba_premultiplied(229, 233, 240, 255),
+                },
+                corner_radius: egui::CornerRadius {
+                    nw: 4,
+                    ne: 4,
+                    sw: 4,
+                    se: 4,
+                },
+                fg_stroke: Stroke {
+                    width: 1.5,
+                    color: Color32::from_rgba_premultiplied(229, 233, 240, 255),
+                },
+                expansion: 1.0,
+            },
+            active: WidgetVisuals {
+                bg_fill: Color32::from_rgba_premultiplied(94, 129, 172, 255),
+                weak_bg_fill: Color32::from_rgba_premultiplied(94, 129, 172, 255),
+                bg_stroke: Stroke {
+                    width: 2.0,
+                    color: Color32::from_rgba_premultiplied(236, 239, 244, 255),
+                },
+                corner_radius: egui::CornerRadius {
+                    nw: 4,
+                    ne: 4,
+                    sw: 4,
+                    se: 4,
+                },
+                fg_stroke: Stroke {
+                    width: 2.0,
+                    color: Color32::from_rgba_premultiplied(236, 239, 244, 255),
+                },
+                expansion: 1.0,
+            },
+            open: WidgetVisuals {
+                bg_fill: Color32::from_rgba_premultiplied(0, 0, 0, 255),
+                weak_bg_fill: Color32::from_rgba_premultiplied(0, 0, 0, 255),
+                bg_stroke: Stroke {
+                    width: 0.0,
+                    color: Color32::from_rgba_premultiplied(0, 0, 0, 255),
+                },
+                corner_radius: egui::CornerRadius {
+                    nw: 4,
+                    ne: 4,
+                    sw: 4,
+                    se: 4,
+                },
+                fg_stroke: Stroke {
+                    width: 1.0,
+                    color: Color32::from_rgba_premultiplied(226, 239, 244, 255),
+                },
+                expansion: 0.0,
+            },
+        },
+        selection: Selection {
+            bg_fill: Color32::from_rgba_premultiplied(0, 92, 128, 255),
+            stroke: Stroke {
+                width: 1.0,
+                color: Color32::from_rgba_premultiplied(192, 222, 255, 255),
+            },
+        },
+        hyperlink_color: Color32::from_rgba_premultiplied(136, 192, 208, 255),
+        faint_bg_color: Color32::from_rgba_premultiplied(5, 5, 5, 0),
+        extreme_bg_color: Color32::from_rgba_premultiplied(59, 66, 82, 255),
+        code_bg_color: Color32::from_rgba_premultiplied(59, 66, 82, 255),
+        warn_fg_color: Color32::from_rgba_premultiplied(208, 135, 112, 255),
+        error_fg_color: Color32::from_rgba_premultiplied(191, 97, 106, 255),
+        window_shadow: Shadow {
+            // extrusion: 8.0,
+            color: Color32::from_rgba_premultiplied(0, 0, 0, 126),
+            ..Default::default()
+        },
+        window_fill: Color32::from_rgba_premultiplied(46, 52, 64, 255),
+        window_stroke: Stroke {
+            width: 2.0,
+            color: Color32::from_rgba_premultiplied(67, 76, 94, 255),
+        },
+        panel_fill: Color32::from_rgba_premultiplied(46, 52, 64, 255),
+        popup_shadow: Shadow {
+            // extrusion: 16.0,
+            color: Color32::from_rgba_premultiplied(0, 0, 0, 96),
+            ..Default::default()
+        },
+        resize_corner_size: 12.0,
+        clip_rect_margin: 3.0,
+        button_frame: true,
+        collapsing_header_frame: false,
+        indent_has_left_vline: true,
+        striped: false,
+        slider_trailing_fill: false,
+        ..Default::default()
+    }
+}
+
 pub fn style() -> Style {
     Style {
         // override the text styles here:
@@ -32,10 +174,10 @@ pub fn style() -> Style {
             },
             button_padding: Vec2 { x: 4.0, y: 1.0 },
             menu_margin: Margin {
-                left: 6.0,
-                right: 6.0,
-                top: 6.0,
-                bottom: 6.0,
+                left: 6,
+                right: 6,
+                top: 6,
+                bottom: 6,
             },
             indent: 18.0,
             interact_size: Vec2 { x: 40.0, y: 18.0 },
@@ -48,15 +190,7 @@ pub fn style() -> Style {
             tooltip_width: 600.0,
             indent_ends_with_horizontal_line: false,
             combo_height: 200.0,
-            slider_rail_height: todo!(),
-            default_area_size: todo!(),
-            menu_width: todo!(),
-            menu_spacing: todo!(),
-            scroll: todo!(),
-            // scroll_bar_width: 8.0,
-            // scroll_handle_min_length: 12.0,
-            // scroll_bar_inner_margin: 4.0,
-            // scroll_bar_outer_margin: 0.0,
+            ..Spacing::default()
         },
         interaction: Interaction {
             resize_grab_radius_side: 5.0,
@@ -64,155 +198,7 @@ pub fn style() -> Style {
             show_tooltips_only_when_still: true,
             ..Default::default()
         },
-        visuals: Visuals {
-            dark_mode: true,
-            override_text_color: Some(Color32::from_rgba_premultiplied(229, 233, 240, 255)),
-            widgets: Widgets {
-                noninteractive: WidgetVisuals {
-                    bg_fill: Color32::from_rgba_premultiplied(67, 76, 94, 255),
-                    weak_bg_fill: Color32::from_rgba_premultiplied(67, 76, 94, 255),
-                    bg_stroke: Stroke {
-                        width: 2.0,
-                        color: Color32::from_rgba_premultiplied(76, 86, 107, 255),
-                    },
-                    // rounding: Rounding {
-                    //     nw: 2.0,
-                    //     ne: 2.0,
-                    //     sw: 2.0,
-                    //     se: 2.0,
-                    // },
-                    fg_stroke: Stroke {
-                        width: 1.0,
-                        color: Color32::from_rgba_premultiplied(236, 239, 244, 255),
-                    },
-                    expansion: 0.0,
-                },
-                inactive: WidgetVisuals {
-                    bg_fill: Color32::from_rgba_premultiplied(76, 86, 107, 255),
-                    weak_bg_fill: Color32::from_rgba_premultiplied(76, 86, 107, 255),
-                    bg_stroke: Stroke {
-                        width: 0.0,
-                        color: Color32::from_rgba_premultiplied(0, 0, 0, 0),
-                    },
-                    // rounding: Rounding {
-                    //     nw: 2.0,
-                    //     ne: 2.0,
-                    //     sw: 2.0,
-                    //     se: 2.0,
-                    // },
-                    fg_stroke: Stroke {
-                        width: 1.5,
-                        color: Color32::from_rgba_premultiplied(236, 239, 244, 255),
-                    },
-                    expansion: 0.0,
-                },
-                hovered: WidgetVisuals {
-                    bg_fill: Color32::from_rgba_premultiplied(67, 76, 94, 255),
-                    weak_bg_fill: Color32::from_rgba_premultiplied(67, 76, 94, 255),
-                    bg_stroke: Stroke {
-                        width: 1.5,
-                        color: Color32::from_rgba_premultiplied(229, 233, 240, 255),
-                    },
-                    // rounding: Rounding {
-                    //     nw: 3.0,
-                    //     ne: 3.0,
-                    //     sw: 3.0,
-                    //     se: 3.0,
-                    // },
-                    fg_stroke: Stroke {
-                        width: 1.5,
-                        color: Color32::from_rgba_premultiplied(229, 233, 240, 255),
-                    },
-                    expansion: 1.0,
-                },
-                active: WidgetVisuals {
-                    bg_fill: Color32::from_rgba_premultiplied(94, 129, 172, 255),
-                    weak_bg_fill: Color32::from_rgba_premultiplied(94, 129, 172, 255),
-                    bg_stroke: Stroke {
-                        width: 2.0,
-                        color: Color32::from_rgba_premultiplied(236, 239, 244, 255),
-                    },
-                    // rounding: Rounding {
-                    //     nw: 2.0,
-                    //     ne: 2.0,
-                    //     sw: 2.0,
-                    //     se: 2.0,
-                    // },
-                    fg_stroke: Stroke {
-                        width: 2.0,
-                        color: Color32::from_rgba_premultiplied(236, 239, 244, 255),
-                    },
-                    expansion: 1.0,
-                },
-                open: WidgetVisuals {
-                    bg_fill: Color32::from_rgba_premultiplied(0, 0, 0, 255),
-                    weak_bg_fill: Color32::from_rgba_premultiplied(0, 0, 0, 255),
-                    bg_stroke: Stroke {
-                        width: 0.0,
-                        color: Color32::from_rgba_premultiplied(0, 0, 0, 255),
-                    },
-                    // rounding: Rounding {
-                    //     nw: 2.0,
-                    //     ne: 2.0,
-                    //     sw: 2.0,
-                    //     se: 2.0,
-                    // },
-                    fg_stroke: Stroke {
-                        width: 1.0,
-                        color: Color32::from_rgba_premultiplied(226, 239, 244, 255),
-                    },
-                    expansion: 0.0,
-                },
-            },
-            selection: Selection {
-                bg_fill: Color32::from_rgba_premultiplied(0, 92, 128, 255),
-                stroke: Stroke {
-                    width: 1.0,
-                    color: Color32::from_rgba_premultiplied(192, 222, 255, 255),
-                },
-            },
-            hyperlink_color: Color32::from_rgba_premultiplied(136, 192, 208, 255),
-            faint_bg_color: Color32::from_rgba_premultiplied(5, 5, 5, 0),
-            extreme_bg_color: Color32::from_rgba_premultiplied(59, 66, 82, 255),
-            code_bg_color: Color32::from_rgba_premultiplied(59, 66, 82, 255),
-            warn_fg_color: Color32::from_rgba_premultiplied(208, 135, 112, 255),
-            error_fg_color: Color32::from_rgba_premultiplied(191, 97, 106, 255),
-            // window_rounding: Rounding {
-            //     nw: 6.0,
-            //     ne: 6.0,
-            //     sw: 6.0,
-            //     se: 6.0,
-            // },
-            window_shadow: Shadow {
-                extrusion: 8.0,
-                color: Color32::from_rgba_premultiplied(0, 0, 0, 126),
-            },
-            window_fill: Color32::from_rgba_premultiplied(46, 52, 64, 255),
-            window_stroke: Stroke {
-                width: 2.0,
-                color: Color32::from_rgba_premultiplied(67, 76, 94, 255),
-            },
-            // menu_rounding: Rounding {
-            //     nw: 6.0,
-            //     ne: 6.0,
-            //     sw: 6.0,
-            //     se: 6.0,
-            // },
-            panel_fill: Color32::from_rgba_premultiplied(46, 52, 64, 255),
-            popup_shadow: Shadow {
-                extrusion: 16.0,
-                color: Color32::from_rgba_premultiplied(0, 0, 0, 96),
-            },
-            resize_corner_size: 12.0,
-            text_cursor_preview: false,
-            clip_rect_margin: 3.0,
-            button_frame: true,
-            collapsing_header_frame: false,
-            indent_has_left_vline: true,
-            striped: false,
-            slider_trailing_fill: false,
-            ..Default::default()
-        },
+        visuals: visuals(),
         animation_time: 0.0833333358168602,
         explanation_tooltips: false,
         ..Default::default()

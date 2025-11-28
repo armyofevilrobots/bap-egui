@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 
 use aoer_plotty_rs::plotter::pen::PenDetail;
 use egui::{Color32, Pos2, pos2};
+use egui::{Visuals, style};
 
 use crate::core::config::AppConfig;
 use crate::core::machine::MachineConfig;
@@ -79,6 +80,10 @@ impl Default for BAPViewModel {
             last_pointer_pos: None,
             picked: None,
             config: AppConfig::default(),
+            visuals: (
+                "Nord Dark".to_string(),
+                crate::ui::themes::egui_nord::visuals(),
+            ),
         }
     }
 }

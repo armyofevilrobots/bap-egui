@@ -7,7 +7,7 @@ use std::thread::{JoinHandle, sleep};
 use std::time::{Duration, Instant};
 
 use eframe::egui;
-use egui::{Color32, Pos2, Rect, TextureHandle, Vec2, pos2, vec2};
+use egui::{Color32, Pos2, Rect, Style, TextureHandle, Vec2, Visuals, pos2, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
 use rfd::FileDialog;
 
@@ -91,6 +91,7 @@ pub struct BAPViewModel {
     ruler_origin: RulerOrigin,
     last_pointer_pos: Option<Pos2>,
     picked: Option<Vec<usize>>,
+    visuals: (String, Visuals),
 }
 
 impl BAPViewModel {
