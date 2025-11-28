@@ -24,6 +24,7 @@ pub enum CommandContext {
     Space(Vec<Key>),
     SelectColorAt(Option<Pos2>),
     SelectTheme,
+    Translate(Option<Pos2>),
     None,
 }
 
@@ -62,6 +63,7 @@ impl Display for CommandContext {
                 }
             ),
             CommandContext::SelectTheme => write!(f, "Select Theme"),
+            CommandContext::Translate(_start) => write!(f, "Translate"),
         }
     }
 }
@@ -179,6 +181,7 @@ impl BAPViewModel {
             CommandContext::SelectColorAt(_pos2) => CommandContext::None,
             CommandContext::None => CommandContext::None,
             CommandContext::SelectTheme => CommandContext::None,
+            CommandContext::Translate(_) => CommandContext::None,
         };
     }
 
@@ -197,6 +200,7 @@ impl BAPViewModel {
             CommandContext::SelectColorAt(_opt_pos2) => ctx,
             CommandContext::None => ctx,
             CommandContext::SelectTheme => ctx,
+            CommandContext::Translate(_) => ctx,
         };
     }
 

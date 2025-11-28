@@ -267,7 +267,7 @@ impl ApplicationCore {
                             self.select_all();
                             self.ctx.request_repaint();
                         }
-                        ViewCommand::SelectByColorPick(x, y) => {
+                        ViewCommand::PickByColorAt(x, y) => {
                             self.select_by_color_at(x, y);
                             self.ctx.request_repaint();
                         }
@@ -295,6 +295,22 @@ impl ApplicationCore {
                                         .to_string(),
                                 ))
                             });
+                        }
+                        ViewCommand::Translate(x, y) => {
+                            self.project.translate_geometry_mut((x, y), &self.picked);
+                            let new_ext = self.project.extents().clone();
+                            self.state_change_out
+                                .send(ApplicationStateChangeMsg::PatchViewModel(ViewModelPatch {
+                                    extents: Some((
+                                        new_ext.min().x,
+                                        new_ext.min().y,
+                                        new_ext.width(),
+                                        new_ext.height(),
+                                    )),
+                                    ..Default::default()
+                                }))
+                                .expect("Failed to send error to viewmodel.");
+                            self.ctx.request_repaint();
                         }
                     }
                 }

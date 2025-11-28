@@ -1,3 +1,4 @@
+use crate::core::commands::ViewCommand;
 use crate::ui::machine::machine_editor_window;
 // use crate::ui::bottom_panel::bottom_panel;
 use crate::ui::menu::main_menu;
@@ -91,6 +92,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                 }
             }
         }
+
         _ => (),
     }
 
@@ -134,6 +136,38 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
                     Color32::WHITE,
                 );
+            }
+        }
+        // The translation line
+        if let CommandContext::Translate(start) = model.command_context() {
+            let p1 = painter_resp.rect.min.clone();
+            let p2 = painter_resp.rect.max.clone();
+            if let Some(ptr_pos) = ctx.pointer_latest_pos() {
+                if let Some(start_xy) = start {
+                    let pos = model.mm_to_frame_coords(start_xy);
+                    painter.line(
+                        vec![pos2(pos.x, p1.y), pos2(pos.x, p2.y)],
+                        Stroke::new(0.5, Color32::RED),
+                    );
+                    painter.line(
+                        vec![pos2(p1.x, pos.y), pos2(p2.x, pos.y)],
+                        Stroke::new(0.5, Color32::RED),
+                    );
+                    painter.arrow(
+                        pos.clone(),
+                        ptr_pos.clone() - pos.clone(),
+                        Stroke::new(0.5, Color32::RED),
+                    );
+                } else {
+                    painter.line(
+                        vec![pos2(ptr_pos.x, p1.y), pos2(ptr_pos.x, p2.y)],
+                        Stroke::new(0.5, Color32::RED),
+                    );
+                    painter.line(
+                        vec![pos2(p1.x, ptr_pos.y), pos2(p2.x, ptr_pos.y)],
+                        Stroke::new(0.5, Color32::RED),
+                    );
+                }
             }
         }
 
@@ -361,6 +395,23 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     if let Some(pos) = ctx.pointer_hover_pos() {
                         model.select_by_color_pick(pos);
                         model.cancel_command_context(false);
+                    }
+                }
+                CommandContext::Translate(opt_pos) => {
+                    if let Some(hover_pos) = ctx.pointer_hover_pos() {
+                        if opt_pos.is_none() {
+                            let opt_pos = Some(model.frame_coords_to_mm(hover_pos));
+                            model.set_command_context(CommandContext::Translate(opt_pos));
+                        } else {
+                            let pos1 = opt_pos.unwrap();
+                            let pos2 = model.frame_coords_to_mm(hover_pos);
+                            let delta = pos2 - pos1;
+                            model.yolo_view_command(ViewCommand::Translate(
+                                delta.x as f64,
+                                delta.y as f64,
+                            ));
+                            model.cancel_command_context(false);
+                        }
                     }
                 }
                 _ => {

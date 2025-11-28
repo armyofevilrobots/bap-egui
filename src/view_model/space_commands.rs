@@ -335,7 +335,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         ),
     );
 
-    let cmd_rotate = (
+    let cmd_geometry_rotate = (
         Key::R,
         (
             "Rotate".to_string(),
@@ -347,7 +347,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         ),
     );
 
-    let cmd_scale = (
+    let cmd_geometry_scale = (
         Key::S,
         (
             "Scale".to_string(),
@@ -452,6 +452,19 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             ),
         ),
     );
+    let cmd_geometry_translate = (
+        Key::T,
+        (
+            "Translate".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Translate".to_string(),
+                Box::new(|model| {
+                    model.set_command_context(CommandContext::Translate(None));
+                }),
+                None,
+            ),
+        ),
+    );
 
     let cmd_geometry = (
         Key::G,
@@ -461,8 +474,9 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 cmd_geometry_ungroup,
                 cmd_geometry_group,
                 scb_separator(),
-                cmd_rotate,
-                cmd_scale,
+                cmd_geometry_rotate,
+                cmd_geometry_scale,
+                cmd_geometry_translate,
             ])),
         ),
     );

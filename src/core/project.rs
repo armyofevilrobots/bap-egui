@@ -5,7 +5,7 @@ use aoer_plotty_rs::context::operation::OPLayer;
 pub use aoer_plotty_rs::context::pgf_file::*;
 pub use aoer_plotty_rs::plotter::pen::PenDetail;
 use geo::algorithm::bounding_rect::BoundingRect;
-use geo::{Geometry, LineString, MultiLineString, Point, Rect, Rotate, coord};
+use geo::{Geometry, LineString, MultiLineString, Point, Rect, Rotate, Translate, coord};
 use nalgebra::{Affine2, Matrix3};
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
@@ -210,6 +210,28 @@ impl Project {
             do_keepdown: true,
             file_path: None,
         }
+    }
+    /// Translates all geometry.
+    pub fn translate_geometry_mut(
+        &mut self,
+        translation: (f64, f64),
+        picked: &Option<BTreeSet<u32>>,
+    ) {
+        for (idx, geometry) in self.geometry.iter_mut().enumerate() {
+            if let Some(picks) = picked {
+                if picks.contains(&(idx as u32)) {
+                    geometry
+                        .geometry
+                        .translate_mut(translation.0, translation.1);
+                }
+            } else {
+                geometry
+                    .geometry
+                    .translate_mut(translation.0, translation.1);
+            }
+        }
+        // println!("ROTATED. Now redoing extents etc.");
+        self.regenerate_extents();
     }
 
     /// Rotates all geometry around a given point.
