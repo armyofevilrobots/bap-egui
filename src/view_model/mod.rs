@@ -12,8 +12,7 @@ use egui_toast::{Toast, ToastKind, ToastOptions};
 use rfd::FileDialog;
 
 use crate::core::commands::{ApplicationStateChangeMsg, ViewCommand};
-
-use crate::core::config::{AppConfig, DockPosition};
+use crate::core::config::{AppConfig, DockPosition, RulerOrigin};
 use crate::core::machine::MachineConfig;
 use crate::core::project::{Orientation, PaperSize, PenDetail};
 use crate::core::sender::{PlotterResponse, PlotterState};
@@ -29,9 +28,8 @@ pub(crate) mod view_core_update;
 pub(crate) mod view_model_eframe;
 pub(crate) mod view_model_get_set;
 pub(crate) mod view_model_patch;
-use crate::core::config::RulerOrigin;
 pub use command_context::CommandContext;
-pub use util::*;
+use util::*;
 
 pub const PIXELS_PER_MM: f32 = 4.; // This is also scaled by the PPP value, but whatever.
 pub const MAX_SIZE: usize = 8192;

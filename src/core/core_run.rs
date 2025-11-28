@@ -61,8 +61,11 @@ impl ApplicationCore {
                             self.checkpoint();
                             // println!("Rotating source data around {},{} by {} degrees", center.0, center.1, degrees);
                             // println!("PRE EXTENTS: {:?}", self.project.extents());
-                            self.project
-                                .rotate_geometry_around_point_mut(center, degrees);
+                            self.project.rotate_geometry_around_point_mut(
+                                center,
+                                degrees,
+                                &self.picked,
+                            );
                             // println!("POST EXTENTS: {:?}", self.project.extents());
                             self.rebuild_after_content_change();
                             // println!("POST RESEND EXTENTS: {:?}", self.project.extents());

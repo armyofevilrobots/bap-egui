@@ -9,6 +9,7 @@ use geo::{Geometry, LineString, MultiLineString, Point, Rect, Rotate, coord};
 use nalgebra::{Affine2, Matrix3};
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 use std::ffi::OsString;
 use std::fmt::Display;
 use std::fs::File;
@@ -212,11 +213,24 @@ impl Project {
     }
 
     /// Rotates all geometry around a given point.
-    pub fn rotate_geometry_around_point_mut(&mut self, center: (f64, f64), degrees: f64) {
-        for geometry in &mut self.geometry {
-            geometry
-                .geometry
-                .rotate_around_point_mut(degrees, Point::new(center.0, center.1));
+    pub fn rotate_geometry_around_point_mut(
+        &mut self,
+        center: (f64, f64),
+        degrees: f64,
+        picked: &Option<BTreeSet<u32>>,
+    ) {
+        for (idx, geometry) in self.geometry.iter_mut().enumerate() {
+            if let Some(picks) = picked {
+                if picks.contains(&(idx as u32)) {
+                    geometry
+                        .geometry
+                        .rotate_around_point_mut(degrees, Point::new(center.0, center.1));
+                }
+            } else {
+                geometry
+                    .geometry
+                    .rotate_around_point_mut(degrees, Point::new(center.0, center.1));
+            }
         }
         // println!("ROTATED. Now redoing extents etc.");
         self.regenerate_extents();
@@ -323,13 +337,22 @@ impl Project {
         &self,
         around: (f64, f64),
         angle: f64,
+        picked: &Option<BTreeSet<u32>>,
     ) -> Vec<PlotGeometry> {
         let (xc, yc) = around;
         self.geometry
             .iter()
             .enumerate()
-            .map(|(_idx, pg)| {
-                let new_geo = pg.geometry.rotate_around_point(angle, Point::new(xc, yc));
+            .map(|(idx, pg)| {
+                let new_geo = if let Some(pick) = picked {
+                    if pick.contains(&(idx as u32)) {
+                        pg.geometry.rotate_around_point(angle, Point::new(xc, yc))
+                    } else {
+                        pg.geometry.clone()
+                    }
+                } else {
+                    pg.geometry.rotate_around_point(angle, Point::new(xc, yc))
+                };
                 PlotGeometry {
                     // id: idx as u64,
                     geometry: new_geo,

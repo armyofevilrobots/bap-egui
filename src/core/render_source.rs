@@ -82,7 +82,7 @@ pub(crate) fn render_svg_preview(
     cancel: &Receiver<()>,
 ) -> Result<(ColorImage, Rect), anyhow::Error> {
     let (extents, geo) = if let Some(((xc, yc), rot)) = &rotate {
-        let geo = project.rotate_geometry_around_point((*xc, *yc), *rot);
+        let geo = project.rotate_geometry_around_point((*xc, *yc), *rot, &picked);
         (Project::calc_extents_for_geometry(&geo), geo)
     } else {
         (project.extents(), project.geometry.clone())
