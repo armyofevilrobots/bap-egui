@@ -406,10 +406,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                             let pos1 = opt_pos.unwrap();
                             let pos2 = model.frame_coords_to_mm(hover_pos);
                             let delta = pos2 - pos1;
-                            model.yolo_view_command(ViewCommand::Translate(
-                                delta.x as f64,
-                                delta.y as f64,
-                            ));
+                            model.apply_translation(delta.x as f64, delta.y as f64);
                             model.cancel_command_context(false);
                         }
                     }

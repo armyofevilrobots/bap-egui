@@ -100,6 +100,10 @@ impl BAPViewModel {
         self
     }
 
+    pub fn apply_translation(&self, dx: f64, dy: f64) {
+        self.yolo_view_command(ViewCommand::Translate(dx, dy));
+    }
+
     pub fn delete_selection(&mut self) {
         if self.picked().is_some() {
             self.yolo_view_command(ViewCommand::DeleteSelection);
