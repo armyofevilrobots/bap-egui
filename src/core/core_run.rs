@@ -283,6 +283,7 @@ impl ApplicationCore {
                             self.apply_group();
                         }
                         ViewCommand::DeleteSelection => {
+                            self.checkpoint();
                             self.delete_selection();
                             self.ctx.request_repaint();
                         }
@@ -296,6 +297,7 @@ impl ApplicationCore {
                             });
                         }
                         ViewCommand::Translate(x, y) => {
+                            self.checkpoint();
                             self.project.translate_geometry_mut((x, y), &self.picked);
                             let new_ext = self.project.extents().clone();
                             self.state_change_out
