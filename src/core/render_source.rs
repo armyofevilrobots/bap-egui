@@ -15,14 +15,20 @@ const MAX_TEXTURE_SIZE: usize = 8192; // Maximum size in any dimension of the pr
 // This can never be more than 16384. That's the max
 // size of the underlying EGUI framework.
 impl ApplicationCore {
-    pub fn handle_request_source_image(&mut self, zoom: f64, rotation: Option<((f64, f64), f64)>) {
+    pub fn handle_request_source_image(
+        &mut self,
+        zoom: f64,
+        rotation: Option<((f64, f64), f64)>,
+        translation: Option<(f64, f64)>,
+    ) {
         let phase = (SystemTime::now().duration_since(SystemTime::UNIX_EPOCH))
             .expect("Should never fail to calc unix seconds.");
         let phase = phase.as_secs_f64();
-        let (cimg, extents_out) = match super::render_source::render_svg_preview(
+        let (cimg, extents_out) = match super::render_source::render_source_preview(
             &self.project,
             zoom,
             rotation.clone(),
+            translation.clone(),
             self.picked.clone(),
             phase,
             &self.state_change_out,
@@ -70,12 +76,13 @@ impl ApplicationCore {
     }
 }
 
-pub(crate) fn render_svg_preview(
+pub(crate) fn render_source_preview(
     project: &Project,
     // extents: (f64, f64, f64, f64),
     // resolution: (usize, usize),
     zoom: f64,
     rotate: Option<((f64, f64), f64)>,
+    translate: Option<(f64, f64)>,
     picked: Option<BTreeSet<u32>>,
     phase: f64,
     _state_change_out: &Sender<ApplicationStateChangeMsg>,
@@ -86,6 +93,12 @@ pub(crate) fn render_svg_preview(
         (Project::calc_extents_for_geometry(&geo), geo)
     } else {
         (project.extents(), project.geometry.clone())
+    };
+    let (extents, geo) = if let Some((dx, dy)) = &translate {
+        let new_geo = Project::translate_arbitrary_geo(&geo, (*dx, *dy), &picked);
+        (Project::calc_extents_for_geometry(&new_geo), new_geo)
+    } else {
+        (extents, geo)
     };
 
     let mut resolution = (

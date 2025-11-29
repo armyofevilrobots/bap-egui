@@ -211,6 +211,29 @@ impl Project {
             file_path: None,
         }
     }
+
+    pub fn translate_arbitrary_geo(
+        geo: &Vec<PlotGeometry>,
+        translation: (f64, f64),
+        picked: &Option<BTreeSet<u32>>,
+    ) -> Vec<PlotGeometry> {
+        let mut geo_out = geo.clone();
+        for (idx, geometry) in geo_out.iter_mut().enumerate() {
+            if let Some(picks) = picked {
+                if picks.contains(&(idx as u32)) {
+                    geometry
+                        .geometry
+                        .translate_mut(translation.0, translation.1);
+                }
+            } else {
+                geometry
+                    .geometry
+                    .translate_mut(translation.0, translation.1);
+            }
+        }
+        return geo_out;
+    }
+
     /// Translates all geometry.
     pub fn translate_geometry_mut(
         &mut self,

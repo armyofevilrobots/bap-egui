@@ -22,6 +22,7 @@ pub enum ViewCommand {
         zoom: f64,
         // resolution: (usize, usize),
         rotation: Option<((f64, f64), f64)>,
+        translation: Option<(f64, f64)>,
     },
     RequestPlotPreviewImage {
         extents: (f64, f64, f64, f64),

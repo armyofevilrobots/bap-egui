@@ -545,6 +545,15 @@ impl BAPViewModel {
                         } else {
                             None
                         };
+                    let translation: Option<(f64, f64)> =
+                        if let CommandContext::Translate(Some(start_pos)) = &self.command_context
+                            && let Some(end_pos) = self.last_pointer_pos
+                        {
+                            let tx = self.frame_coords_to_mm(end_pos) - *start_pos;
+                            Some((tx.x as f64, tx.y as f64))
+                        } else {
+                            None
+                        };
 
                     if let Some(handle) = &self.source_image_handle {
                         let hs = handle.size();
@@ -560,6 +569,7 @@ impl BAPViewModel {
                                             zoom: zoom as f64,
                                             // resolution: resolution,
                                             rotation,
+                                            translation,
                                         }
                                     }
                                     BAPDisplayMode::Plot => {
@@ -583,6 +593,7 @@ impl BAPViewModel {
                                     zoom: zoom as f64,
                                     // resolution: resolution,
                                     rotation: None,
+                                    translation: None,
                                 })
                                 .unwrap_or_else(|err| {
                                     eprintln!("Failed to send request for updated image to core.");
