@@ -89,7 +89,9 @@ impl ApplicationCore {
                             self.shutdown = true;
                             self.yolo_send_plotter_cmd(PlotterCommand::Shutdown);
                         }
-                        ViewCommand::UpdateMachineConfig(_machine_config) => todo!(),
+                        ViewCommand::UpdateMachineConfig(machine_config) => {
+                            self.project.set_machine(Some(machine_config));
+                        }
                         ViewCommand::SendCommand(cmd) => {
                             self.yolo_send_plotter_cmd(PlotterCommand::Command(cmd));
                         }
@@ -313,6 +315,37 @@ impl ApplicationCore {
                                 }))
                                 .expect("Failed to send error to viewmodel.");
                             self.ctx.request_repaint();
+                        }
+                        ViewCommand::LoadMachineConfig(path_buf) => {
+                            self.project.load_machine(&path_buf).unwrap_or_else(|err| {
+                                self.yolo_app_state_change(ApplicationStateChangeMsg::Error(
+                                    format!(
+                                        "Failed to load machine config from {}! Err:{}",
+                                        path_buf.as_os_str().to_string_lossy(),
+                                        err
+                                    )
+                                    .to_string(),
+                                ))
+                            });
+                            self.state_change_out
+                                .send(ApplicationStateChangeMsg::PatchViewModel(ViewModelPatch {
+                                    machine_config: Some(self.project.machine().clone()),
+                                    ..Default::default()
+                                }))
+                                .expect("Failed to send error to viewmodel.");
+                        }
+                        ViewCommand::SaveMachineConfig(path_buf) => {
+                            self.project.save_machine(&path_buf).unwrap_or_else(|err| {
+                                eprintln!("Failed to save: {:?}", err);
+                                self.yolo_app_state_change(ApplicationStateChangeMsg::Error(
+                                    format!(
+                                        "Failed to save machine config to {}! Err:{}",
+                                        path_buf.as_os_str().to_string_lossy(),
+                                        err
+                                    )
+                                    .to_string(),
+                                ))
+                            });
                         }
                     }
                 }

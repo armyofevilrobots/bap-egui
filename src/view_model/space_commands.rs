@@ -82,6 +82,18 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         ),
     );
 
+    let cmd_load_machine = (
+        Key::L,
+        (
+            "Load Machine".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Load Machine".to_string(),
+                Box::new(|model| model.load_machine_with_dialog()),
+                None,
+            ),
+        ),
+    );
+
     let cmd_import_svg = (
         Key::V,
         (
@@ -550,7 +562,10 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         Key::P,
         (
             "Project".to_string(),
-            SpaceCommandBranch::Branch(IndexMap::from([cmd_project_post_to_plotter])),
+            SpaceCommandBranch::Branch(IndexMap::from([
+                cmd_project_post_to_plotter,
+                cmd_load_machine,
+            ])),
         ),
     );
 

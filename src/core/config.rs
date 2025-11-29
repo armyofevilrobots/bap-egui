@@ -164,6 +164,12 @@ impl AppConfig {
             // eprintln!("Creating new config path at {:?}", path);
             create_dir_all(path.clone())?;
         }
+        let machine_path = path.join("machines");
+        if !machine_path.is_dir() {
+            // eprintln!("Creating new config path at {:?}", path);
+            create_dir_all(machine_path.clone())?;
+        }
+
         // eprintln!("Path exists and is a dir.");
         let cfgpath = path.join("config.bap"); //.with_extension("bap");
         // eprintln!("Will save to {:?}", cfgpath);

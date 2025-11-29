@@ -32,6 +32,8 @@ pub enum ViewCommand {
     SetOrigin(f64, f64),
     SetPaper(Paper),
     UpdateMachineConfig(MachineConfig),
+    LoadMachineConfig(PathBuf),
+    SaveMachineConfig(PathBuf),
     SetClipBoundary {
         min: (f64, f64),
         max: (f64, f64),

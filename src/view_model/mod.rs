@@ -46,6 +46,8 @@ pub enum FileSelector {
     LoadPGF(PathBuf),
     OpenProject(PathBuf),
     SaveProjectAs(PathBuf),
+    SaveMachineAs(PathBuf),
+    LoadMachineFrom(PathBuf),
     //SaveProject,
 }
 

@@ -3,7 +3,7 @@ use egui::{
 };
 use indexmap::IndexMap;
 
-use crate::view_model::BAPViewModel;
+use crate::{core::commands::ViewCommand, view_model::BAPViewModel};
 
 pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
     egui::Modal::new(Id::new("Pen Editor")).frame(egui::containers::Frame::window(&Style::default())).show(ctx, |ui| {
@@ -207,7 +207,17 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                     if ui.button("Ok").clicked() {
                         // model.paper_modal_open = false
                         // model.set_command_context(CommandContext::None);
+                        model.yolo_view_command(ViewCommand::UpdateMachineConfig(model.machine_config()));
                         model.cancel_command_context(false);
+                    }
+
+                    if ui.button("Save Machine").clicked(){
+                        model.yolo_view_command(ViewCommand::UpdateMachineConfig(model.machine_config()));
+                        model.save_machine_with_dialog();
+                    }
+
+                    if ui.button("Load Machine").clicked(){
+                        model.load_machine_with_dialog();
                     }
 
                 });

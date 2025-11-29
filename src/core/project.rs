@@ -642,6 +642,22 @@ impl Project {
         // });
     }
 
+    /// Loads a machine config from disk
+    pub fn load_machine(&mut self, path: &PathBuf) -> Result<()> {
+        if let Ok(path) = std::fs::canonicalize(path) {
+            let machine: MachineConfig = MachineConfig::load_from_path(&path)?;
+            self.machine = Some(machine);
+        }
+        Ok(())
+    }
+
+    /// Saves a machine config to disk
+    pub fn save_machine(&mut self, path: &PathBuf) -> Result<()> {
+        if let Some(machine) = &self.machine {
+            machine.save_to_path(&path)?;
+        }
+        Ok(())
+    }
     /// Loads a pregenerated plot geo set (Plotter Geometry Format)
     pub fn load_pgf(&mut self, path: &PathBuf) -> Result<()> {
         if let Ok(path) = std::fs::canonicalize(path) {

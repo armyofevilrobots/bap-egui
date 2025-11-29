@@ -1,8 +1,26 @@
-use std::fmt::Debug;
+use std::ffi::OsString;
+use std::io::BufWriter;
+use std::str::FromStr;
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::{fmt::Debug, fs::File, path::PathBuf};
 
 use anyhow::Result as AnyResult;
+use anyhow::anyhow;
+use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 use tera::Tera;
+
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+pub enum MachineVariant {
+    GRBL,
+    HPGL,
+}
+
+impl Default for MachineVariant {
+    fn default() -> Self {
+        MachineVariant::GRBL
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct MachineConfig {
@@ -12,6 +30,8 @@ pub struct MachineConfig {
     keepdown: Option<f64>,
     limits: (f64, f64),
     feedrate: f64,
+    #[serde(default)]
+    variant: MachineVariant,
 }
 
 impl Debug for MachineConfig {
@@ -27,6 +47,47 @@ impl Debug for MachineConfig {
 }
 
 impl MachineConfig {
+    pub fn save_to_path(&self, path: &PathBuf) -> AnyResult<PathBuf> {
+        let mut path = path.clone(); //std::fs::canonicalize(path)?;
+        let mut dest_path = path.clone();
+        dest_path.set_extension(OsString::from_str("bap-machine")?);
+        // We save, then move, to ensure we don't accidentally delete if something bad happens.
+        let tmptime = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+        path.set_extension(OsString::from_str(
+            format!("bap-machine.{tmptime}.tmp").as_str(),
+        )?);
+
+        // Write the file
+        {
+            let writer = std::fs::File::create(&path)?;
+            let writer = Box::new(BufWriter::new(writer));
+            //
+            // Turns out writer_pretty is hella slow too.
+            // Or... Actually it was the lack of a bufwriter. Wups.
+            ron::Options::default().to_io_writer_pretty(writer, self, PrettyConfig::default())?;
+        } // Falls out of scope, closes file, we hope.
+        std::fs::rename(&path, &dest_path)?;
+
+        Ok(dest_path)
+    }
+
+    pub fn load_from_path(path: &PathBuf) -> AnyResult<Self> {
+        if let Ok(path) = std::fs::canonicalize(path) {
+            let machine_rdr = std::fs::File::open(path.clone())?;
+            return match ron::de::from_reader::<File, Self>(machine_rdr) {
+                Ok(machine) => Ok(machine),
+                Err(err) => {
+                    eprintln!("Failed to load due to: {:?}", &err);
+                    Err(anyhow!(format!("Error was: {:?}", &err)))
+                }
+            };
+        };
+        Err(anyhow!(format!("Invalid machine path {:?}", path)))
+    }
+
     pub fn set_post_template(&mut self, post_template: &Vec<(String, String)>) {
         self.post_template = Box::new(post_template.clone())
     }
@@ -159,7 +220,7 @@ impl MachineConfig {
             keepdown: Some(0.0),
             limits: (235., 235.),
             feedrate: 1200.,
-            // emulate_m06: true,
+            variant: Default::default(),
         }
     }
 }
