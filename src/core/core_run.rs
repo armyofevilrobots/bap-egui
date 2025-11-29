@@ -158,7 +158,6 @@ impl ApplicationCore {
                         ViewCommand::Undo => self.undo(),
                         ViewCommand::SetPaper(paper) => {
                             self.checkpoint();
-                            // println!("Setting project paper to: {:?}", paper);
                             self.project.paper = paper
                         }
                         ViewCommand::LoadProject(path_buf) => {

@@ -1,10 +1,9 @@
-use egui::{Color32, Pos2, Rect, Vec2, pos2, vec2};
-
 use super::BAPViewModel;
 use crate::core::{
     commands::ViewCommand,
     project::{Orientation, Paper, PaperSize},
 };
+use egui::{Color32, Pos2, Rect, Vec2, pos2, vec2};
 
 impl BAPViewModel {
     /// Orients the rect for the paper to the origin, and
@@ -108,7 +107,6 @@ impl BAPViewModel {
     }
 
     pub fn set_paper_orientation(&mut self, orientation: &Orientation, create_history: bool) {
-        // println!("Setting paper orientation: {:?}", orientation);
         self.paper_orientation = orientation.clone();
         if let Some(cmd_out) = &self.cmd_out
             && create_history
@@ -122,9 +120,8 @@ impl BAPViewModel {
                     color.b() as f64 / 255.0,
                 ),
                 size: self.paper_size.clone(),
-                orientation: self.paper_orientation.clone(),
+                orientation: orientation.clone(), //self.paper_orientation.clone(),
             });
-            // println!("ORIENTATION Paper out: {:?}", paper_out);
             cmd_out
                 .send(paper_out)
                 .expect("Failed to send SetPaper command?");

@@ -125,13 +125,11 @@ pub(crate) fn floating_tool_window(
                             ),
                         };
                         if portrait_landscape_button.clicked() {
-                            model.set_paper_orientation(
-                                &match model.paper_orientation() {
-                                    Orientation::Landscape => Orientation::Portrait,
-                                    Orientation::Portrait => Orientation::Landscape,
-                                },
-                                true,
-                            );
+                            let new_orientation = &match model.paper_orientation() {
+                                Orientation::Landscape => Orientation::Portrait,
+                                Orientation::Portrait => Orientation::Landscape,
+                            };
+                            model.set_paper_orientation(new_orientation, true);
                         };
                         ui.end_row();
                         if tool_button(

@@ -209,7 +209,7 @@ impl ApplicationCore {
         if self.history.len() > UNDO_MAX {
             self.history.remove(0);
         }
-        self.rebuild_after_content_change();
+        // self.rebuild_after_content_change();
         self.update_vm_undo_avail();
     }
 
