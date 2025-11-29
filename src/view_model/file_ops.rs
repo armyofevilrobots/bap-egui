@@ -143,7 +143,7 @@ impl BAPViewModel {
         if let Some(cmd_out) = &self.cmd_out {
             cmd_out
                 .send(ViewCommand::LoadProject(path))
-                .expect("Failed to send Loadt command?");
+                .expect("Failed to send Load command?");
         }
     }
 }

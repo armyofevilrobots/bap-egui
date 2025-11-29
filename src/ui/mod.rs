@@ -28,14 +28,6 @@ pub(crate) mod tool_button;
 pub(crate) mod tool_window;
 use tool_window::floating_tool_window;
 
-// pub(crate) fn native_to_mm(native: Pos2, zoom: f32) -> Pos2 {
-//     (PIXELS_PER_MM * native) / zoom
-// }
-
-// pub(crate) fn mm_to_native(mm: Pos2, zoom: f32) -> Pos2 {
-//     (mm * zoom) / PIXELS_PER_MM
-// }
-
 pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &mut eframe::Frame) {
     // Looks better on 4k montior
     ctx.set_pixels_per_point(model.ppp());

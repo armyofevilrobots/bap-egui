@@ -6,7 +6,9 @@ use indexmap::IndexMap;
 use crate::{core::commands::ViewCommand, view_model::BAPViewModel};
 
 pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
-    egui::Modal::new(Id::new("Pen Editor")).frame(egui::containers::Frame::window(&Style::default())).show(ctx, |ui| {
+    egui::Modal::new(Id::new("Machine Editor"))
+       // .frame(egui::containers::Frame::window(&Style::default()))
+       .show(ctx, |ui| {
         ui.vertical(|ui|{
             let scrollarea_resp=egui::ScrollArea::vertical()
                 .auto_shrink(true)
