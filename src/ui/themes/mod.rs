@@ -1,16 +1,31 @@
 use crate::view_model::BAPViewModel;
+use catppuccin_egui::{FRAPPE, LATTE, MACCHIATO, MOCHA, set_style_theme};
 use eframe::egui;
 use egui::{ComboBox, Id};
-use std::collections::HashMap;
+// use std::collections::HashMap;
+use indexmap::IndexMap;
 
 use egui::Visuals;
 
 pub mod egui_nord;
 
-pub fn themes() -> HashMap<String, Visuals> {
-    HashMap::from([
+pub fn themes() -> IndexMap<String, Visuals> {
+    let mut cat_latte = egui::Style::default();
+    set_style_theme(&mut cat_latte, LATTE);
+    let mut cat_mocha = egui::Style::default();
+    set_style_theme(&mut cat_mocha, MOCHA);
+    let mut cat_macchiato = egui::Style::default();
+    set_style_theme(&mut cat_macchiato, MACCHIATO);
+    let mut cat_frappe = egui::Style::default();
+    set_style_theme(&mut cat_frappe, FRAPPE);
+
+    IndexMap::from([
         ("Nord Dark".to_string(), egui_nord::visuals()),
         ("EGUI Light".to_string(), egui::style::Visuals::light()),
+        ("Catppuccin Latte".to_string(), cat_latte.visuals),
+        ("Catppuccin Mocha".to_string(), cat_mocha.visuals),
+        ("Catppuccin Macchiato".to_string(), cat_macchiato.visuals),
+        ("Catppuccin Frappe".to_string(), cat_frappe.visuals),
         (default_theme(), egui::style::Visuals::dark()),
     ])
 }

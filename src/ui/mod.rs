@@ -1,4 +1,3 @@
-use crate::core::commands::ViewCommand;
 use crate::ui::machine::machine_editor_window;
 // use crate::ui::bottom_panel::bottom_panel;
 use crate::ui::menu::main_menu;

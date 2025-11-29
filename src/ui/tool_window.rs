@@ -24,11 +24,11 @@ pub(crate) fn floating_tool_window(
         DockPosition::Floating(_x, _y) => win.title_bar(false), //.current_pos(Pos2 { x, y }),
         DockPosition::Left => {
             let ofs = if model.show_rulers() {
-                (25.0, wtop + 49.)
+                (25.0, wtop + 74.)
             } else {
                 (2., wtop + 49.)
             };
-            let default_height = ctx.content_rect().height();
+            let default_height = ctx.content_rect().height() - 23.;
             win.title_bar(false)
                 .anchor(egui::Align2::LEFT_TOP, ofs)
                 .default_height(default_height)
@@ -37,12 +37,12 @@ pub(crate) fn floating_tool_window(
         }
         DockPosition::Right => {
             let ofs = if model.show_rulers() {
-                (2., wtop + 49.)
+                (25.0, wtop + 74.)
             } else {
-                (2., wtop)
+                (2., wtop + 49.)
             };
 
-            let default_height = ctx.content_rect().height();
+            let default_height = ctx.content_rect().height() - 23.;
             win.title_bar(false)
                 .anchor(egui::Align2::RIGHT_TOP, ofs)
                 .default_height(default_height)
@@ -258,6 +258,18 @@ pub(crate) fn floating_tool_window(
 
                         if tool_button(
                             ui,
+                            egui::include_image!("../../resources/images/move_geo.png"),
+                            Some("Free Translate".into()),
+                            model.source_image_extents().is_some(),
+                        )
+                        .clicked()
+                        {
+                            model.set_command_context(CommandContext::Translate(None));
+                        }
+
+                        ui.end_row();
+                        if tool_button(
+                            ui,
                             egui::include_image!("../../resources/images/expand.png"),
                             Some("Scale to fit paper/machine with matting".into()),
                             model.source_image_extents().is_some(),
@@ -266,8 +278,6 @@ pub(crate) fn floating_tool_window(
                         {
                             model.set_command_context(CommandContext::Scale(1.));
                         }
-
-                        ui.end_row();
                     });
                 ui.add_space(16.);
                 ui.label("Ruler Origin");

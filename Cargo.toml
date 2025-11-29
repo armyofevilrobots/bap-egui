@@ -11,6 +11,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.100"
 aoer-plotty-rs = {path="../aoer-plotty-rs"}
+catppuccin-egui = { version = "5.7.0", features = ["egui33"], default-features=false}
 csscolorparser = { version = "0.7.2", features = ["serde", "rgb", "lab", "cint"] }
 dirs = "6.0.0"
 eframe = "0.33.0"
