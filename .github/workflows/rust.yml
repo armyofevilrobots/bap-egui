@@ -20,16 +20,36 @@ jobs:
       # repository-projects: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
       - run: |
           sudo add-apt-repository ppa:ubuntugis/ppa
           sudo apt-get update
           sudo apt-cache search geos
+      - name: Clone Repository
+        run: git clone https://github.com/armyofevilrobots/aoer-plotty-rs.git deps/aoer-plotty-rs
       - uses: awalsh128/cache-apt-pkgs-action@latest
         with:
-          packages: build-essential libgeos-dev
+          packages: build-essential libgeos-dev libudev-dev libwayland-egl-backend-dev libegl-dev libgles2 libgles-dev libwayland-egl1 libwayland-dev
           version: 1.0
+      - name: Cache all the target build artifacts.
+        id: cache-target-rust-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            target
+          key: ${{ runner.os }}-primes
       - name: Build
         run: cargo build --release --verbose
+
+      - name: Cache all the target build artifacts.
+        id: cache-target-rust-save
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: |
+            target
+          key: ${{ steps.cache-target-rust-restore.outputs.cache-primary-key }}
       - name: Release
         id: create_release
         uses: softprops/action-gh-release@v2
