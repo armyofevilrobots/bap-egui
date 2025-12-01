@@ -20,10 +20,11 @@ jobs:
       # repository-projects: write
     steps:
       - uses: actions/checkout@v4
+      - run: |
+          sudo add-apt-repository ppa:ubuntugis/ppa
       - uses: awalsh128/cache-apt-pkgs-action@latest
         with:
           packages: build-essential geos
-          add-repository: ppa:ubuntugis/ppa
           version: 1.0
       - name: Build
         run: cargo build --release --verbose
