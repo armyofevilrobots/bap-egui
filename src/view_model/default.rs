@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
 use aoer_plotty_rs::plotter::pen::PenDetail;
+use egui::Modifiers;
 use egui::{Color32, Pos2, pos2};
 
 use crate::core::config::AppConfig;
@@ -86,6 +87,7 @@ impl Default for BAPViewModel {
                 crate::ui::themes::egui_nord::visuals(),
             ),
             pen_reorder: None,
+            modifiers: Modifiers::NONE,
         }
     }
 }

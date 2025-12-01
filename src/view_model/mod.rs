@@ -7,7 +7,7 @@ use std::thread::{JoinHandle, sleep};
 use std::time::{Duration, Instant};
 
 use eframe::egui;
-use egui::{Color32, Pos2, Rect, TextureHandle, Vec2, Visuals, pos2, vec2};
+use egui::{Color32, Modifiers, Pos2, Rect, TextureHandle, Vec2, Visuals, pos2, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
 use rfd::FileDialog;
 
@@ -95,6 +95,7 @@ pub struct BAPViewModel {
     picked: Option<Vec<usize>>,
     visuals: (String, Visuals),
     pen_reorder: Option<Vec<(usize, usize)>>,
+    modifiers: Modifiers,
 }
 
 impl BAPViewModel {
@@ -550,7 +551,12 @@ impl BAPViewModel {
                             //     CommandContext::Rotate(Some(center_mm), Some(ref1_mm), Some(ref2_mm));
                             let vec_a = *ref1_mm - *center_mm;
                             let vec_b = ref2_mm - *center_mm;
-                            let degrees = BAPViewModel::degrees_between_two_vecs(vec_a, vec_b);
+                            let mut degrees = BAPViewModel::degrees_between_two_vecs(vec_a, vec_b);
+                            let mods = self.modifiers();
+                            if mods.shift {
+                                degrees = (degrees / 5.0).round() * 5.0;
+                            }
+
                             Some(((center_mm.x as f64, center_mm.y as f64), degrees as f64))
                         } else {
                             None

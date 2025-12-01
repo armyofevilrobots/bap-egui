@@ -25,7 +25,7 @@ impl ApplicationCore {
                 Ok(msg) => {
                     match msg {
                         ViewCommand::ScaleAround { center, factor } => {
-                            println!("Scaling geo around {:?} by {}", center, factor);
+                            // println!("Scaling geo around {:?} by {}", center, factor);
                             self.checkpoint();
                             self.project.scale_geometry_around_point_mut(
                                 center,

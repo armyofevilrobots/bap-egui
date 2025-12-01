@@ -31,6 +31,7 @@ use tool_window::floating_tool_window;
 pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &mut eframe::Frame) {
     // Looks better on 4k montior
     ctx.set_pixels_per_point(model.ppp());
+    model.set_modifiers(&ctx.input(|i| i.modifiers));
 
     model.check_for_new_source_image();
 
@@ -160,17 +161,15 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                         );
                     }
                     if let Some(ref_xy) = opt_ref {
-
-                        model.request_new_source_image();
                         let ref1_vec_mm = ref_xy - start_xy;
                         let rad_ref1_mm = ref1_vec_mm.length();
                         if rad_ref1_mm.abs() > 0.001 {
                             let rad_base_px = model.scale_mm_to_screen(ref1_vec_mm).length();
                             let ref2_xy = model.frame_coords_to_mm(ptr_pos);
                             let ref2_vec_mm = ref2_xy - start_xy;
-                            // let rad_ref2_px = model.scale_mm_to_screen(ref2_vec_mm).length();
 
                             if ref2_vec_mm.length().abs()>0.001{
+                                model.request_new_source_image();
                                 painter.text(
                                     model.mm_to_frame_coords(start_xy+vec2(8., 8.)),
                                     Align2::LEFT_BOTTOM,
@@ -310,15 +309,31 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     // Then we draw the live arc and second ref, if available...
                     if let Some(ref1_mm) = ref1 {
                         // println!("We have an initial ref... Request new image?");
-                        model.request_new_source_image();
                         let ref_circle_rad =
                             (center_as_frame - model.mm_to_frame_coords(ref1_mm)).length();
                         let ref2_vec = (pos - model.mm_to_frame_coords(center_pos)).normalized()
                             * ref_circle_rad;
+                        let vec_ref1 = (ref1_mm-center_pos);
+                        let vec_ref2 = (model.frame_coords_to_mm(pos)-center_pos);
+                        let mut angle = BAPViewModel::degrees_between_two_vecs(vec_ref1, vec_ref2);
+
+                        let mods = ctx.input(|i| i.modifiers.clone());
+                        if mods.shift{
+                            angle = (angle/5.0).round()*5.0;
+                        }
                         painter.line_segment(
                             [center_as_frame.clone(), center_as_frame + ref2_vec],
                             Stroke::new(0.5, Color32::RED),
                         );
+                        painter.text(
+                            center_as_frame+vec2(2., -8.),
+                            Align2::LEFT_TOP,
+                            format!("Rotate {:3.1}°", angle),
+                            FontId::proportional(8.),
+                            Color32::RED,
+                        );
+                        model.request_new_source_image();
+
                     } else {
                         painter.circle(
                             center_as_frame.clone(),
@@ -442,7 +457,13 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                         //     CommandContext::Rotate(Some(center_mm), Some(ref1_mm), Some(ref2_mm));
                         let vec_a = ref1_mm - center_mm;
                         let vec_b = ref2_mm - center_mm;
-                        let degrees = BAPViewModel::degrees_between_two_vecs(vec_a, vec_b);
+                        let mut degrees = BAPViewModel::degrees_between_two_vecs(vec_a, vec_b);
+                        let mods = ctx.input(|i| i.modifiers.clone());
+                        if mods.shift{
+                            degrees = (degrees/5.0).round()*5.0;
+                            // let vec_ref2 = vec2(vec_ref1*angle.cos)
+
+                        }
                         // println!("Calculated angle is {}", degrees);
                         model.rotate_around_point(
                             (center_mm.x as f64, center_mm.y as f64),
@@ -574,9 +595,14 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     physical_key,
                     pressed,
                     repeat: _,
-                    modifiers: _mods,
+                    modifiers: mods,
                 } => {
                     if let Some(pkey) = physical_key {
+                        if *pkey == Key::Z && *pressed && mods.ctrl{
+                            if model.undo_available(){
+                                model.undo();
+                            }
+                        }
                         if *pkey == Key::Escape && *pressed {
                             // Only on depress, not release
                             if model.command_context() != CommandContext::None {

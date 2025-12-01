@@ -1,7 +1,7 @@
 use std::{sync::mpsc::Sender, thread::JoinHandle};
 
 use aoer_plotty_rs::plotter::pen::PenDetail;
-use egui::{Pos2, Rect, TextureHandle, Visuals};
+use egui::{Modifiers, Pos2, Rect, TextureHandle, Visuals};
 use egui_toast::Toast;
 
 use crate::core::{
@@ -16,6 +16,14 @@ use super::{BAPDisplayMode, BAPViewModel};
 impl BAPViewModel {
     pub fn name() -> &'static str {
         "Bot-a-Plot"
+    }
+
+    pub fn modifiers(&self) -> egui::Modifiers {
+        self.modifiers.clone()
+    }
+
+    pub fn set_modifiers(&mut self, modifiers: &Modifiers) {
+        self.modifiers = modifiers.clone()
     }
 
     pub fn visuals(&self) -> (String, Visuals) {
