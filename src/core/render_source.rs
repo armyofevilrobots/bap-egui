@@ -20,15 +20,17 @@ impl ApplicationCore {
         zoom: f64,
         rotation: Option<((f64, f64), f64)>,
         translation: Option<(f64, f64)>,
+        scale_around: Option<((f64, f64), f64)>,
     ) {
         let phase = (SystemTime::now().duration_since(SystemTime::UNIX_EPOCH))
             .expect("Should never fail to calc unix seconds.");
         let phase = phase.as_secs_f64();
-        let (cimg, extents_out) = match super::render_source::render_source_preview(
+        let (cimg, extents_out) = match render_source_preview(
             &self.project,
             zoom,
             rotation.clone(),
             translation.clone(),
+            scale_around.clone(),
             self.picked.clone(),
             phase,
             &self.state_change_out,
@@ -83,6 +85,7 @@ pub(crate) fn render_source_preview(
     zoom: f64,
     rotate: Option<((f64, f64), f64)>,
     translate: Option<(f64, f64)>,
+    scale_around: Option<((f64, f64), f64)>,
     picked: Option<BTreeSet<u32>>,
     phase: f64,
     _state_change_out: &Sender<ApplicationStateChangeMsg>,
@@ -96,6 +99,12 @@ pub(crate) fn render_source_preview(
     };
     let (extents, geo) = if let Some((dx, dy)) = &translate {
         let new_geo = Project::translate_arbitrary_geo(&geo, (*dx, *dy), &picked);
+        (Project::calc_extents_for_geometry(&new_geo), new_geo)
+    } else {
+        (extents, geo)
+    };
+    let (extents, geo) = if let Some(((dx, dy), factor)) = &scale_around {
+        let new_geo = Project::scale_geometry_around_point(&geo, (*dx, *dy), *factor, &picked);
         (Project::calc_extents_for_geometry(&new_geo), new_geo)
     } else {
         (extents, geo)

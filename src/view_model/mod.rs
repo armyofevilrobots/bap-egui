@@ -564,6 +564,25 @@ impl BAPViewModel {
                         } else {
                             None
                         };
+                    let scale_around: Option<((f64, f64), f64)> =
+                        if let CommandContext::ScaleAround(Some(center_mm), Some(ref1_mm)) =
+                            &self.command_context
+                            && let Some(ref2_px) = self.last_pointer_pos
+                        {
+                            let ref2_mm = self.frame_coords_to_mm(ref2_px);
+                            let ref2_rad = (ref2_mm - *center_mm).length();
+                            let ref1_rad = (*ref1_mm - *center_mm).length();
+                            if ref2_rad.abs() < 0.001 || ref1_rad.abs() < 0.001 {
+                                None
+                            } else {
+                                Some((
+                                    (center_mm.x as f64, center_mm.y as f64),
+                                    (ref2_rad / ref1_rad) as f64,
+                                ))
+                            }
+                        } else {
+                            None
+                        };
 
                     if let Some(handle) = &self.source_image_handle {
                         let hs = handle.size();
@@ -580,6 +599,7 @@ impl BAPViewModel {
                                             // resolution: resolution,
                                             rotation,
                                             translation,
+                                            scale_around,
                                         }
                                     }
                                     BAPDisplayMode::Plot => {
@@ -604,6 +624,7 @@ impl BAPViewModel {
                                     // resolution: resolution,
                                     rotation: None,
                                     translation: None,
+                                    scale_around: None,
                                 })
                                 .unwrap_or_else(|err| {
                                     eprintln!("Failed to send request for updated image to core.");

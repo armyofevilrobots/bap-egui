@@ -44,8 +44,14 @@ impl ApplicationCore {
                             // resolution,
                             rotation,
                             translation,
+                            scale_around,
                         } => {
-                            self.handle_request_source_image(zoom, rotation, translation);
+                            self.handle_request_source_image(
+                                zoom,
+                                rotation,
+                                translation,
+                                scale_around,
+                            );
                         }
                         ViewCommand::ImportSVG(path_buf) => {
                             self.checkpoint();

@@ -23,6 +23,7 @@ pub enum ViewCommand {
         // resolution: (usize, usize),
         rotation: Option<((f64, f64), f64)>,
         translation: Option<(f64, f64)>,
+        scale_around: Option<((f64, f64), f64)>,
     },
     RequestPlotPreviewImage {
         extents: (f64, f64, f64, f64),

@@ -1,6 +1,4 @@
-use egui::{
-    Align2, Color32, FontId, Id, Layout, Rect, Slider, Stroke, Style, TextEdit, Vec2, pos2, vec2,
-};
+use egui::{Align2, Color32, FontId, Id, Layout, Rect, Slider, Stroke, TextEdit, Vec2, pos2, vec2};
 use indexmap::IndexMap;
 
 use crate::{core::commands::ViewCommand, view_model::BAPViewModel};

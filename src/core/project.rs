@@ -256,7 +256,35 @@ impl Project {
         // println!("ROTATED. Now redoing extents etc.");
         self.regenerate_extents();
     }
-    ///
+
+    /// Scale all geometry around a given point.
+    pub fn scale_geometry_around_point(
+        geo: &Vec<PlotGeometry>,
+        center: (f64, f64),
+        scale: f64,
+        picked: &Option<BTreeSet<u32>>,
+    ) -> Vec<PlotGeometry> {
+        let mut geo = geo.clone();
+        for (idx, plotgeo) in geo.iter_mut().enumerate() {
+            if let Some(picks) = picked {
+                if picks.contains(&(idx as u32)) {
+                    plotgeo.geometry.scale_around_point_mut(
+                        scale,
+                        scale,
+                        Point::new(center.0, center.1),
+                    );
+                }
+            } else {
+                plotgeo.geometry.scale_around_point_mut(
+                    scale,
+                    scale,
+                    Point::new(center.0, center.1),
+                );
+            }
+        }
+        geo
+    }
+
     /// Scale all geometry around a given point.
     pub fn scale_geometry_around_point_mut(
         &mut self,

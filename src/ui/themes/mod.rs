@@ -1,7 +1,7 @@
 use crate::view_model::BAPViewModel;
 use catppuccin_egui::{FRAPPE, LATTE, MACCHIATO, MOCHA, set_style_theme};
 use eframe::egui;
-use egui::{ComboBox, Id};
+use egui::{ComboBox, Id, Layout};
 // use std::collections::HashMap;
 use indexmap::IndexMap;
 
@@ -61,5 +61,11 @@ pub(crate) fn theme_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                     };
                 }
             });
+
+        ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
+            if ui.button("Done").clicked() {
+                model.cancel_command_context(false);
+            }
+        });
     });
 }

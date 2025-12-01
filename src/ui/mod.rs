@@ -160,13 +160,13 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                         );
                     }
                     if let Some(ref_xy) = opt_ref {
-                        let ref1_vec_mm = (ref_xy - start_xy);
+                        let ref1_vec_mm = ref_xy - start_xy;
                         let rad_ref1_mm = ref1_vec_mm.length();
                         if rad_ref1_mm.abs() > 0.001 {
                             let rad_base_px = model.scale_mm_to_screen(ref1_vec_mm).length();
                             let ref2_xy = model.frame_coords_to_mm(ptr_pos);
-                            let ref2_vec_mm = (ref2_xy - start_xy);
-                            let rad_ref2_px = model.scale_mm_to_screen(ref2_vec_mm).length();
+                            let ref2_vec_mm = ref2_xy - start_xy;
+                            // let rad_ref2_px = model.scale_mm_to_screen(ref2_vec_mm).length();
 
                             if ref2_vec_mm.length().abs()>0.001{
                                 painter.text(
