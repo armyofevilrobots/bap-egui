@@ -42,6 +42,10 @@ pub enum ViewCommand {
         center: (f64, f64),
         degrees: f64,
     },
+    ScaleAround {
+        center: (f64, f64),
+        factor: f64,
+    },
     Scale(f64),
     Post,
     StartPlot,
@@ -71,6 +75,7 @@ pub enum ViewCommand {
     DeleteSelection,
     UpdateConfig(AppConfig),
     Translate(f64, f64),
+    ReNumberGeometry(Vec<(usize, usize)>), // Change geometry foreach(from toolid-> to toolid)
     None,
 }
 

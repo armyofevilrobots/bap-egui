@@ -24,12 +24,19 @@ impl ApplicationCore {
                 Err(_err) => (),
                 Ok(msg) => {
                     match msg {
+                        ViewCommand::ScaleAround { center, factor } => {
+                            println!("Scaling geo around {:?} by {}", center, factor);
+                            self.checkpoint();
+                            self.project.scale_geometry_around_point_mut(
+                                center,
+                                factor,
+                                &self.picked,
+                            );
+                            self.rebuild_after_content_change();
+                        }
                         ViewCommand::Ping => {
                             // println!("PING!");
-                            self.state_change_out
-                                .send(ApplicationStateChangeMsg::Pong)
-                                .unwrap_or_else(|_op| self.shutdown = true);
-                            self.ctx.request_repaint();
+                            self.yolo_app_state_change(ApplicationStateChangeMsg::Pong);
                         }
                         ViewCommand::RequestSourceImage {
                             // extents,
@@ -43,11 +50,9 @@ impl ApplicationCore {
                         ViewCommand::ImportSVG(path_buf) => {
                             self.checkpoint();
                             self.project.import_svg(&path_buf, true);
-                            self.state_change_out
-                                .send(ApplicationStateChangeMsg::PatchViewModel(
-                                    ViewModelPatch::from(self.project.clone()),
-                                ))
-                                .expect("Failed to send error to viewmodel.");
+                            self.yolo_app_state_change(ApplicationStateChangeMsg::PatchViewModel(
+                                ViewModelPatch::from(self.project.clone()),
+                            ));
                             self.rebuild_after_content_change();
                         }
                         ViewCommand::SetOrigin(x, y) => {
@@ -61,16 +66,12 @@ impl ApplicationCore {
                         } => todo!(),
                         ViewCommand::RotateSource { center, degrees } => {
                             self.checkpoint();
-                            // println!("Rotating source data around {},{} by {} degrees", center.0, center.1, degrees);
-                            // println!("PRE EXTENTS: {:?}", self.project.extents());
                             self.project.rotate_geometry_around_point_mut(
                                 center,
                                 degrees,
                                 &self.picked,
                             );
-                            // println!("POST EXTENTS: {:?}", self.project.extents());
                             self.rebuild_after_content_change();
-                            // println!("POST RESEND EXTENTS: {:?}", self.project.extents());
                         }
                         ViewCommand::Post => {
                             self.handle_post();
@@ -346,6 +347,9 @@ impl ApplicationCore {
                                     .to_string(),
                                 ))
                             });
+                        }
+                        ViewCommand::ReNumberGeometry(pen_map) => {
+                            todo!();
                         }
                     }
                 }

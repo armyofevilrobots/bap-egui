@@ -94,12 +94,20 @@ pub struct BAPViewModel {
     last_pointer_pos: Option<Pos2>,
     picked: Option<Vec<usize>>,
     visuals: (String, Visuals),
+    pen_reorder: Option<Vec<(usize, usize)>>,
 }
 
 impl BAPViewModel {
     pub fn with_appstate_recv(mut self, state: Receiver<ApplicationStateChangeMsg>) -> Self {
         self.state_in = Some(state);
         self
+    }
+
+    pub fn scale_around(&self, center: Pos2, scale: f32) {
+        self.yolo_view_command(ViewCommand::ScaleAround {
+            center: (center.x as f64, center.y as f64),
+            factor: scale as f64,
+        });
     }
 
     pub fn apply_translation(&self, dx: f64, dy: f64) {

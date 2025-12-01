@@ -25,6 +25,7 @@ pub enum CommandContext {
     SelectColorAt(Option<Pos2>),
     SelectTheme,
     Translate(Option<Pos2>),
+    ScaleAround(Option<Pos2>, Option<Pos2>), // Center, reference
     None,
 }
 
@@ -64,6 +65,9 @@ impl Display for CommandContext {
             ),
             CommandContext::SelectTheme => write!(f, "Select Theme"),
             CommandContext::Translate(_start) => write!(f, "Translate"),
+            CommandContext::ScaleAround(xy, _opt_ref) => {
+                write!(f, "ScaleAround({:?})", xy)
+            }
         }
     }
 }
@@ -182,6 +186,7 @@ impl BAPViewModel {
             CommandContext::None => CommandContext::None,
             CommandContext::SelectTheme => CommandContext::None,
             CommandContext::Translate(_) => CommandContext::None,
+            CommandContext::ScaleAround(_pos2, _opt_ref) => CommandContext::None,
         };
     }
 
@@ -201,6 +206,7 @@ impl BAPViewModel {
             CommandContext::None => ctx,
             CommandContext::SelectTheme => ctx,
             CommandContext::Translate(_) => ctx,
+            CommandContext::ScaleAround(_pos2, _opt_ref) => ctx,
         };
     }
 

@@ -5,7 +5,7 @@ use aoer_plotty_rs::context::operation::OPLayer;
 pub use aoer_plotty_rs::context::pgf_file::*;
 pub use aoer_plotty_rs::plotter::pen::PenDetail;
 use geo::algorithm::bounding_rect::BoundingRect;
-use geo::{Geometry, LineString, MultiLineString, Point, Rect, Rotate, Translate, coord};
+use geo::{Geometry, LineString, MultiLineString, Point, Rect, Rotate, Scale, Translate, coord};
 use nalgebra::{Affine2, Matrix3};
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
@@ -251,6 +251,34 @@ impl Project {
                 geometry
                     .geometry
                     .translate_mut(translation.0, translation.1);
+            }
+        }
+        // println!("ROTATED. Now redoing extents etc.");
+        self.regenerate_extents();
+    }
+    ///
+    /// Scale all geometry around a given point.
+    pub fn scale_geometry_around_point_mut(
+        &mut self,
+        center: (f64, f64),
+        scale: f64,
+        picked: &Option<BTreeSet<u32>>,
+    ) {
+        for (idx, geometry) in self.geometry.iter_mut().enumerate() {
+            if let Some(picks) = picked {
+                if picks.contains(&(idx as u32)) {
+                    geometry.geometry.scale_around_point_mut(
+                        scale,
+                        scale,
+                        Point::new(center.0, center.1),
+                    );
+                }
+            } else {
+                geometry.geometry.scale_around_point_mut(
+                    scale,
+                    scale,
+                    Point::new(center.0, center.1),
+                );
             }
         }
         // println!("ROTATED. Now redoing extents etc.");
@@ -732,6 +760,7 @@ pub fn svg_to_geometries(
                         .unwrap_or(csscolorparser::parse("black").unwrap()),
                     None => csscolorparser::parse("black").unwrap(),
                 },
+                ..Default::default()
             };
             // println!("This pen: {:?}", this_pen);
             let mut pen_idx = usize::MAX;

@@ -347,6 +347,18 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         ),
     );
 
+    let cmd_scale_around = (
+        Key::S,
+        (
+            "Scale around point".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Scale around point".to_string(),
+                Box::new(|model| model.command_context = CommandContext::ScaleAround(None, None)),
+                None,
+            ),
+        ),
+    );
+
     let cmd_geometry_rotate = (
         Key::R,
         (
@@ -363,7 +375,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         Key::S,
         (
             "Scale".to_string(),
-            SpaceCommandBranch::Branch(IndexMap::from([cmd_scale_factor])),
+            SpaceCommandBranch::Branch(IndexMap::from([cmd_scale_factor, cmd_scale_around])),
         ),
     );
 

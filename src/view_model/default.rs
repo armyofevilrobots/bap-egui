@@ -63,6 +63,7 @@ impl Default for BAPViewModel {
                     stroke_density: 1.0,
                     feed_rate: Some(2000.0),
                     color: csscolorparser::Color::from_rgba8(255, 0, 0, 255),
+                    ..Default::default()
                 },
                 PenDetail {
                     tool_id: 3,
@@ -71,6 +72,7 @@ impl Default for BAPViewModel {
                     stroke_density: 0.5, // It's runny
                     feed_rate: Some(1000.0),
                     color: csscolorparser::Color::from_rgba8(0, 0, 255, 255),
+                    ..Default::default()
                 },
             ],
             undo_available: false,
@@ -83,6 +85,7 @@ impl Default for BAPViewModel {
                 "Nord Dark".to_string(),
                 crate::ui::themes::egui_nord::visuals(),
             ),
+            pen_reorder: None,
         }
     }
 }

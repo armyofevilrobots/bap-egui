@@ -9,7 +9,7 @@ use crate::view_model::command_context::SpaceCommandStatus;
 use crate::view_model::{BAPViewModel, CommandContext};
 use eframe::egui;
 use egui::Direction::BottomUp;
-use egui::{Align2, Color32, Key, Rect, Stroke, StrokeKind, pos2};
+use egui::{Align2, Color32, FontId, Key, Rect, Stroke, StrokeKind, pos2, vec2};
 use egui_toast::Toasts;
 
 pub(crate) mod bottom_panel;
@@ -129,6 +129,75 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                 );
             }
         }
+        // The translation line
+        if let CommandContext::ScaleAround(start, opt_ref) = model.command_context() {
+            let p1 = painter_resp.rect.min.clone();
+            let p2 = painter_resp.rect.max.clone();
+            if let Some(ptr_pos) = ctx.pointer_latest_pos() {
+                if let Some(start_xy) = start {
+                    let pos = model.mm_to_frame_coords(start_xy);
+                    painter.line(
+                        vec![pos2(pos.x - 8., pos.y), pos2(pos.x + 8., pos.y)],
+                        Stroke::new(0.5, Color32::RED),
+                    );
+                    painter.line(
+                        vec![pos2(pos.x, pos.y - 8.), pos2(pos.x, pos.y + 8.)],
+                        Stroke::new(0.5, Color32::RED),
+                    );
+                    painter.circle(
+                        pos,
+                        8.,
+                        Color32::TRANSPARENT,
+                        Stroke::new(0.5, Color32::RED),
+                    );
+                    let rad_ref1 = (ptr_pos - pos).length();
+                    if rad_ref1 > 0. {
+                        painter.circle(
+                            pos,
+                            rad_ref1,
+                            Color32::TRANSPARENT,
+                            Stroke::new(0.5, Color32::RED),
+                        );
+                    }
+                    if let Some(ref_xy) = opt_ref {
+                        let ref1_vec_mm = (ref_xy - start_xy);
+                        let rad_ref1_mm = ref1_vec_mm.length();
+                        if rad_ref1_mm.abs() > 0.001 {
+                            let rad_base_px = model.scale_mm_to_screen(ref1_vec_mm).length();
+                            let ref2_xy = model.frame_coords_to_mm(ptr_pos);
+                            let ref2_vec_mm = (ref2_xy - start_xy);
+                            let rad_ref2_px = model.scale_mm_to_screen(ref2_vec_mm).length();
+
+                            if ref2_vec_mm.length().abs()>0.001{
+                                painter.text(
+                                    model.mm_to_frame_coords(start_xy+vec2(8., 8.)),
+                                    Align2::LEFT_BOTTOM,
+                                    format!("{:3.1}%", 100.*(ref2_vec_mm.length()/rad_ref1_mm)),
+                                    FontId::proportional(8.),
+                                    Color32::RED,
+                                );
+
+                            }
+                            painter.circle(
+                                pos,
+                                rad_base_px,
+                                Color32::TRANSPARENT,
+                                Stroke::new(0.5, Color32::RED),
+                            );
+                        }
+                    }
+                } else {
+                    painter.line(
+                        vec![pos2(ptr_pos.x, p1.y), pos2(ptr_pos.x, p2.y)],
+                        Stroke::new(0.5, Color32::RED),
+                    );
+                    painter.line(
+                        vec![pos2(p1.x, ptr_pos.y), pos2(p2.x, ptr_pos.y)],
+                        Stroke::new(0.5, Color32::RED),
+                    );
+                }
+            }
+        };
         // The translation line
         if let CommandContext::Translate(start) = model.command_context() {
             let p1 = painter_resp.rect.min.clone();
@@ -379,6 +448,41 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                         );
                         // model.command_context = CommandContext::None;
                         model.cancel_command_context(false);
+                    }
+                }
+                CommandContext::ScaleAround(opt_pos, opt_ref) => {
+                    if let Some(hover_pos) = ctx.pointer_hover_pos() {
+                        if opt_pos.is_none() {
+                            let opt_pos = Some(model.frame_coords_to_mm(hover_pos));
+                            model.set_command_context(CommandContext::ScaleAround(opt_pos, None));
+                        }
+                        if let Some(pos) = opt_pos
+                            && opt_ref.is_none()
+                        {
+                            let ref_pos = model.frame_coords_to_mm(hover_pos);
+                            if (ref_pos - pos).length().abs() > 0.01 {
+                                model.set_command_context(CommandContext::ScaleAround(
+                                    opt_pos,
+                                    Some(ref_pos),
+                                ));
+                            }
+                        } else if let Some(center) = opt_pos
+                            && let Some(ref1) = opt_ref
+                        {
+                            let pos2 = model.frame_coords_to_mm(hover_pos);
+                            let rad2 = (pos2 - center).length();
+                            let rad1 = (ref1 - center).length();
+                            if rad2 != 0. && rad1 != 0. {
+                                let ratio = rad2 / rad1;
+                                model.scale_around(center, ratio);
+                                model.cancel_command_context(false);
+                            } else {
+                                eprintln!("Cannot scale with a reference position or scale position of 0.0");
+                            }
+                            // model.apply_translation(delta.x as f64, delta.y as f64);
+                            // model.cancel_command_context(false);
+                            ()
+                        }
                     }
                 }
                 CommandContext::Space(_) => (),

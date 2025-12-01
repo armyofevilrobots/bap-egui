@@ -22,6 +22,14 @@ impl BAPViewModel {
         self.visuals.clone()
     }
 
+    pub fn pen_reorder(&self) -> Option<Vec<(usize, usize)>> {
+        self.pen_reorder().clone()
+    }
+
+    pub fn set_pen_reorder(&mut self, order: Option<Vec<(usize, usize)>>) {
+        self.pen_reorder = order
+    }
+
     pub fn set_visuals(&mut self, viz_name: String, visuals: Visuals) {
         self.visuals = (viz_name, visuals);
     }
