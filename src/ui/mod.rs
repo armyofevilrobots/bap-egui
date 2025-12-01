@@ -160,6 +160,8 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                         );
                     }
                     if let Some(ref_xy) = opt_ref {
+
+                        model.request_new_source_image();
                         let ref1_vec_mm = ref_xy - start_xy;
                         let rad_ref1_mm = ref1_vec_mm.length();
                         if rad_ref1_mm.abs() > 0.001 {

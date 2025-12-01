@@ -232,15 +232,17 @@ pub(crate) fn floating_tool_window(
                             model.center_smart();
                         };
                         ui.end_row();
+
+                        // Add free scale here
                         if tool_button(
                             ui,
-                            egui::include_image!("../../resources/images/scale.png"),
-                            Some("Scale by a factor".into()),
+                            egui::include_image!("../../resources/images/free_scale.png"),
+                            Some("Free scale around a point".into()),
                             model.source_image_extents().is_some(),
                         )
                         .clicked()
                         {
-                            model.set_command_context(CommandContext::Scale(1.));
+                            model.set_command_context(CommandContext::ScaleAround(None, None));
                         }
 
                         if tool_button(
@@ -266,6 +268,17 @@ pub(crate) fn floating_tool_window(
                         }
 
                         ui.end_row();
+                        if tool_button(
+                            ui,
+                            egui::include_image!("../../resources/images/scale.png"),
+                            Some("Scale by a factor".into()),
+                            model.source_image_extents().is_some(),
+                        )
+                        .clicked()
+                        {
+                            model.set_command_context(CommandContext::Scale(1.));
+                        }
+
                         if tool_button(
                             ui,
                             egui::include_image!("../../resources/images/expand.png"),
