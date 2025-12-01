@@ -9,7 +9,7 @@ GRBL dialects of GCode, and allows you to customize your post
 processor depending on how your machine is configured. Virtual
 and real toolchanges are supported for multiple pens.
 
-Current features:
+## Current features:
 
  * Import SVG and PGF files,
  * Post process geometry to tool-paths
