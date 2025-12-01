@@ -3,8 +3,8 @@ name: Rust
 on:
   push:
     branches: ["main", "testing"]
-  #   tags:
-  #     - "v*"
+    tags:
+      - "v*"
   # pull_request:
   #   branches: ["release"]
 
