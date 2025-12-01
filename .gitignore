@@ -2,3 +2,4 @@
 Cargo.lock
 /*.bap
 /*.bap2
+deps/aoer-plotty-rs
