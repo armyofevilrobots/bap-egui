@@ -19,12 +19,12 @@ jobs:
       # pull-requests: write
       # repository-projects: write
     steps:
+      - uses: actions/checkout@v4
       - uses: awalsh128/cache-apt-pkgs-action@latest
         with:
-          add-repository: ppa:ubuntugis/ppa
           packages: build-essential geos
+          add-repository: ppa:ubuntugis/ppa
           version: 1.0
-      - uses: actions/checkout@v4
       - name: Build
         run: cargo build --release --verbose
       - name: Release
