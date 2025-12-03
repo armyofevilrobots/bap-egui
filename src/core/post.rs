@@ -114,16 +114,20 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
     ));
 
     let mut last_tool: usize = usize::MAX;
-    for geometry in &project.geometry {
+    for geometry in &project.plot_geometry {
         let geo_lines = geometry
             .transformed(&tx_affine2)
             .geometry
+            .geometry()
             .to_multi_line_strings();
         let opt = Optimizer::new(
             machine.keepdown().unwrap_or(1.0),
             OptimizationStrategy::Greedy,
         );
-        let pen = geometry.stroke.clone().unwrap_or(PenDetail::default());
+        //let pen = geometry.stroke.clone().unwrap_or(PenDetail::default());
+        let pen = project
+            .pen_by_uuid(geometry.pen_uuid)
+            .unwrap_or(PenDetail::default());
         // println!("Geo with pen id {}", pen.tool_id);
         let feedrate = pen.feed_rate.unwrap_or(machine.feedrate());
         let geo_lines = opt.optimize(&geo_lines);
@@ -184,10 +188,11 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
             //     && ((&line[0].x - last_x).powi(2) + (&line[0].y - last_y).powi(2)).sqrt()
             //         < machine.keepdown().unwrap()
             // {
-            let pen_width = match &geometry.stroke {
-                Some(stroke) => stroke.stroke_width,
-                None => 0.5,
-            };
+            // let pen_width = match &geometry.stroke {
+            //     Some(stroke) => stroke.stroke_width,
+            //     None => 0.5,
+            // };
+            let pen_width = pen.stroke_width;
 
             // TODO: This should definitely be used further down.
             let keepdown = ((&line[0].x - last_x).powi(2) + (&line[0].y - last_y).powi(2)).sqrt()

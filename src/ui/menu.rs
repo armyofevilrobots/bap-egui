@@ -2,7 +2,7 @@ use crate::BAPViewModel;
 use crate::view_model::CommandContext;
 use crate::view_model::space_commands::{SPACE_CMDS, SpaceCommandBranch};
 use eframe::egui;
-use egui::{Button, Key, Rect, Ui};
+use egui::{Button, Frame, Key, Margin, Rect, Ui};
 
 fn grow_stack(stack: &Vec<Key>, key: &Key) -> Vec<Key> {
     let mut new_stack = stack.clone();
@@ -78,16 +78,30 @@ fn menu_from_tree(
 }
 
 pub(crate) fn main_menu(model: &mut BAPViewModel, ctx: &egui::Context) -> Rect {
-    let tbp = egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-        egui::MenuBar::new().ui(ui, |ui| {
-            menu_from_tree(
-                model,
-                ui,
-                &Key::Space,
-                &vec![Key::Space],
-                &*SPACE_CMDS.lock(),
+    let tbp = egui::TopBottomPanel::top("top_panel")
+        .show_separator_line(false)
+        /*
+            .frame(
+                Frame::new()
+                    .outer_margin(Margin {
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        bottom: -20,
+                    })
+                    .fill(ctx.style().visuals.window_fill.clone()),
             )
-        })
-    });
+        */
+        .show(ctx, |ui| {
+            egui::MenuBar::new().ui(ui, |ui| {
+                menu_from_tree(
+                    model,
+                    ui,
+                    &Key::Space,
+                    &vec![Key::Space],
+                    &*SPACE_CMDS.lock(),
+                )
+            })
+        });
     tbp.response.rect
 }

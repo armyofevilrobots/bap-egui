@@ -1,44 +1,62 @@
-use aoer_plotty_rs::context::pgf_file::PlotGeometry;
+use aoer_plotty_rs::context::pgf_file::{KeepdownStrategy, PlotGeometry};
 
 use super::commands::ApplicationStateChangeMsg;
 use geo::{Geometry, MultiLineString};
 
 use super::ApplicationCore;
-use crate::view_model::view_model_patch::ViewModelPatch;
+use crate::{
+    core::{
+        post::GeometryToMultiLineString,
+        project::{BAPGeometry, GeometryKind},
+    },
+    view_model::view_model_patch::ViewModelPatch,
+};
 
 impl ApplicationCore {
     pub fn apply_ungroup(&mut self) {
         // println!("Would have ungrouped {:?}", self.picked);
         if let Some(picked) = &self.picked {
             // Make copies of all the stuff we're breaking up.
-            let geo_items: Vec<PlotGeometry> = picked
+            let geo_items: Vec<BAPGeometry> = picked
                 .iter()
-                .filter_map(|idx| self.project.geometry.get(*idx as usize))
+                .filter_map(|idx| self.project.plot_geometry.get(*idx as usize))
                 .map(|item| item.clone())
                 .collect();
             // Then remove them from the geometry list. We reverse the order
             // to prevent shrinking and removing the wrong shit.
             for idx in picked.iter().rev() {
-                self.project.geometry.remove(*idx as usize);
+                self.project.plot_geometry.remove(*idx as usize);
             }
 
             for geo in geo_items {
-                let geo = geo.clone();
-                match geo.geometry {
-                    Geometry::MultiLineString(mls) => {
-                        for linestring in mls.0 {
-                            self.project.geometry.push(PlotGeometry {
-                                geometry: Geometry::MultiLineString(MultiLineString::new(vec![
-                                    linestring,
-                                ])),
-                                // id: u32::MAX as u64,
-                                stroke: geo.stroke.clone(),
-                                keepdown_strategy: geo.keepdown_strategy.clone(),
-                            });
-                        }
-                    }
-                    _ => (),
-                }
+                let new_geokind = match geo.geometry {
+                    GeometryKind::Stroke(geoms) => GeometryKind::Stroke(Geometry::MultiLineString(
+                        geoms.to_multi_line_strings(),
+                    )),
+                    GeometryKind::Hatch(geoms) => GeometryKind::Hatch(Geometry::MultiLineString(
+                        geoms.to_multi_line_strings(),
+                    )),
+                };
+                self.project.plot_geometry.push(BAPGeometry {
+                    pen_uuid: geo.pen_uuid,
+                    geometry: new_geokind,
+                    keepdown_strategy: geo.keepdown_strategy,
+                })
+                // let geo = geo.clone();
+                // match geo.geometry() {
+                // Geometry::MultiLineString(mls) => {
+                //     for linestring in mls.0 {
+                //         self.project.plot_geometry.push(BAPGeometry { pen_uuid: (), geometry: () } {
+                //             geometry: Geometry::MultiLineString(MultiLineString::new(vec![
+                //                 linestring,
+                //             ])),
+                //             // id: u32::MAX as u64,
+                //             stroke: geo.stroke.clone(),
+                //             keepdown_strategy: geo.keepdown_strategy.clone(),
+                //         });
+                // }
+                // }
+                // _ => (),
             }
             self.state_change_out
                 .send(ApplicationStateChangeMsg::Picked(None))
@@ -61,35 +79,42 @@ impl ApplicationCore {
                 return;
             }
             // Make copies of all the stuff we're breaking up.
-            let picked_items: Vec<PlotGeometry> = picked
+            let picked_items: Vec<BAPGeometry> = picked
                 .iter()
-                .filter_map(|idx| self.project.geometry.get(*idx as usize))
+                .filter_map(|idx| self.project.plot_geometry.get(*idx as usize))
                 .map(|item| item.clone())
                 .collect();
             // Then remove them from the geometry list. We reverse the order
             // to prevent shrinking and removing the wrong shit.
             for idx in picked.iter().rev() {
-                self.project.geometry.remove(*idx as usize);
+                self.project.plot_geometry.remove(*idx as usize);
             }
 
             let mut new_mls: MultiLineString<f64> = MultiLineString::new(Vec::new());
+            // TODO: We should find the first stroke and hatch, and group down to TWO geometries, one of each
             let tmp_geo = picked_items.first().unwrap().clone();
 
             for geo in picked_items {
                 let geo = geo.clone();
-                match geo.geometry {
-                    Geometry::MultiLineString(mls) => {
-                        new_mls.0.extend(mls.0);
-                    }
-                    _ => (),
-                }
+                new_mls.0.extend(geo.geometry().to_multi_line_strings());
+                // match geo.geometry() {
+                //     Geometry::MultiLineString(mls) => {
+                //         new_mls.0.extend(mls.0);
+                //     }
+                //     _ => (),
+                // }
             }
-            self.project.geometry.push(PlotGeometry {
-                geometry: Geometry::MultiLineString(new_mls),
-                // id: u32::MAX as u64,
-                stroke: tmp_geo.stroke.clone(),
-                keepdown_strategy: tmp_geo.keepdown_strategy.clone(),
+            self.project.plot_geometry.push(BAPGeometry {
+                pen_uuid: tmp_geo.pen_uuid,
+                geometry: GeometryKind::Stroke(Geometry::MultiLineString(new_mls)),
+                keepdown_strategy: tmp_geo.keepdown_strategy,
             });
+            // {
+            //     geometry: geometry::multilinestring(new_mls),
+            //     // id: u32::max as u64,
+            //     stroke: tmp_geo.stroke.clone(),
+            //     keepdown_strategy: tmp_geo.keepdown_strategy.clone(),
+            // });
 
             self.state_change_out
                 .send(ApplicationStateChangeMsg::Picked(None))

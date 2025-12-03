@@ -9,7 +9,7 @@ use crate::view_model::command_context::SpaceCommandStatus;
 use crate::view_model::{BAPViewModel, CommandContext};
 use eframe::egui;
 use egui::Direction::BottomUp;
-use egui::{Align2, Color32, FontId, Key, Rect, Stroke, StrokeKind, pos2, vec2};
+use egui::{Align2, Color32, FontId, Frame, Key, Rect, Stroke, StrokeKind, pos2, vec2};
 use egui_toast::Toasts;
 
 pub(crate) mod bottom_panel;
@@ -88,7 +88,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
         _ => (),
     }
 
-    let _cp = egui::CentralPanel::default().show(ctx, |ui| {
+    let _cp = egui::CentralPanel::default().frame(Frame::new().fill(ctx.style().visuals.window_fill.clone()).stroke(Stroke::NONE)).show(ctx, |ui| {
         // ui.visuals_mut().widgets.inactive.weak_bg_fill = Color32::TRANSPARENT;
 
         let precursor = ui.cursor();

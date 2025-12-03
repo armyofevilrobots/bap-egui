@@ -21,9 +21,9 @@ impl ApplicationCore {
                 }
             }
 
-            for (idx, geo) in self.project.geometry.iter_mut().enumerate() {
+            for (idx, geo) in self.project.plot_geometry.iter_mut().enumerate() {
                 if picked.contains(&(idx as u32)) {
-                    geo.stroke = Some(pen.clone());
+                    geo.pen_uuid = pen.identity;
                 }
             }
 
@@ -40,9 +40,9 @@ impl ApplicationCore {
     pub fn delete_selection(&mut self) {
         self.checkpoint();
         if let Some(picked) = &self.picked {
-            for idx in (0..self.project.geometry.len()).rev() {
+            for idx in (0..self.project.plot_geometry.len()).rev() {
                 if picked.contains(&(idx as u32)) {
-                    self.project.geometry.remove(idx);
+                    self.project.plot_geometry.remove(idx);
                 }
             }
             self.state_change_out
@@ -73,24 +73,28 @@ impl ApplicationCore {
         // println!("!PICK COLOR @{},{}", x, y);
         if let Some(pick) = self.try_pick(x, y) {
             // println!("GOT PICK OF {}", pick);
-            if let Some(geo) = self.project.geometry.get(pick as usize) {
+            if let Some(geo) = self.project.plot_geometry.get(pick as usize) {
                 // println!("Got picked geo: {:?}", geo);
-                if let Some(stroke_sel) = &geo.stroke {
-                    // println!("Stroke sel: {:?}", stroke_sel);
-                    let mut new_picked = BTreeSet::new();
-                    for (idx, other_geo) in self.project.geometry.iter().enumerate() {
-                        if let Some(other_stroke) = &other_geo.stroke {
-                            if other_stroke.tool_id == stroke_sel.tool_id {
-                                // println!("Matched a stroke at {}", stroke_sel.tool_id);
-                                new_picked.insert(idx as u32);
-                            }
-                        }
-                    }
-                    if new_picked.len() > 0 {
-                        self.picked = Some(new_picked);
-                        self.send_pick_changed();
+                // if let Some(stroke_sel) = self.project.pen_by_uuid(geo.pen_uuid) {
+                //&geo.stroke {
+                // println!("Stroke sel: {:?}", stroke_sel);
+                let mut new_picked = BTreeSet::new();
+                for (idx, other_geo) in self.project.plot_geometry.iter().enumerate() {
+                    // if let Some(other_stroke) = &other_geo.stroke {
+                    // if other_stroke.tool_id == stroke_sel.tool_id {
+                    //     // println!("Matched a stroke at {}", stroke_sel.tool_id);
+                    //     new_picked.insert(idx as u32);
+                    // }
+                    // }
+                    if other_geo.pen_uuid == geo.pen_uuid {
+                        new_picked.insert(idx as u32);
                     }
                 }
+                if new_picked.len() > 0 {
+                    self.picked = Some(new_picked);
+                    self.send_pick_changed();
+                }
+                // }
             }
         }
     }
@@ -201,7 +205,7 @@ impl ApplicationCore {
 
     pub fn select_all(&mut self) {
         self.picked = Some(BTreeSet::from_iter(
-            (0..self.project.geometry.len()).map(|i| i as u32),
+            (0..self.project.plot_geometry.len()).map(|i| i as u32),
         ));
         self.last_rendered =
             Instant::now() + Duration::from_millis((PICKED_ROTATE_TIME * 1000.) as u64);

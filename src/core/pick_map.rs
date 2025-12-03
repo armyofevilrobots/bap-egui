@@ -79,7 +79,7 @@ impl super::ApplicationCore {
                         continue;
                     }
                     // println!("Picked a color of {:?}", id);
-                    if self.project.geometry.get(*id as usize).is_some() {
+                    if self.project.plot_geometry.get(*id as usize).is_some() {
                         return Some(*id);
                         // return Some(geo.id.clone() as u32);
                     }
@@ -95,7 +95,7 @@ pub(crate) fn render_pick_map(
     project: &Project,
     _state_change_out: &Sender<ApplicationStateChangeMsg>,
 ) -> Result<(Vec<u32>, Rect), anyhow::Error> {
-    let (extents, geo) = (project.extents(), project.geometry.clone());
+    let (extents, geo) = (project.extents(), project.plot_geometry.clone());
 
     let resolution = (
         (PICKS_PER_MM as f64 * extents.width().ceil()) as usize,
@@ -124,24 +124,29 @@ pub(crate) fn render_pick_map(
     for (id, pg) in geo.iter().enumerate() {
         let _mid = extents.center();
 
-        let pen = pg.stroke.clone().unwrap_or(PenDetail::default());
+        let pen = project
+            .pen_by_uuid(pg.pen_uuid)
+            .unwrap_or(PenDetail::default());
+        // let pen = pg.stroke.clone().unwrap_or(PenDetail::default());
+        // let pen_uuid = pg.pen_uuid;
         paint.set_stroke_width((pen.stroke_width as f32 * PICKS_PER_MM as f32) / 4.);
         let geo_color = Color::new(id as u32 | 0xff000000);
         paint.set_color(geo_color);
 
-        if let Geometry::MultiLineString(mls) = &pg.geometry {
-            let _line_count = mls.0.len();
-            for (_idx, line) in mls.0.clone().iter().enumerate() {
-                let mut path = Path::new();
-                if let Some(p0) = line.0.first() {
-                    path.move_to((p0.x as f32, p0.y as f32));
-                    for coord in line.0.iter().skip(1) {
-                        path.line_to((coord.x as f32, coord.y as f32));
-                    }
+        // if let Geometry::MultiLineString(mls) = &pg.geometry {
+        let mls = pg.lines();
+        let _line_count = mls.0.len();
+        for (_idx, line) in mls.0.clone().iter().enumerate() {
+            let mut path = Path::new();
+            if let Some(p0) = line.0.first() {
+                path.move_to((p0.x as f32, p0.y as f32));
+                for coord in line.0.iter().skip(1) {
+                    path.line_to((coord.x as f32, coord.y as f32));
                 }
-                surface.canvas().draw_path(&path, &paint);
             }
+            surface.canvas().draw_path(&path, &paint);
         }
+        // }
     }
 
     let mut bmap = Bitmap::new();

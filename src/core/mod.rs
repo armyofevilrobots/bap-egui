@@ -9,6 +9,7 @@ pub(crate) mod config;
 pub(crate) mod core_run;
 pub(crate) mod group_ungroup;
 pub(crate) mod machine;
+pub(crate) mod paper;
 pub(crate) mod pick_map;
 pub(crate) mod post;
 pub(crate) mod project;

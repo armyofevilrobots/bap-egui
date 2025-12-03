@@ -17,14 +17,14 @@ pub(crate) fn floating_tool_window(
 ) {
     let win = egui::Window::new("")
         // .auto_sized()
-        .default_pos((40., 40.))
+        .default_pos((32., 32.))
         .collapsible(false)
         .resizable([false, false]);
     let win = match model.toolbar_position() {
         DockPosition::Floating(_x, _y) => win.title_bar(false), //.current_pos(Pos2 { x, y }),
         DockPosition::Left => {
             let ofs = if model.show_rulers() {
-                (25.0, wtop + 74.)
+                (18.0, wtop + 74.)
             } else {
                 (2., wtop + 49.)
             };
@@ -80,6 +80,8 @@ pub(crate) fn floating_tool_window(
             };
         });
         // ui.separator();
+        // ui.shrink_width_to_current();
+        // super::scene_toggle::scene_toggle_toolbox(model, ctx, ui);
         egui::ScrollArea::vertical().show(ui, |ui| {
             if model.display_mode() == BAPDisplayMode::SVG {
                 ui.add_space(8.);

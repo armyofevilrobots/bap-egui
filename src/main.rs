@@ -24,8 +24,9 @@ fn main() -> eframe::Result<()> {
 
     let mut native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size((600.0, 400.0))
-            .with_min_inner_size(Vec2::new(600., 400.)),
+            .with_inner_size((700.0, 400.0))
+            .with_min_inner_size(Vec2::new(700., 400.)),
+
         vsync: false,
         ..eframe::NativeOptions::default()
     };

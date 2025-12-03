@@ -85,10 +85,10 @@ pub fn space_command_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
         Window::new("Space Commands")
             .anchor(Align2::CENTER_BOTTOM, vec2(0., -24.))
             .collapsible(false)
-            .min_width(800.)
-            .default_size([800., 128.])
+            .min_width(600.)
+            .default_size([600., 300.])
             .title_bar(true)
-            .min_size(vec2(800., 128.))
+            .min_size(vec2(600., 300.))
             .show(ctx, |ui| {
                 ui.vertical(|ui| {
                     ui.horizontal(|ui| {

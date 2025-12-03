@@ -55,27 +55,26 @@ pub(crate) fn render_plot_preview(
     canvas.translate((-xofs as f32 * sx, -yofs as f32 * sy));
     canvas.scale((sx, sy));
     let _mid = extents.center();
-    for pg in &project.geometry {
+    for pg in &project.plot_geometry {
         paint.set_stroke_width(0.);
         paint.set_alpha_f(0.5);
         paint.set_color(Color::BLACK);
         paint.set_path_effect(PathEffect::dash(&[0.2, 0.5], 0.));
 
-        if let Geometry::MultiLineString(mls) = &pg.geometry {
-            let _line_count = mls.0.len();
-            for (_idx, line) in mls.0.clone().iter().enumerate() {
-                let mut path = Path::new();
-                if let Ok(_msg) = cancel.try_recv() {
-                    return Err(anyhow::anyhow!("Got a cancel on render."));
-                }
-                if let Some(p0) = line.0.first() {
-                    path.move_to((p0.x as f32, p0.y as f32));
-                    for coord in line.0.iter().skip(1) {
-                        path.line_to((coord.x as f32, coord.y as f32));
-                    }
-                }
-                surface.canvas().draw_path(&path, &paint);
+        let mls = &pg.lines();
+        let _line_count = mls.0.len();
+        for (_idx, line) in mls.0.clone().iter().enumerate() {
+            let mut path = Path::new();
+            if let Ok(_msg) = cancel.try_recv() {
+                return Err(anyhow::anyhow!("Got a cancel on render."));
             }
+            if let Some(p0) = line.0.first() {
+                path.move_to((p0.x as f32, p0.y as f32));
+                for coord in line.0.iter().skip(1) {
+                    path.line_to((coord.x as f32, coord.y as f32));
+                }
+            }
+            surface.canvas().draw_path(&path, &paint);
         }
     }
 

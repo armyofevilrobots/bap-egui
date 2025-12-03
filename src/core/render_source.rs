@@ -95,7 +95,7 @@ pub(crate) fn render_source_preview(
         let geo = project.rotate_geometry_around_point((*xc, *yc), *rot, &picked);
         (Project::calc_extents_for_geometry(&geo), geo)
     } else {
-        (project.extents(), project.geometry.clone())
+        (project.extents(), project.plot_geometry.clone())
     };
     let (extents, geo) = if let Some((dx, dy)) = &translate {
         let new_geo = Project::translate_arbitrary_geo(&geo, (*dx, *dy), &picked);
@@ -155,7 +155,10 @@ pub(crate) fn render_source_preview(
     canvas.scale((sx, sy));
     let _mid = extents.center();
     for (id, pg) in geo.clone().iter().enumerate() {
-        let pen = pg.stroke.clone().unwrap_or(PenDetail::default());
+        // let pen = pg.stroke.clone().unwrap_or(PenDetail::default());
+        let pen = project
+            .pen_by_uuid(pg.pen_uuid)
+            .unwrap_or(PenDetail::default());
         paint.set_path_effect(None);
         paint.set_stroke_cap(skia_safe::PaintCap::Round);
         paint.set_stroke_width(pen.stroke_width as f32);
@@ -178,22 +181,21 @@ pub(crate) fn render_source_preview(
         paint.set_color(Color::from_argb(a, r, g, b));
         // paint.set_path_effect(None);
 
-        if let Geometry::MultiLineString(mls) = &pg.geometry {
-            //&pg.geometry {
-            let _line_count = mls.0.len();
-            for (_idx, line) in mls.0.clone().iter().enumerate() {
-                let mut path = Path::new();
-                if let Ok(_msg) = cancel.try_recv() {
-                    return Err(anyhow::anyhow!("Got a cancel on render."));
-                }
-                if let Some(p0) = line.0.first() {
-                    path.move_to((p0.x as f32, p0.y as f32));
-                    for coord in line.0.iter().skip(1) {
-                        path.line_to((coord.x as f32, coord.y as f32));
-                    }
-                }
-                surface.canvas().draw_path(&path, &paint);
+        let mls = &pg.lines();
+        //&pg.geometry {
+        let _line_count = mls.0.len();
+        for (_idx, line) in mls.0.clone().iter().enumerate() {
+            let mut path = Path::new();
+            if let Ok(_msg) = cancel.try_recv() {
+                return Err(anyhow::anyhow!("Got a cancel on render."));
             }
+            if let Some(p0) = line.0.first() {
+                path.move_to((p0.x as f32, p0.y as f32));
+                for coord in line.0.iter().skip(1) {
+                    path.line_to((coord.x as f32, coord.y as f32));
+                }
+            }
+            surface.canvas().draw_path(&path, &paint);
         }
     }
     let mut bmap = Bitmap::new();

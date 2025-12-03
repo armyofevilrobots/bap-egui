@@ -1,174 +1,164 @@
 use crate::core::machine::MachineConfig;
+use crate::core::post::GeometryToMultiLineString;
 use anyhow::{Result, anyhow};
 use aoer_plotty_rs::context::operation::OPLayer;
+use aoer_plotty_rs::geo_types::matrix::TransformGeometry;
 // use aoer_plotty_rs::geo_types::hatch::Hatches;
+pub use super::paper::*;
 pub use aoer_plotty_rs::context::pgf_file::*;
 pub use aoer_plotty_rs::plotter::pen::PenDetail;
 use geo::algorithm::bounding_rect::BoundingRect;
-use geo::{Geometry, LineString, MultiLineString, Point, Rect, Rotate, Scale, Translate, coord};
+use geo::{
+    Coord, Geometry, LineString, MultiLineString, Point, Rect, Rotate, Scale, Translate, coord,
+};
 use nalgebra::{Affine2, Matrix3};
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::ffi::OsString;
-use std::fmt::Display;
 use std::fs::File;
 use std::io::BufWriter;
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{collections::HashMap, path::PathBuf};
 use usvg::{Tree, WriteOptions};
+use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
-pub enum Orientation {
-    Landscape,
-    Portrait,
-}
-impl Display for Orientation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Orientation::Landscape => write!(f, "Landscape"),
-            Orientation::Portrait => write!(f, "Portrait"),
-        }
-    }
-}
-
-#[allow(non_camel_case_types)]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub enum PaperSize {
-    Letter,
-    Ansi_A,
-    Ansi_B,
-    Ansi_C,
-    Ansi_D,
-    US_Legal,
-    A0,
-    A1,
-    A2,
-    A3,
-    A4,
-    A5,
-    A6,
-    A7,
-    ISO216,
-    USBusinessCard,
-    EuroBusinessCard,
-    Custom(f64, f64),
+pub enum GeometryKind {
+    Stroke(Geometry),
+    Hatch(Geometry),
 }
 
-impl PaperSize {
-    /// Get the mm measurements for this paper size, as a tuple of f64s.
-    pub fn dims(&self) -> (f64, f64) {
+impl GeometryKind {
+    pub fn bounding_rect(&self) -> Option<Rect> {
+        self.geometry().bounding_rect()
+    }
+
+    pub fn transformed(&self, tx: &Affine2<f64>) -> GeometryKind {
+        let inner_geo = self.geometry().transformed(tx);
         match self {
-            PaperSize::Letter => (216., 279.),
-            PaperSize::Ansi_A => (216., 279.),
-            PaperSize::Ansi_B => (279., 432.),
-            PaperSize::Ansi_C => (432., 559.),
-            PaperSize::Ansi_D => (559., 864.),
-            PaperSize::US_Legal => (216., 356.),
-            PaperSize::A0 => (841., 1189.),
-            PaperSize::A1 => (594., 841.),
-            PaperSize::A2 => (420., 594.),
-            PaperSize::A3 => (297., 420.),
-            PaperSize::A4 => (210., 297.),
-            PaperSize::A5 => (148., 210.),
-            PaperSize::A6 => (105., 148.),
-            PaperSize::A7 => (74., 105.),
-            PaperSize::ISO216 => (74., 52.),
-            PaperSize::USBusinessCard => (88.9, 50.8),
-            PaperSize::EuroBusinessCard => (85., 55.),
-            PaperSize::Custom(x, y) => (*x, *y),
+            GeometryKind::Hatch(_old_geo) => GeometryKind::Hatch(inner_geo),
+            GeometryKind::Stroke(_old_geo) => GeometryKind::Stroke(inner_geo),
         }
     }
 
-    pub fn all() -> Vec<PaperSize> {
-        vec![
-            PaperSize::Letter,
-            PaperSize::Ansi_A,
-            PaperSize::Ansi_B,
-            PaperSize::Ansi_C,
-            PaperSize::Ansi_D,
-            PaperSize::US_Legal,
-            PaperSize::A0,
-            PaperSize::A1,
-            PaperSize::A2,
-            PaperSize::A3,
-            PaperSize::A4,
-            PaperSize::A5,
-            PaperSize::A6,
-            PaperSize::A7,
-            PaperSize::ISO216,
-            PaperSize::USBusinessCard,
-            PaperSize::EuroBusinessCard,
-            PaperSize::Custom(200., 200.),
-        ]
-    }
-}
-
-impl Display for PaperSize {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let fmtarg = match self {
-            Self::Letter => "US Letter".to_string(),
-            Self::Ansi_A => "Ansi A".to_string(),
-            Self::Ansi_B => "Ansi B".to_string(),
-            Self::Ansi_C => "Ansi C".to_string(),
-            Self::Ansi_D => "Ansi D".to_string(),
-            Self::A0 => "A0".to_string(),
-            Self::A1 => "A1".to_string(),
-            Self::A2 => "A2".to_string(),
-            Self::A3 => "A3".to_string(),
-            Self::A4 => "A4".to_string(),
-            Self::A5 => "A5".to_string(),
-            Self::A6 => "A6".to_string(),
-            Self::A7 => "A7".to_string(),
-            Self::Custom(a, b) => format!("Custom({:.2}x{:.2})", a, b),
-            Self::US_Legal => "US Legal".to_string(),
-            PaperSize::ISO216 => "ISO216".to_string(),
-            PaperSize::USBusinessCard => "US Business Card".to_string(),
-            PaperSize::EuroBusinessCard => "Euro Business Card".to_string(),
-        };
-        write!(f, "{}", fmtarg)
-    }
-}
-
-impl PaperSize {
-    pub fn dimensions(&self) -> (f64, f64) {
+    pub fn rotate_around_point(&self, degrees: f64, around: impl Into<Point<f64>>) -> GeometryKind {
+        let mut inner_geo = self.geometry().clone();
+        inner_geo.rotate_around_point_mut(degrees, around.into());
         match self {
-            PaperSize::Letter => (216., 279.),
-            PaperSize::Ansi_A => (216., 279.),
-            PaperSize::Ansi_B => (279., 432.),
-            PaperSize::Ansi_C => (432., 559.),
-            PaperSize::Ansi_D => (559., 864.),
-            PaperSize::US_Legal => (216., 356.),
-            PaperSize::A0 => (841., 1189.),
-            PaperSize::A1 => (594., 841.),
-            PaperSize::A2 => (420., 594.),
-            PaperSize::A3 => (297., 420.),
-            PaperSize::A4 => (210., 297.),
-            PaperSize::A5 => (148., 210.),
-            PaperSize::A6 => (105., 148.),
-            PaperSize::A7 => (74., 105.),
-            PaperSize::ISO216 => (74., 52.),
-            PaperSize::USBusinessCard => (88.9, 50.8),
-            PaperSize::EuroBusinessCard => (85., 55.),
-            PaperSize::Custom(x, y) => (*x, *y),
+            GeometryKind::Hatch(_old_geo) => GeometryKind::Hatch(inner_geo),
+            GeometryKind::Stroke(_old_geo) => GeometryKind::Stroke(inner_geo),
+        }
+    }
+
+    pub fn geometry(&self) -> &Geometry {
+        match self {
+            GeometryKind::Stroke(geo) => geo,
+            GeometryKind::Hatch(geo) => geo,
+        }
+    }
+
+    pub fn geometry_mut(&mut self) -> &mut Geometry {
+        match self {
+            GeometryKind::Stroke(geo) => geo,
+            GeometryKind::Hatch(geo) => geo,
+        }
+    }
+
+    pub fn rotate_around_point_mut(&mut self, degrees: f64, around: impl Into<Point<f64>>) {
+        self.geometry_mut()
+            .rotate_around_point_mut(degrees, around.into());
+    }
+
+    pub fn scale_around_point_mut(
+        &mut self,
+        xscale: f64,
+        yscale: f64,
+        around: impl Into<Coord<f64>>,
+    ) {
+        self.geometry_mut()
+            .scale_around_point_mut(xscale, yscale, around)
+    }
+
+    pub fn translate_mut(&mut self, x: f64, y: f64) {
+        match self {
+            GeometryKind::Stroke(geometry) => geometry.translate_mut(x, y),
+            GeometryKind::Hatch(geometry) => geometry.translate_mut(x, y),
         }
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct Paper {
-    pub weight_gsm: f64,
-    pub rgb: (f64, f64, f64), // For display purposes only.
-    pub size: PaperSize,
-    pub orientation: Orientation,
+pub struct BAPGeometry {
+    pub pen_uuid: Uuid,
+    pub geometry: GeometryKind,
+    pub keepdown_strategy: KeepdownStrategy,
+}
+
+impl BAPGeometry {
+    pub fn transformed(&self, tx: &Affine2<f64>) -> BAPGeometry {
+        BAPGeometry {
+            pen_uuid: self.pen_uuid,
+            geometry: self.geometry.transformed(tx),
+            keepdown_strategy: self.keepdown_strategy,
+        }
+    }
+
+    pub fn rotate_around_point_mut(&mut self, degrees: f64, around: impl Into<Point<f64>>) {
+        self.geometry_mut()
+            .rotate_around_point_mut(degrees, around.into());
+    }
+
+    pub fn scale_around_point_mut(&mut self, xs: f64, ys: f64, around: impl Into<Coord<f64>>) {
+        self.geometry_mut().scale_around_point_mut(xs, ys, around);
+    }
+
+    pub fn translate_mut(&mut self, x: f64, y: f64) {
+        self.geometry_mut().translate_mut(x, y);
+    }
+
+    pub fn lines(&self) -> MultiLineString {
+        match &self.geometry {
+            GeometryKind::Stroke(geometry) => geometry.to_multi_line_strings(),
+            GeometryKind::Hatch(geometry) => geometry.to_multi_line_strings(),
+        }
+    }
+    pub fn geometry(&self) -> &Geometry {
+        self.geometry.geometry()
+    }
+
+    pub fn geometry_mut(&mut self) -> &mut Geometry {
+        self.geometry.geometry_mut()
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ProjectV0 {
+    svg: Option<String>,
+    pub geometry: Vec<PlotGeometry>,
+    // pub geometry: HashMap<Uuid, PlotGeometry>,
+    pub layers: HashMap<String, OPLayer>,
+    pub pens: Vec<PenDetail>,
+    pub paper: Paper,
+    pub origin: Option<(f64, f64)>, // Target/center of the viewport
+    extents: Rect,
+    machine: Option<MachineConfig>,
+    program: Option<Box<Vec<String>>>,
+    pub do_keepdown: bool,
+    pub file_path: Option<PathBuf>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Project {
+    #[serde(default)]
+    version: usize,
     svg: Option<String>,
-    pub geometry: Vec<PlotGeometry>,
-    pub layers: HashMap<String, OPLayer>,
+    pub plot_geometry: Vec<BAPGeometry>,
+    #[serde(skip_serializing)]
+    #[serde(default)]
+    #[serde(rename = "geometry")]
+    pub old_geometry: Vec<PlotGeometry>,
     pub pens: Vec<PenDetail>,
     pub paper: Paper,
     pub origin: Option<(f64, f64)>, // Target/center of the viewport
@@ -193,9 +183,10 @@ impl Paper {
 impl Project {
     pub fn new() -> Self {
         Project {
+            version: 2,
             svg: None,
-            geometry: vec![],
-            layers: HashMap::new(),
+            plot_geometry: vec![],
+            old_geometry: vec![],
             pens: Vec::new(),
             paper: Paper {
                 weight_gsm: 180.,
@@ -212,11 +203,20 @@ impl Project {
         }
     }
 
+    pub fn pen_by_uuid(&self, uuid: Uuid) -> Option<PenDetail> {
+        for pen in &self.pens {
+            if pen.identity == uuid {
+                return Some(pen.clone());
+            }
+        }
+        None
+    }
+
     pub fn translate_arbitrary_geo(
-        geo: &Vec<PlotGeometry>,
+        geo: &Vec<BAPGeometry>,
         translation: (f64, f64),
         picked: &Option<BTreeSet<u32>>,
-    ) -> Vec<PlotGeometry> {
+    ) -> Vec<BAPGeometry> {
         let mut geo_out = geo.clone();
         for (idx, geometry) in geo_out.iter_mut().enumerate() {
             if let Some(picks) = picked {
@@ -240,7 +240,7 @@ impl Project {
         translation: (f64, f64),
         picked: &Option<BTreeSet<u32>>,
     ) {
-        for (idx, geometry) in self.geometry.iter_mut().enumerate() {
+        for (idx, geometry) in self.plot_geometry.iter_mut().enumerate() {
             if let Some(picks) = picked {
                 if picks.contains(&(idx as u32)) {
                     geometry
@@ -259,11 +259,11 @@ impl Project {
 
     /// Scale all geometry around a given point.
     pub fn scale_geometry_around_point(
-        geo: &Vec<PlotGeometry>,
+        geo: &Vec<BAPGeometry>,
         center: (f64, f64),
         scale: f64,
         picked: &Option<BTreeSet<u32>>,
-    ) -> Vec<PlotGeometry> {
+    ) -> Vec<BAPGeometry> {
         let mut geo = geo.clone();
         for (idx, plotgeo) in geo.iter_mut().enumerate() {
             if let Some(picks) = picked {
@@ -292,7 +292,7 @@ impl Project {
         scale: f64,
         picked: &Option<BTreeSet<u32>>,
     ) {
-        for (idx, geometry) in self.geometry.iter_mut().enumerate() {
+        for (idx, geometry) in self.plot_geometry.iter_mut().enumerate() {
             if let Some(picks) = picked {
                 if picks.contains(&(idx as u32)) {
                     geometry.geometry.scale_around_point_mut(
@@ -320,7 +320,7 @@ impl Project {
         degrees: f64,
         picked: &Option<BTreeSet<u32>>,
     ) {
-        for (idx, geometry) in self.geometry.iter_mut().enumerate() {
+        for (idx, geometry) in self.plot_geometry.iter_mut().enumerate() {
             if let Some(picks) = picked {
                 if picks.contains(&(idx as u32)) {
                     geometry
@@ -380,9 +380,16 @@ impl Project {
             return match ron::de::from_reader::<File, Self>(project_rdr) {
                 Ok(mut prj) => {
                     prj.file_path = Some(path);
-                    prj.reindex_geometry();
+                    // prj.reindex_geometry();
                     prj.calc_extents();
                     // println!("Calced extents are: {:?}", prj.extents());
+                    for pen in &mut prj.pens {
+                        if pen.identity == Uuid::nil() {
+                            pen.identity = Uuid::new_v4();
+                        }
+                    }
+                    println!("Loaded pens from disk: {:?}", &prj.pens);
+
                     Ok(prj)
                 }
                 Err(err) => {
@@ -439,9 +446,9 @@ impl Project {
         around: (f64, f64),
         angle: f64,
         picked: &Option<BTreeSet<u32>>,
-    ) -> Vec<PlotGeometry> {
+    ) -> Vec<BAPGeometry> {
         let (xc, yc) = around;
-        self.geometry
+        self.plot_geometry
             .iter()
             .enumerate()
             .map(|(idx, pg)| {
@@ -454,17 +461,16 @@ impl Project {
                 } else {
                     pg.geometry.rotate_around_point(angle, Point::new(xc, yc))
                 };
-                PlotGeometry {
-                    // id: idx as u64,
+                BAPGeometry {
                     geometry: new_geo,
-                    stroke: pg.stroke.clone(),
-                    keepdown_strategy: pg.keepdown_strategy.clone(),
+                    pen_uuid: pg.pen_uuid,
+                    keepdown_strategy: pg.keepdown_strategy,
                 }
             })
             .collect()
     }
 
-    pub fn calc_extents_for_geometry(geometry: &Vec<PlotGeometry>) -> Rect {
+    pub fn calc_extents_for_geometry(geometry: &Vec<BAPGeometry>) -> Rect {
         if geometry.len() == 0 {
             return Rect::new(coord! {x: -1., y: -1.}, coord! {x: 1., y: 1.});
         }
@@ -502,42 +508,7 @@ impl Project {
 
     /// Returns top left, bottom right as 4 f64s.
     pub fn calc_extents(&self) -> Rect {
-        /*
-        if self.geometry.len() == 0 {
-            return Rect::new(coord! {x: -1., y: -1.}, coord! {x: 1., y: 1.});
-        }
-        let mut xmin = f64::MAX;
-        let mut xmax = f64::MIN;
-        let mut ymin = f64::MAX;
-        let mut ymax = f64::MIN;
-        for geo in &self.geometry {
-            // Only update extents if the geometry is rational and non-empty.
-            if let Some(tmp_extents) = geo.geometry.bounding_rect() {
-                if tmp_extents.min().x < xmin {
-                    xmin = tmp_extents.min().x;
-                }
-                if tmp_extents.min().y < ymin {
-                    ymin = tmp_extents.min().y;
-                }
-                if tmp_extents.max().x > xmax {
-                    xmax = tmp_extents.max().x;
-                }
-                if tmp_extents.max().y > ymax {
-                    ymax = tmp_extents.max().y;
-                }
-            }
-        }
-        if xmax - xmin == 0. || ymax - ymin == 0. {
-            xmin = -1.;
-            ymin = -1.;
-            xmax = 1.;
-            ymax = 1.;
-        }
-        let extents = Rect::new(coord! {x: xmin, y:ymin}, coord! {x:xmax, y: ymax});
-        // println!("Returning calculated extents of {:?}", &extents);
-        extents
-        */
-        Self::calc_extents_for_geometry(&self.geometry)
+        Self::calc_extents_for_geometry(&self.plot_geometry)
     }
 
     pub fn regenerate_extents(&mut self) {
@@ -564,7 +535,7 @@ impl Project {
         let tx_affine2 = Affine2::<f64>::from_matrix_unchecked(Matrix3::new(
             factor, 0., 0., 0., factor, 0., 0., 0., 1.,
         ));
-        for geo in self.geometry.iter_mut() {
+        for geo in self.plot_geometry.iter_mut() {
             *geo = geo.transformed(&tx_affine2);
         }
         self.regenerate_extents();
@@ -636,54 +607,34 @@ impl Project {
     }
 
     pub fn update_pen_details(&mut self, pen_crib: &Vec<PenDetail>) {
-        // println!("Updating pens with {:?}", &pen_crib);
         self.pens = pen_crib.clone();
+        /*
+        // println!("Updating pens with {:?}", &pen_crib);
+        println!("Got new pens: {:?}", pen_crib);
+        let mut orig_geopens_map: HashMap<usize, Uuid> = HashMap::new(); //geometry_id->Pen UUID
+        let mut new_pensgeo_map: HashMap<Uuid, usize> = HashMap::new(); //PenUUID->PenIDX
+        self.pens = pen_crib.clone();
+        for (idx, pen) in self.pens.iter().enumerate() {
+            new_pensgeo_map.insert(pen.identity.clone(), idx);
+        }
+
         let default_pen = match pen_crib.get(0) {
             Some(pen_detail) => pen_detail.clone(),
             None => PenDetail::default(),
         };
-        for (_idx, geometry) in self.geometry.iter_mut().enumerate() {
-            let new_stroke_pen = if geometry.stroke.is_some() {
-                if let Some(current_stroke_pen) = geometry.stroke.clone() {
-                    match pen_crib.get(current_stroke_pen.tool_id - 1) {
-                        // Pens IDs are counted from 1, not zero
-                        Some(pen) => pen.clone(),
-                        None => default_pen.clone(),
-                    }
-                } else {
-                    default_pen.clone()
-                }
-            } else {
-                default_pen.clone()
-            };
-            // println!(
-            //     "Replacing stroke pen {:?} with pen {:?}",
-            //     geometry.stroke, new_stroke_pen
-            // );
-            geometry.stroke = Some(new_stroke_pen);
-
-            /*
-            if geometry.hatch.is_some() {
-                let new_hatch_pen = if let Some(hatch_detail) = geometry.hatch.clone() {
-                    if let Some(current_hatch_pen) = hatch_detail.pen {
-                        match pen_crib.get(current_hatch_pen.tool_id - 1) {
-                            Some(pen) => pen.clone(),
-                            None => default_pen.clone(),
-                        }
-                    } else {
-                        default_pen.clone()
-                    }
-                } else {
-                    default_pen.clone()
-                };
-                // println!(
-                //     "Updating hatch pen {:?} with pen {:?}",
-                //     geometry.hatch, new_hatch_pen
-                // );
-                geometry.hatch.as_mut().unwrap().pen = Some(new_hatch_pen);
-            };
-            */
+        for (idx, geometry) in self.plot_geometry.iter_mut().enumerate() {
+            let pen_uuid = geometry
+                .stroke
+                .as_ref()
+                .unwrap_or(&default_pen)
+                .identity
+                .clone();
+            orig_geopens_map.insert(idx, pen_uuid);
+            let new_pen_idx = new_pensgeo_map.get(&pen_uuid).unwrap_or(&0).clone();
+            let new_stroke = Some(self.pens.get(new_pen_idx).unwrap_or(&default_pen).clone());
+            geometry.stroke = new_stroke;
         }
+        */
     }
 
     pub fn reindex_geometry(&mut self) {
@@ -716,15 +667,36 @@ impl Project {
     }
     /// Loads a pregenerated plot geo set (Plotter Geometry Format)
     pub fn load_pgf(&mut self, path: &PathBuf) -> Result<()> {
+        self.plot_geometry = vec![];
         if let Ok(path) = std::fs::canonicalize(path) {
             let pgf: PGF = PGF::from_file(&path)?;
-            self.geometry = pgf.geometries();
-            self.geometry.sort_by(|item1, item2| {
+            for geometry in pgf.geometries().clone() {
+                if let Some(stroke) = geometry.stroke.clone() {
+                    if !self.pens.contains(&stroke) {
+                        self.pens.push(stroke);
+                    }
+                }
+                self.plot_geometry.push(BAPGeometry {
+                    geometry: GeometryKind::Stroke(geometry.geometry),
+                    pen_uuid: match geometry.stroke {
+                        Some(pen) => pen.identity,
+                        None => Uuid::new_v4(),
+                    },
+                    keepdown_strategy: geometry.keepdown_strategy,
+                });
+            }
+            /*
+            // We used to sort the geometry by tool id, but I think that is a mistake
+            // because some users might wanna have back and forth plotting. We can make
+            // it a post-processing option.
+            self.plot_geometry = pgf.geometries();
+            self.plot_geometry.sort_by(|item1, item2| {
                 let s1 = item1.stroke.clone().unwrap_or(PenDetail::default());
                 let s2 = item2.stroke.clone().unwrap_or(PenDetail::default());
                 s1.tool_id.cmp(&s2.tool_id)
             });
-            self.reindex_geometry();
+            */
+            // self.reindex_geometry();
             self.regenerate_extents();
         }
         Ok(())
@@ -738,8 +710,16 @@ impl Project {
                 let svg_string = rtree.to_string(&usvg::WriteOptions::default());
                 // println!("{:?}", rtree.root());
                 self.svg = Some(svg_string);
-                self.geometry =
+                let tmp_geometry =
                     svg_to_geometries(&rtree, scale_x, scale_y, keepdown, &mut self.pens);
+                self.plot_geometry = tmp_geometry
+                    .iter()
+                    .map(move |geo| BAPGeometry {
+                        pen_uuid: geo.stroke.clone().unwrap().identity,
+                        geometry: GeometryKind::Stroke(geo.geometry.clone()),
+                        keepdown_strategy: geo.keepdown_strategy,
+                    })
+                    .collect();
                 // self.extents = self.calc_extents();
                 self.regenerate_extents();
             }
