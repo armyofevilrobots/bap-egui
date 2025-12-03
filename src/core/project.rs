@@ -169,6 +169,12 @@ pub struct Project {
     pub file_path: Option<PathBuf>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ProjectGuessVersion {
+    #[serde(default)]
+    version: usize,
+}
+
 impl Paper {
     #[allow(unused)]
     pub fn dimensions(&self) -> (f64, f64) {
@@ -371,6 +377,12 @@ impl Project {
         Ok(dest_path)
     }
 
+    pub fn guess_file_version(path: &PathBuf) -> Result<usize> {
+        let project_rdr = std::fs::File::open(path.clone())?;
+        let gv = ron::de::from_reader::<File, ProjectGuessVersion>(project_rdr)?;
+        Ok(gv.version)
+    }
+
     pub fn load_from_path(path: &PathBuf) -> Result<Self> {
         if let Ok(path) = std::fs::canonicalize(path) {
             let project_rdr = std::fs::File::open(path.clone())?;
@@ -393,7 +405,10 @@ impl Project {
                     Ok(prj)
                 }
                 Err(err) => {
-                    eprintln!("Failed to load due to: {:?}", &err);
+                    // eprintln!("Failed to load due to: {:?}", &err);
+                    let version = Self::guess_file_version(&path)?;
+                    println!("Guess file version: {}", version);
+
                     Err(anyhow!(format!("Error was: {:?}", &err)))
                 }
             };
@@ -670,15 +685,18 @@ impl Project {
         self.plot_geometry = vec![];
         if let Ok(path) = std::fs::canonicalize(path) {
             let pgf: PGF = PGF::from_file(&path)?;
-            for geometry in pgf.geometries().clone() {
-                if let Some(stroke) = geometry.stroke.clone() {
+            for geometry in &mut pgf.geometries().clone() {
+                if let Some(stroke) = &mut geometry.stroke {
+                    if stroke.identity.is_nil() {
+                        stroke.identity = Uuid::new_v4();
+                    }
                     if !self.pens.contains(&stroke) {
-                        self.pens.push(stroke);
+                        self.pens.push(stroke.clone());
                     }
                 }
                 self.plot_geometry.push(BAPGeometry {
-                    geometry: GeometryKind::Stroke(geometry.geometry),
-                    pen_uuid: match geometry.stroke {
+                    geometry: GeometryKind::Stroke(geometry.geometry.clone()),
+                    pen_uuid: match &geometry.stroke {
                         Some(pen) => pen.identity,
                         None => Uuid::new_v4(),
                     },
@@ -696,7 +714,6 @@ impl Project {
                 s1.tool_id.cmp(&s2.tool_id)
             });
             */
-            // self.reindex_geometry();
             self.regenerate_extents();
         }
         Ok(())
@@ -714,10 +731,16 @@ impl Project {
                     svg_to_geometries(&rtree, scale_x, scale_y, keepdown, &mut self.pens);
                 self.plot_geometry = tmp_geometry
                     .iter()
-                    .map(move |geo| BAPGeometry {
-                        pen_uuid: geo.stroke.clone().unwrap().identity,
-                        geometry: GeometryKind::Stroke(geo.geometry.clone()),
-                        keepdown_strategy: geo.keepdown_strategy,
+                    .map(move |geo| {
+                        let mut tmp_id = geo.stroke.clone().unwrap().identity;
+                        if tmp_id.is_nil() {
+                            tmp_id = Uuid::new_v4();
+                        }
+                        BAPGeometry {
+                            pen_uuid: tmp_id,
+                            geometry: GeometryKind::Stroke(geo.geometry.clone()),
+                            keepdown_strategy: geo.keepdown_strategy,
+                        }
                     })
                     .collect();
                 // self.extents = self.calc_extents();
