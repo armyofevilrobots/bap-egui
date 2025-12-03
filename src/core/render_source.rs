@@ -1,5 +1,5 @@
 use egui::ColorImage;
-use geo::{Geometry, Rect};
+use geo::Rect;
 use skia_safe::paint::Style;
 use skia_safe::{AlphaType, Bitmap, Color, ImageInfo, Paint, Path, PathEffect, surfaces};
 use std::collections::BTreeSet;

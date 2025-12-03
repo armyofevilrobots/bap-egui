@@ -1,5 +1,3 @@
-use aoer_plotty_rs::context::pgf_file::{KeepdownStrategy, PlotGeometry};
-
 use super::commands::ApplicationStateChangeMsg;
 use geo::{Geometry, MultiLineString};
 

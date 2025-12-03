@@ -86,7 +86,6 @@ impl Default for BAPViewModel {
                 "Nord Dark".to_string(),
                 crate::ui::themes::egui_nord::visuals(),
             ),
-            pen_reorder: None,
             modifiers: Modifiers::NONE,
         }
     }

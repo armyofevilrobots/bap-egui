@@ -2,7 +2,7 @@ use crate::BAPViewModel;
 use crate::view_model::CommandContext;
 use crate::view_model::space_commands::{SPACE_CMDS, SpaceCommandBranch};
 use eframe::egui;
-use egui::{Button, Frame, Key, Margin, Rect, Ui};
+use egui::{Button, Key, Rect, Ui};
 
 fn grow_stack(stack: &Vec<Key>, key: &Key) -> Vec<Key> {
     let mut new_stack = stack.clone();

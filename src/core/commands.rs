@@ -76,7 +76,7 @@ pub enum ViewCommand {
     DeleteSelection,
     UpdateConfig(AppConfig),
     Translate(f64, f64),
-    ReNumberGeometry(Vec<(usize, usize)>), // Change geometry foreach(from toolid-> to toolid)
+    // ReNumberGeometry(Vec<(usize, usize)>), // Change geometry foreach(from toolid-> to toolid)
     None,
 }
 

@@ -94,7 +94,6 @@ pub struct BAPViewModel {
     last_pointer_pos: Option<Pos2>,
     picked: Option<Vec<usize>>,
     visuals: (String, Visuals),
-    pen_reorder: Option<Vec<(usize, usize)>>,
     modifiers: Modifiers,
 }
 

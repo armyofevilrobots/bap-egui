@@ -313,8 +313,8 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                             (center_as_frame - model.mm_to_frame_coords(ref1_mm)).length();
                         let ref2_vec = (pos - model.mm_to_frame_coords(center_pos)).normalized()
                             * ref_circle_rad;
-                        let vec_ref1 = (ref1_mm-center_pos);
-                        let vec_ref2 = (model.frame_coords_to_mm(pos)-center_pos);
+                        let vec_ref1 = ref1_mm-center_pos;
+                        let vec_ref2 = model.frame_coords_to_mm(pos)-center_pos;
                         let mut angle = BAPViewModel::degrees_between_two_vecs(vec_ref1, vec_ref2);
 
                         let mods = ctx.input(|i| i.modifiers.clone());

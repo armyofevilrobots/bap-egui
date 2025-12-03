@@ -2,7 +2,7 @@
 use egui::ColorImage;
 // TODO: I really need to write my own that has stateful G/M codes to remember the
 // previous move type, so that just coords can be used to reduce the outgoing bitrate
-use geo::{Coord, Geometry, Rect};
+use geo::{Coord, Rect};
 use skia_safe::paint::Style;
 use skia_safe::{AlphaType, Bitmap, Color, ImageInfo, Paint, Path, PathEffect, surfaces};
 use std::sync::mpsc::{Receiver, Sender};

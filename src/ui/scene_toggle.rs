@@ -1,10 +1,8 @@
 use crate::view_model::{BAPDisplayMode, BAPViewModel};
 use eframe::egui;
-use egui::{
-    Align, Button, CornerRadius, FontId, Frame, Layout, Margin, SelectableLabel, Stroke, Ui, Vec2,
-    vec2,
-};
+use egui::{Align, Button, CornerRadius, FontId, Layout, Stroke, Ui, vec2};
 
+#[allow(unused)]
 pub(crate) fn scene_toggle_toolbox(model: &mut BAPViewModel, ctx: &egui::Context, ui: &mut Ui) {
     ui.style_mut().override_font_id = Some(FontId {
         size: 18.,
@@ -78,7 +76,7 @@ pub(crate) fn scene_toggle_toolbox(model: &mut BAPViewModel, ctx: &egui::Context
     }
 }
 
-pub(crate) fn scene_toggle_inner(model: &mut BAPViewModel, ctx: &egui::Context, ui: &mut Ui) {
+pub(crate) fn scene_toggle_inner(model: &mut BAPViewModel, _ctx: &egui::Context, ui: &mut Ui) {
     ui.style_mut().override_font_id = Some(FontId {
         size: 18.,
         ..FontId::default()

@@ -353,10 +353,9 @@ impl ApplicationCore {
                                     .to_string(),
                                 ))
                             });
-                        }
-                        ViewCommand::ReNumberGeometry(pen_map) => {
-                            todo!();
-                        }
+                        } // ViewCommand::ReNumberGeometry(pen_map) => {
+                          //     todo!();
+                          // }
                     }
                 }
             }

@@ -105,15 +105,18 @@ impl BAPGeometry {
         }
     }
 
+    #[allow(unused)]
     pub fn rotate_around_point_mut(&mut self, degrees: f64, around: impl Into<Point<f64>>) {
         self.geometry_mut()
             .rotate_around_point_mut(degrees, around.into());
     }
 
+    #[allow(unused)]
     pub fn scale_around_point_mut(&mut self, xs: f64, ys: f64, around: impl Into<Coord<f64>>) {
         self.geometry_mut().scale_around_point_mut(xs, ys, around);
     }
 
+    #[allow(unused)]
     pub fn translate_mut(&mut self, x: f64, y: f64) {
         self.geometry_mut().translate_mut(x, y);
     }
@@ -133,6 +136,7 @@ impl BAPGeometry {
     }
 }
 
+#[allow(unused)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProjectV0 {
     svg: Option<String>,
@@ -154,10 +158,11 @@ pub struct Project {
     #[serde(default)]
     version: usize,
     svg: Option<String>,
+    #[serde(default)]
     pub plot_geometry: Vec<BAPGeometry>,
     #[serde(skip_serializing)]
-    #[serde(default)]
     #[serde(rename = "geometry")]
+    #[serde(default)]
     pub old_geometry: Vec<PlotGeometry>,
     pub pens: Vec<PenDetail>,
     pub paper: Paper,
@@ -383,6 +388,60 @@ impl Project {
         Ok(gv.version)
     }
 
+    pub fn find_matching_pen(&self, pen: &PenDetail) -> Option<PenDetail> {
+        for my_pen in &self.pens {
+            if my_pen.color == pen.color
+                && my_pen.stroke_width == pen.stroke_width
+                && my_pen.stroke_density == pen.stroke_density
+            {
+                return Some(my_pen.clone());
+            }
+        }
+        None
+    }
+
+    pub fn upgrade(&mut self) {
+        if self.version == 0 {
+            self.version = 2;
+            for pen in &mut self.pens {
+                if pen.identity == Uuid::nil() {
+                    pen.identity = Uuid::new_v4();
+                }
+            }
+
+            for old_geo in &self.old_geometry {
+                // println!("Found pen in geo: {:#?}", old_geo.stroke);
+                let mut found_pen = if let Some(stroke) = old_geo.stroke.clone() {
+                    if let Some(found_pen) = self.find_matching_pen(&stroke) {
+                        found_pen
+                    } else {
+                        let mut tmp_pen = old_geo
+                            .stroke
+                            .clone()
+                            .unwrap_or(self.pens.first().unwrap_or(&PenDetail::default()).clone());
+                        if tmp_pen.identity.is_nil() {
+                            tmp_pen.identity = Uuid::new_v4();
+                        }
+                        self.pens.push(tmp_pen.clone());
+                        tmp_pen
+                    }
+                } else {
+                    self.pens.first().unwrap_or(&PenDetail::default()).clone()
+                };
+                if found_pen.identity.is_nil() {
+                    found_pen.identity = Uuid::new_v4();
+                }
+                self.plot_geometry.push({
+                    BAPGeometry {
+                        pen_uuid: found_pen.identity,
+                        geometry: GeometryKind::Stroke(old_geo.geometry.clone()),
+                        keepdown_strategy: old_geo.keepdown_strategy,
+                    }
+                })
+            }
+        }
+    }
+
     pub fn load_from_path(path: &PathBuf) -> Result<Self> {
         if let Ok(path) = std::fs::canonicalize(path) {
             let project_rdr = std::fs::File::open(path.clone())?;
@@ -395,19 +454,15 @@ impl Project {
                     // prj.reindex_geometry();
                     prj.calc_extents();
                     // println!("Calced extents are: {:?}", prj.extents());
-                    for pen in &mut prj.pens {
-                        if pen.identity == Uuid::nil() {
-                            pen.identity = Uuid::new_v4();
-                        }
-                    }
-                    println!("Loaded pens from disk: {:?}", &prj.pens);
+                    // println!("Loaded pens from disk: {:?}", &prj.pens);
+                    prj.upgrade();
 
                     Ok(prj)
                 }
                 Err(err) => {
                     // eprintln!("Failed to load due to: {:?}", &err);
                     let version = Self::guess_file_version(&path)?;
-                    println!("Guess file version: {}", version);
+                    eprintln!("Guess file version: {}", version);
 
                     Err(anyhow!(format!("Error was: {:?}", &err)))
                 }
@@ -650,18 +705,6 @@ impl Project {
             geometry.stroke = new_stroke;
         }
         */
-    }
-
-    pub fn reindex_geometry(&mut self) {
-        // self.geometry.iter_mut().enumerate().for_each(|(idx, geo)| {
-        //     // println!(
-        //     //     "Reindexing Geo #{} to #{} with size of {:?}",
-        //     //     geo.id,
-        //     //     idx,
-        //     //     geo.geometry.bounding_rect()
-        //     // );
-        //     geo.id = idx as u64
-        // });
     }
 
     /// Loads a machine config from disk

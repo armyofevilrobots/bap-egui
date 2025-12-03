@@ -1,4 +1,4 @@
-use geo::{Geometry, Rect};
+use geo::Rect;
 use skia_safe::paint::Style;
 use skia_safe::{AlphaType, Bitmap, BlendMode, Color, ImageInfo, Paint, Path, surfaces};
 use std::collections::BTreeSet;
