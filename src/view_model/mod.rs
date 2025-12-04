@@ -95,6 +95,7 @@ pub struct BAPViewModel {
     picked: Option<Vec<usize>>,
     visuals: (String, Visuals),
     modifiers: Modifiers,
+    gcode: String,
 }
 
 impl BAPViewModel {

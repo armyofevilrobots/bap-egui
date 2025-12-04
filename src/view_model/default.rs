@@ -87,6 +87,7 @@ impl Default for BAPViewModel {
                 crate::ui::themes::egui_nord::visuals(),
             ),
             modifiers: Modifiers::NONE,
+            gcode: "".to_string(),
         }
     }
 }

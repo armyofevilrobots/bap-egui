@@ -18,6 +18,18 @@ impl BAPViewModel {
         "Bot-a-Plot"
     }
 
+    pub fn gcode(&self) -> &String {
+        &self.gcode
+    }
+
+    pub fn gcode_mut(&mut self) -> &mut String {
+        &mut self.gcode
+    }
+
+    pub fn set_gcode(&mut self, gcode: String) {
+        self.gcode = gcode;
+    }
+
     pub fn modifiers(&self) -> egui::Modifiers {
         self.modifiers.clone()
     }

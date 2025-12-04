@@ -573,6 +573,22 @@ pub(crate) fn floating_tool_window(
                             }
                         };
                         ui.end_row();
+                        egui::Grid::new("Misc GCODE toolz")
+                            .spacing(vec2(0., 5.))
+                            .show(ui, |ui| {
+                                if tool_button(
+                                    ui,
+                                    egui::include_image!("../../resources/images/gcode.png"),
+                                    Some("Edit GCode".into()),
+                                    model.gcode().len() > 0,
+                                )
+                                .clicked()
+                                {
+                                    model.set_command_context(CommandContext::EditGcode(Some(
+                                        model.gcode().clone(),
+                                    )));
+                                }
+                            });
                     });
                 ui.add_space(8.);
                 ui.horizontal(|ui| {

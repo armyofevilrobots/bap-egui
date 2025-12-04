@@ -25,21 +25,36 @@ pub enum LastMove {
 }
 
 impl super::ApplicationCore {
+    pub fn handle_new_gcode(&mut self, program: &Vec<String>) {
+        self.program = Some(program.clone());
+        self.project.set_program(Some(Box::new(program.clone())));
+        self.state_change_out
+            .send(ApplicationStateChangeMsg::PostComplete(
+                self.program.as_ref().unwrap().len(),
+            ))
+            .expect("Failed to send state change up to VM. Dead view?");
+        self.progress = (0, 0, 0); // Reset progress
+        self.gcode =
+            Some(gcode::parse(self.program.clone().unwrap().join("\n").as_str()).collect());
+
+        let resp = self.plot_sender.send(PlotterCommand::Program(Box::new(
+            self.program.as_ref().unwrap().clone(),
+        )));
+        if resp.is_err() {
+            self.yolo_app_state_change(ApplicationStateChangeMsg::Error(
+                "Failed to set GCode on Sender.".to_string(),
+            ));
+        }
+    }
+
     pub fn handle_post(&mut self) {
-        let prep_sender = match post(&self.project) {
+        match post(&self.project) {
             Ok(program) => {
-                self.program = Some(program.clone());
-                self.project.set_program(Some(Box::new(program.clone())));
-                self.state_change_out
-                    .send(ApplicationStateChangeMsg::PostComplete(
-                        self.program.as_ref().unwrap().len(),
-                    ))
-                    .expect("Failed to send state change up to VM. Dead view?");
-                self.progress = (0, 0, 0); // Reset progress
-                self.gcode =
-                    Some(gcode::parse(self.program.clone().unwrap().join("\n").as_str()).collect());
+                self.handle_new_gcode(&program);
+                self.yolo_app_state_change(ApplicationStateChangeMsg::GCode(Some(
+                    self.program.as_ref().unwrap().join("\n"),
+                )));
                 self.ctx.request_repaint();
-                true
             }
             Err(err) => {
                 self.state_change_out
@@ -49,14 +64,8 @@ impl super::ApplicationCore {
                     .expect("Failed to send error to viewmodel.");
 
                 self.ctx.request_repaint();
-                false
             }
         };
-        if prep_sender {
-            let _resp = self.plot_sender.send(PlotterCommand::Program(Box::new(
-                self.program.as_ref().unwrap().clone(),
-            )));
-        }
     }
 }
 
@@ -65,6 +74,8 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
     let post_template = &machine.post_template()?;
     let mut pen_up = false;
     let mut distance_down = 0.0f64; // Used to ensure we do an extra pen down periodically?
+    let mut total_points = 0usize;
+    let mut skipped_points = 0usize;
     // #[allow(unused)]
     // let mut last_move = LastMove::None;
 
@@ -132,6 +143,7 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
         let feedrate = pen.feed_rate.unwrap_or(machine.feedrate());
         let geo_lines = opt.optimize(&geo_lines);
         if pen.tool_id != last_tool {
+            println!("Emitting tool change.");
             last_tool = pen.tool_id;
             let mut context = Context::new();
             context.insert("tool_id", &pen.tool_id);
@@ -141,6 +153,7 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
                     .split("\n")
                     .map(|s| s.to_string()),
             );
+            pen_up = true;
             program.extend(
                 post_template
                     .render("toolchange", &context)?
@@ -215,6 +228,8 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
             }
 
             for point in &line.0[1..] {
+                // println!("Start of points in line.");
+                total_points += 1;
                 #[allow(deprecated)]
                 if pen_up == false {
                     distance_down += point.euclidean_distance(&Coord {
@@ -224,6 +239,18 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
                 } else {
                     distance_down = 0.0;
                 }
+                // if last_x == point.x && last_y == point.y {
+                #[allow(deprecated)]
+                if point.euclidean_distance(&Coord {
+                    x: last_x,
+                    y: last_y,
+                }) < 0.1
+                {
+                    // eprintln!("Too close points! {},{}", last_x, last_y);
+                    skipped_points += 1;
+                    continue;
+                }
+
                 (last_x, last_y) = (point.x.clone(), point.y.clone());
                 let mut context = Context::new();
                 context.insert("xmm", &point.x);
@@ -264,6 +291,12 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
             .render("epilog", &Context::new())?
             .split("\n")
             .map(|s| s.to_string()),
+    );
+    eprintln!(
+        "Geometry yielded {} total points, of which we skipped {}% ({} points)",
+        total_points,
+        (100 * skipped_points) / total_points,
+        skipped_points,
     );
 
     Ok(program)

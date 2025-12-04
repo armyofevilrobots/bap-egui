@@ -24,6 +24,12 @@ impl ApplicationCore {
                 Err(_err) => (),
                 Ok(msg) => {
                     match msg {
+                        ViewCommand::MergePens => {
+                            self.project.merge_matching_pens();
+                            self.yolo_app_state_change(ApplicationStateChangeMsg::PatchViewModel(
+                                ViewModelPatch::from(self.project.clone()),
+                            ));
+                        }
                         ViewCommand::ScaleAround { center, factor } => {
                             // println!("Scaling geo around {:?} by {}", center, factor);
                             self.checkpoint();
@@ -353,9 +359,12 @@ impl ApplicationCore {
                                     .to_string(),
                                 ))
                             });
-                        } // ViewCommand::ReNumberGeometry(pen_map) => {
-                          //     todo!();
-                          // }
+                        }
+                        ViewCommand::SetGCode(gcode) => {
+                            let program: Vec<String> =
+                                gcode.split("\n").map(|line| line.to_string()).collect();
+                            self.handle_new_gcode(&program);
+                        }
                     }
                 }
             }

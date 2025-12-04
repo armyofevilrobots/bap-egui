@@ -13,6 +13,7 @@ use egui::{Align2, Color32, FontId, Frame, Key, Rect, Stroke, StrokeKind, pos2, 
 use egui_toast::Toasts;
 
 pub(crate) mod bottom_panel;
+pub(crate) mod editor;
 pub(crate) mod machine;
 pub(crate) mod menu;
 pub(crate) mod paper_chooser;
@@ -83,6 +84,9 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     model.toast_error(msg);
                 }
             }
+        }
+        CommandContext::EditGcode(_orig_code) => {
+            editor::gcode_editor_window(model, ctx);
         }
 
         _ => (),

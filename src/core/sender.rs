@@ -374,6 +374,7 @@ impl PlotterConnection {
                                 if let Some(program) = &self.program {
                                     if let Some(line) = program.get(current_line as usize).clone() {
                                         if line.to_uppercase().trim().starts_with("$M06") {
+                                            eprintln!("Running tool change. '{}'", line);
                                             self.set_state(PlotterState::Paused(
                                                 current_line + 1,
                                                 total_lines,

@@ -194,6 +194,18 @@ impl eframe::App for BAPViewModel {
                     // eprintln!("Received new config from app core: {:?}", app_config);
                     self.update_ui_from_config(app_config.clone());
                 }
+                ApplicationStateChangeMsg::GCode(opt_gcode) => {
+                    if let Some(gcode) = &opt_gcode {
+                        self.toast_info(format!(
+                            "Received new GCode program with {} lines.",
+                            gcode.len(),
+                        ));
+                    }
+                    self.gcode = match opt_gcode {
+                        Some(gcode) => gcode,
+                        None => "".to_string(),
+                    };
+                }
             }
         }
 

@@ -26,6 +26,7 @@ pub enum CommandContext {
     SelectTheme,
     Translate(Option<Pos2>),
     ScaleAround(Option<Pos2>, Option<Pos2>), // Center, reference
+    EditGcode(Option<String>),               // Saves original gcode.
     None,
 }
 
@@ -68,6 +69,7 @@ impl Display for CommandContext {
             CommandContext::ScaleAround(xy, _opt_ref) => {
                 write!(f, "ScaleAround({:?})", xy)
             }
+            CommandContext::EditGcode(_) => write!(f, "Edit GCode"),
         }
     }
 }
@@ -187,6 +189,7 @@ impl BAPViewModel {
             CommandContext::SelectTheme => CommandContext::None,
             CommandContext::Translate(_) => CommandContext::None,
             CommandContext::ScaleAround(_pos2, _opt_ref) => CommandContext::None,
+            CommandContext::EditGcode(_) => CommandContext::None,
         };
     }
 
@@ -207,6 +210,7 @@ impl BAPViewModel {
             CommandContext::SelectTheme => ctx,
             CommandContext::Translate(_) => ctx,
             CommandContext::ScaleAround(_pos2, _opt_ref) => ctx,
+            CommandContext::EditGcode(_) => ctx,
         };
     }
 

@@ -16,6 +16,8 @@ use serde::{Deserialize, Serialize};
 pub enum ViewCommand {
     #[default]
     Ping,
+    MergePens,
+    SetGCode(String),
     // ZoomView(f64), // Measured in pixels per mm. The view will calculate exactly how big.
     RequestSourceImage {
         //     extents: (f64, f64, f64, f64),
@@ -119,5 +121,6 @@ pub enum ApplicationStateChangeMsg {
     PaperChanged(Paper),
     PatchViewModel(ViewModelPatch),
     Picked(Option<Vec<usize>>),
+    GCode(Option<String>),
     None,
 }

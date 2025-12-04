@@ -418,6 +418,21 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         ),
     );
 
+    let cmd_media_edit_machine = (
+        Key::M,
+        (
+            "Edit Machine/Post".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Edit Machine/Post".to_string(),
+                Box::new(|model| {
+                    model.command_context =
+                        CommandContext::MachineEdit(Some(model.machine_config()))
+                }),
+                None,
+            ),
+        ),
+    );
+
     let cmd_media_swap_orientation = (
         Key::O,
         (
@@ -550,7 +565,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 cmd_project_undo,
                 scb_separator(),
                 cmd_select,
-                cmd_geometry,
+                // cmd_geometry,
                 // cmd_scale,
                 // cmd_rotate,
             ])),
@@ -560,12 +575,14 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
     let cmd_media = (
         Key::M,
         (
-            "Media".to_string(),
+            "Media/Machine".to_string(),
             SpaceCommandBranch::Branch(IndexMap::from([
                 cmd_media_edit_paper,
-                cmd_media_edit_pencrib,
                 cmd_media_swap_orientation,
                 scb_separator(),
+                cmd_media_edit_machine,
+                cmd_load_machine,
+                cmd_media_edit_pencrib,
             ])),
         ),
     );
@@ -574,10 +591,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         Key::P,
         (
             "Project".to_string(),
-            SpaceCommandBranch::Branch(IndexMap::from([
-                cmd_project_post_to_plotter,
-                cmd_load_machine,
-            ])),
+            SpaceCommandBranch::Branch(IndexMap::from([cmd_project_post_to_plotter])),
         ),
     );
 
@@ -585,6 +599,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         cmd_file,
         cmd_edit,
         cmd_project,
+        cmd_geometry,
         cmd_media,
         cmd_arrange,
         cmd_view,

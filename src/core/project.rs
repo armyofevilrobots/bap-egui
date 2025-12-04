@@ -400,6 +400,36 @@ impl Project {
         None
     }
 
+    pub fn merge_matching_pens(&mut self) {
+        let mut remove_pens: Vec<(Uuid, Uuid)> = vec![];
+        for geo in &self.plot_geometry {
+            let old_uuid = geo.pen_uuid;
+            if let Some(geopen) = self.pen_by_uuid(old_uuid) {
+                if let Some(matchpen) = self.find_matching_pen(&geopen) {
+                    // We have a matching pen.
+                    if matchpen.identity == old_uuid {
+                        continue;
+                    } else {
+                        remove_pens.push((old_uuid, matchpen.identity));
+                    }
+                }
+            }
+        }
+        // println!("Would remove 3ens: {:#?}", remove_pens);
+        for (remove, replace) in remove_pens.clone() {
+            for geo in &mut self.plot_geometry {
+                if geo.pen_uuid == remove {
+                    geo.pen_uuid = replace;
+                }
+            }
+            for (idx, pen) in self.pens.clone().iter().enumerate() {
+                if pen.identity == remove {
+                    self.pens.remove(idx);
+                }
+            }
+        }
+    }
+
     pub fn upgrade(&mut self) {
         if self.version == 0 {
             self.version = 2;

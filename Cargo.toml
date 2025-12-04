@@ -1,6 +1,6 @@
 [package]
 name = "bap-egui"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2024"
 
 # [features]
@@ -17,7 +17,7 @@ dirs = "6.0.0"
 eframe = "0.33.0"
 egui = { version = "0.33.0", features=["default"]}
 egui-toast = { path="deps/egui-toast"}
-egui_extras = { version = "0.33.0", features = ["svg", "image", "gif", "file", "all_loaders"] }
+egui_extras = { version = "0.33.0", features = ["svg", "image", "gif", "file", "all_loaders", "syntect"] }
 gcode = "0.6.1"
 geo = "0.30.0"
 glob = "0.3.3"
@@ -31,6 +31,7 @@ serde = "1.0.228"
 serialport = "4.8.1"
 skia-safe = { version = "0.90.0", features = ["all-linux"] }
 svg2polylines = { version = "0.8.1", features = ["serde"], path="deps/svg2polylines" }
+syntect = "5.3.0"
 tera = "1.20.0"
 tiny-skia = {version="0.11.4", features=["simd", "png-format"]}
 url = "2.5.7"
