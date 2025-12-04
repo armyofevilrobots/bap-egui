@@ -25,7 +25,7 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
 
                 // This is the skim height section. It handles how high we lift
                 // the pen when doing rapids between lines.
-                ui.collapsing("Configuration", |ui|{
+                let _configuration_response = ui.collapsing("Configuration", |ui|{
                     {
                         let mut skim = model.machine_config_mut().skim().unwrap_or(0.0);
                         ui.add(
@@ -97,101 +97,107 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
 
                 });
 
-                ui.collapsing("Post Templates", |ui|{
+                let _templates_response = ui.collapsing("Post Templates", |ui|{
                     let mut templates: IndexMap<String, String> = IndexMap::from_iter(
                         model.machine_config_mut().get_post_template()
                             .iter()
                             .map(|(k,v)| (k.clone(), v.clone())));
                     let mut update=false;
                     for (name, tpl) in templates.iter_mut(){
+                        egui::ScrollArea::vertical()
+                            .id_salt(name)
+                            .auto_shrink(true)
+                            .max_height(50.)
+                            .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible).show(ui, |ui| {
+                                let te = TextEdit::multiline(tpl).desired_width(550.0).desired_rows(10);
+                                if ui.add(te).changed(){update=true}
+                            });
                         ui.label(name.clone());
-                        let te = TextEdit::multiline(tpl).desired_width(560.0);
-                        if ui.add(te).changed(){update=true}
+
                     }
 
                     if update{
                         model.machine_config_mut().set_post_template(&templates.iter().map(|(k,v)|(k.clone(), v.clone())).collect());
 
                     }
-                    // The painter for the machine mockup
-                    // let (painter_resp, painter) = ui.allocate_painter(vec2(390., 420.), egui::Sense::all());
-                    // let prect = painter_resp.rect;
-                    // let ofs = (prect.min.clone() + vec2(10., 10.)).to_vec2();
 
                 });
+                // ui.add_space(8.);
+                // ui.separator();
+                let _limits_response = ui.collapsing("Machine Limits", |ui|{
+                    let (painter_resp, painter) = ui.allocate_painter(vec2(600., 320.), egui::Sense::all());
+                    let limits = model.machine_config().limits();
+                    let ratio = limits.1 / limits.0;
+                    let (mwidth, mheight) = if ratio > 1. {
+                        (300. / ratio as f32, 300.)
+                    } else {
+                        (300., 300. * ratio as f32)
+                    };
+                    let mrect = painter_resp.rect.clone();
+                    let _cur = mrect.min.clone();
+
+                    painter.rect(
+                        Rect::from_center_size(
+                            pos2(mrect.min.x+300., mrect.min.y+150.-8.),
+                            vec2(mwidth as f32, mheight as f32),
+                        ),
+                        0.,
+                        // Color32::from_white_alpha(128),
+                        model.paper_color(),
+                        Stroke::new(2., Color32::from_black_alpha(128)),
+                        egui::StrokeKind::Inside,
+                    );
+                    let pcol = model.paper_color().to_tuple();
+                    let tcol = (
+                        ((pcol.0 as u32 + 85) % 255) as u8,
+                        ((pcol.0 as u32 + 85) % 255) as u8,
+                        ((pcol.0 as u32 + 85) % 255) as u8,
+                    );
+                    let dimensions_text_color = Color32::from_rgb(tcol.0, tcol.1, tcol.2);
+
+                    /*
+                    painter.text(
+                        pos2(mrect.min.x+300., mrect.min.y+150.+8.),
+                        Align2::CENTER_CENTER,
+                        format!("{:3.2}mm x {:3.2}mm\n", limits.0, limits.1),
+                        FontId::default(),
+                        dimensions_text_color.clone(),
+                    );
+                    */
+
+
+                    painter.text(
+                        pos2(mrect.min.x+300., mrect.min.y+150.+ mheight/2.-16.),
+                        Align2::CENTER_CENTER,
+                        format!("X:{:3.2}mm", limits.0), //model.paper_size.dims().0),
+                        FontId::proportional(8.),
+                        dimensions_text_color.clone(),
+                    );
+
+                    painter.text(
+                        pos2(mrect.min.x+300.+ mwidth/2.-24., mrect.min.y+150.+16.),
+                        Align2::CENTER_BOTTOM,
+                        format!("Y:{:3.2}mm", limits.1), //model.paper_size.dims().0),
+                        FontId::proportional(8.),
+                        dimensions_text_color.clone(),
+                    );
+
+                    let (mut xlim,mut ylim) = limits.clone();
+                    ui.horizontal(|ui|{
+                        if ui.add(Slider::new(&mut xlim, 0.0..=2000.0).text("X limit").custom_formatter(|num, _range|format!("{:4.2}mm", num))).changed(){
+                            model.machine_config_mut().set_limits((xlim, ylim));
+                        }
+                        if ui.add(Slider::new(&mut ylim, 0.0..=2000.0).text("Y limit").custom_formatter(|num, _range|format!("{:4.2}mm", num))).changed(){
+                            model.machine_config_mut().set_limits((xlim, ylim));
+                        }
+                    });
+
+                });
+
+
             });
 
             // println!("Scrollarea size: {:?}", scrollarea_resp.content_size);
-            ui.add_space(8.);
-            // ui.separator();
-            ui.collapsing("Machine Limits", |ui|{
-                let (painter_resp, painter) = ui.allocate_painter(vec2(600., 320.), egui::Sense::all());
-                let limits = model.machine_config().limits();
-                let ratio = limits.1 / limits.0;
-                let (mwidth, mheight) = if ratio > 1. {
-                    (300. / ratio as f32, 300.)
-                } else {
-                    (300., 300. * ratio as f32)
-                };
-                let mrect = painter_resp.rect.clone();
-                let _cur = mrect.min.clone();
-
-                painter.rect(
-                    Rect::from_center_size(
-                        pos2(mrect.min.x+300., mrect.min.y+150.-8.),
-                        vec2(mwidth as f32, mheight as f32),
-                    ),
-                    0.,
-                    // Color32::from_white_alpha(128),
-                    model.paper_color(),
-                    Stroke::new(2., Color32::from_black_alpha(128)),
-                    egui::StrokeKind::Inside,
-                );
-                let pcol = model.paper_color().to_tuple();
-                let tcol = (
-                    ((pcol.0 as u32 + 85) % 255) as u8,
-                    ((pcol.0 as u32 + 85) % 255) as u8,
-                    ((pcol.0 as u32 + 85) % 255) as u8,
-                );
-                let dimensions_text_color = Color32::from_rgb(tcol.0, tcol.1, tcol.2);
-
-                painter.text(
-                    pos2(mrect.min.x+300., mrect.min.y+150.+8.),
-                    Align2::CENTER_CENTER,
-                    format!("{:3.2}mm x {:3.2}mm\n", limits.0, limits.1),
-                    FontId::default(),
-                    dimensions_text_color.clone(),
-                );
-
-
-                painter.text(
-                    pos2(mrect.min.x+300., mrect.min.y+150.+ mheight/2.-16.),
-                    Align2::CENTER_CENTER,
-                    format!("X:{:3.2}mm", limits.0), //model.paper_size.dims().0),
-                    FontId::proportional(8.),
-                    dimensions_text_color.clone(),
-                );
-
-                painter.text(
-                    pos2(mrect.min.x+300.+ mwidth/2.-24., mrect.min.y+150.+16.),
-                    Align2::CENTER_BOTTOM,
-                    format!("Y:{:3.2}mm", limits.1), //model.paper_size.dims().0),
-                    FontId::proportional(8.),
-                    dimensions_text_color.clone(),
-                );
-
-                let (mut xlim,mut ylim) = limits.clone();
-                ui.horizontal(|ui|{
-                    if ui.add(Slider::new(&mut xlim, 0.0..=2000.0).text("X limit").custom_formatter(|num, _range|format!("{:4.2}mm", num))).changed(){
-                        model.machine_config_mut().set_limits((xlim, ylim));
-                    }
-                    if ui.add(Slider::new(&mut ylim, 0.0..=2000.0).text("Y limit").custom_formatter(|num, _range|format!("{:4.2}mm", num))).changed(){
-                        model.machine_config_mut().set_limits((xlim, ylim));
-                    }
-                });
-
-            });
-
 
             ui.allocate_ui(Vec2::new(scrollarea_resp.content_size.x, 16.), |ui|{
                 ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
@@ -223,6 +229,8 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                 });
 
             });
+
+
         });
     });
 }

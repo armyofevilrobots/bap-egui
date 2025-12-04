@@ -401,7 +401,7 @@ impl Project {
     }
 
     pub fn merge_matching_pens(&mut self) {
-        let mut remove_pens: Vec<(Uuid, Uuid)> = vec![];
+        let mut remove_pens: Vec<(Uuid, Uuid)> = vec![]; //old_uuid, one_we_keep
         for geo in &self.plot_geometry {
             let old_uuid = geo.pen_uuid;
             if let Some(geopen) = self.pen_by_uuid(old_uuid) {
@@ -415,6 +415,7 @@ impl Project {
                 }
             }
         }
+
         // println!("Would remove 3ens: {:#?}", remove_pens);
         for (remove, replace) in remove_pens.clone() {
             for geo in &mut self.plot_geometry {
@@ -426,6 +427,18 @@ impl Project {
                 if pen.identity == remove {
                     self.pens.remove(idx);
                 }
+            }
+        }
+
+        // Finally, cull unused pens.
+        let mut used_pens: BTreeSet<Uuid> = BTreeSet::new();
+        for geo in &self.plot_geometry {
+            used_pens.insert(geo.pen_uuid);
+        }
+        for (idx, pen) in self.pens.clone().iter().enumerate().rev() {
+            if !used_pens.contains(&pen.identity) {
+                // println!("Removing unused pen {}", pen.identity);
+                self.pens.remove(idx);
             }
         }
     }

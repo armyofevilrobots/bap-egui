@@ -24,7 +24,7 @@ pub(crate) fn floating_tool_window(
         DockPosition::Floating(_x, _y) => win.title_bar(false), //.current_pos(Pos2 { x, y }),
         DockPosition::Left => {
             let ofs = if model.show_rulers() {
-                (18.0, wtop + 74.)
+                (24.0, wtop + 74.)
             } else {
                 (2., wtop + 49.)
             };

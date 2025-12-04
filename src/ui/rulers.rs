@@ -17,7 +17,7 @@ pub(crate) fn draw_rulers(
         let p2 = painter_resp.rect.max;
         let p3 = pos2(p2.x, p1.y + 16.);
         let p4 = pos2(p1.x, p1.y + 16.);
-        let p5 = pos2(p1.x + 16., p2.y);
+        let p5 = pos2(p1.x + 24., p2.y);
         let color = ui.visuals().text_edit_bg_color(); //.faint_bg_color.clone();
         let top_rect = Rect::from_min_max(p1, p3);
         let left_rect = Rect::from_min_max(p4, p5);
@@ -101,7 +101,7 @@ pub(crate) fn draw_rulers(
         while major_y < bottom_limit {
             let ypos = model.mm_to_frame_coords(pos2(0., major_y)).y;
             painter.line_segment(
-                [pos2(left_limit, ypos), pos2(left_limit + 16., ypos)],
+                [pos2(left_limit, ypos), pos2(left_limit + 24., ypos)],
                 Stroke {
                     width: 1.,
                     color: color,
@@ -117,8 +117,8 @@ pub(crate) fn draw_rulers(
             for i in 1..=minor_count {
                 painter.line_segment(
                     [
-                        pos2(left_limit + 12.0, ypos + (i as f32 * minor_inc)),
-                        pos2(left_limit + 16., ypos + (i as f32 * minor_inc)),
+                        pos2(left_limit + 20.0, ypos + (i as f32 * minor_inc)),
+                        pos2(left_limit + 24., ypos + (i as f32 * minor_inc)),
                     ],
                     Stroke {
                         width: 1.,
@@ -171,7 +171,7 @@ pub(crate) fn draw_rulers(
         while major_y > mm_top {
             let ypos = model.mm_to_frame_coords(pos2(0., major_y)).y;
             painter.line_segment(
-                [pos2(left_limit, ypos), pos2(left_limit + 16., ypos)],
+                [pos2(left_limit, ypos), pos2(left_limit + 24., ypos)],
                 Stroke {
                     width: 1.,
                     color: color,
@@ -180,8 +180,8 @@ pub(crate) fn draw_rulers(
             for i in 1..=minor_count {
                 painter.line_segment(
                     [
-                        pos2(left_limit + 12.0, ypos + (i as f32 * minor_inc)),
-                        pos2(left_limit + 16., ypos + (i as f32 * minor_inc)),
+                        pos2(left_limit + 20.0, ypos + (i as f32 * minor_inc)),
+                        pos2(left_limit + 24., ypos + (i as f32 * minor_inc)),
                     ],
                     Stroke {
                         width: 1.,
@@ -211,7 +211,7 @@ pub(crate) fn draw_rulers(
                 },
             );
             painter.line_segment(
-                [pos2(left_limit, lpos.y), pos2(left_limit + 16., lpos.y)],
+                [pos2(left_limit, lpos.y), pos2(left_limit + 24., lpos.y)],
                 Stroke {
                     width: 1.,
                     // color: color,
