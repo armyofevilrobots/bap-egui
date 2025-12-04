@@ -463,6 +463,19 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             ),
         ),
     );
+    let cmd_global_config = (
+        Key::C,
+        (
+            "Global Configuration".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Global Configuration".to_string(),
+                Box::new(|model| {
+                    model.command_context = CommandContext::Configure(Some(model.config.clone()))
+                }),
+                None,
+            ),
+        ),
+    );
 
     let cmd_geometry_ungroup = (
         Key::U,
@@ -591,7 +604,10 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         Key::P,
         (
             "Project".to_string(),
-            SpaceCommandBranch::Branch(IndexMap::from([cmd_project_post_to_plotter])),
+            SpaceCommandBranch::Branch(IndexMap::from([
+                cmd_project_post_to_plotter,
+                cmd_global_config,
+            ])),
         ),
     );
 

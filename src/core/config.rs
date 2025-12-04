@@ -35,9 +35,16 @@ pub enum DockPosition {
     Floating(f32, f32),
 }
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ImportOptions {
+    #[serde(default = "default_true")]
     pub import_pgf_pens: bool,
+    #[serde(default = "default_true")]
+    pub generate_pens_from_svg: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -57,6 +64,7 @@ impl Default for ImportOptions {
     fn default() -> Self {
         Self {
             import_pgf_pens: true,
+            generate_pens_from_svg: true,
         }
     }
 }

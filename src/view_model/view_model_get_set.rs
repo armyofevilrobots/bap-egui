@@ -6,7 +6,7 @@ use egui_toast::Toast;
 
 use crate::core::{
     commands::ViewCommand,
-    config::{DockPosition, RulerOrigin},
+    config::{AppConfig, DockPosition, RulerOrigin},
     machine::MachineConfig,
     sender::PlotterState,
 };
@@ -16,6 +16,14 @@ use super::{BAPDisplayMode, BAPViewModel};
 impl BAPViewModel {
     pub fn name() -> &'static str {
         "Bot-a-Plot"
+    }
+
+    pub fn config(&self) -> &AppConfig {
+        &self.config
+    }
+
+    pub fn config_mut(&mut self) -> &mut AppConfig {
+        &mut self.config
     }
 
     pub fn gcode(&self) -> &String {

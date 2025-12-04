@@ -61,7 +61,11 @@ impl ApplicationCore {
                         }
                         ViewCommand::ImportSVG(path_buf) => {
                             self.checkpoint();
-                            self.project.import_svg(&path_buf, true);
+                            self.project.import_svg(
+                                &path_buf,
+                                true,
+                                self.config.import_options.generate_pens_from_svg,
+                            );
                             self.yolo_app_state_change(ApplicationStateChangeMsg::PatchViewModel(
                                 ViewModelPatch::from(self.project.clone()),
                             ));
@@ -236,18 +240,20 @@ impl ApplicationCore {
                                 eprintln!("Draining excessive cancels.");
                             }
                             self.checkpoint();
-                            self.project.load_pgf(&path_buf).unwrap_or_else(|err| {
-                                self.state_change_out
-                                    .send(ApplicationStateChangeMsg::Error(
-                                        format!(
-                                            "Failed to load project file: {:?} due to {}",
-                                            path_buf, err
-                                        )
-                                        .into(),
-                                    ))
-                                    .expect("Failed to send error to viewmodel.");
-                                self.ctx.request_repaint();
-                            });
+                            self.project
+                                .load_pgf(&path_buf, self.config.import_options.import_pgf_pens)
+                                .unwrap_or_else(|err| {
+                                    self.state_change_out
+                                        .send(ApplicationStateChangeMsg::Error(
+                                            format!(
+                                                "Failed to load project file: {:?} due to {}",
+                                                path_buf, err
+                                            )
+                                            .into(),
+                                        ))
+                                        .expect("Failed to send error to viewmodel.");
+                                    self.ctx.request_repaint();
+                                });
                             self.rebuild_after_content_change();
                         }
                         ViewCommand::ResetProject => {

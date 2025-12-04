@@ -767,19 +767,29 @@ impl Project {
         Ok(())
     }
     /// Loads a pregenerated plot geo set (Plotter Geometry Format)
-    pub fn load_pgf(&mut self, path: &PathBuf) -> Result<()> {
+    pub fn load_pgf(&mut self, path: &PathBuf, import_pens: bool) -> Result<()> {
         self.plot_geometry = vec![];
         if let Ok(path) = std::fs::canonicalize(path) {
             let pgf: PGF = PGF::from_file(&path)?;
-            for geometry in &mut pgf.geometries().clone() {
-                if let Some(stroke) = &mut geometry.stroke {
-                    if stroke.identity.is_nil() {
-                        stroke.identity = Uuid::new_v4();
-                    }
-                    if !self.pens.contains(&stroke) {
-                        self.pens.push(stroke.clone());
-                    }
+            if !import_pens {
+                if self.pens.is_empty() {
+                    let dpen = PenDetail::default();
+                    self.pens.push(dpen.clone());
                 }
+            }
+            for geometry in &mut pgf.geometries().clone() {
+                if import_pens {
+                    if let Some(stroke) = &mut geometry.stroke {
+                        if stroke.identity.is_nil() {
+                            stroke.identity = Uuid::new_v4();
+                        }
+                        if !self.pens.contains(&stroke) {
+                            self.pens.push(stroke.clone());
+                        }
+                    }
+                } else {
+                    geometry.stroke = Some(self.pens.first().unwrap().clone())
+                };
                 self.plot_geometry.push(BAPGeometry {
                     geometry: GeometryKind::Stroke(geometry.geometry.clone()),
                     pen_uuid: match &geometry.stroke {
@@ -789,25 +799,12 @@ impl Project {
                     keepdown_strategy: geometry.keepdown_strategy,
                 });
             }
-            /*
-            // We used to sort the geometry by tool id, but I think that is a mistake
-            // because some users might wanna have back and forth plotting. We can make
-            // it a post-processing option.
-            self.plot_geometry = pgf.geometries();
-            self.plot_geometry.sort_by(|item1, item2| {
-                let s1 = item1.stroke.clone().unwrap_or(PenDetail::default());
-                let s2 = item2.stroke.clone().unwrap_or(PenDetail::default());
-                s1.tool_id.cmp(&s2.tool_id)
-            });
-            */
             self.regenerate_extents();
         }
         Ok(())
     }
 
-    pub fn import_svg(&mut self, path: &PathBuf, keepdown: bool) {
-        // Paper should already be set?
-        // self.paper.rgb = (1., 1., 1.);
+    pub fn import_svg(&mut self, path: &PathBuf, keepdown: bool, generate_pens: bool) {
         if let Ok(path) = std::fs::canonicalize(path) {
             if let Ok((rtree, scale_x, scale_y)) = Self::load_svg(&path) {
                 let svg_string = rtree.to_string(&usvg::WriteOptions::default());
@@ -815,12 +812,21 @@ impl Project {
                 self.svg = Some(svg_string);
                 let tmp_geometry =
                     svg_to_geometries(&rtree, scale_x, scale_y, keepdown, &mut self.pens);
+                if !generate_pens {
+                    if self.pens.is_empty() {
+                        let dpen = PenDetail::default();
+                        self.pens.push(dpen.clone());
+                    }
+                }
                 self.plot_geometry = tmp_geometry
                     .iter()
-                    .map(move |geo| {
+                    .map(|geo| {
                         let mut tmp_id = geo.stroke.clone().unwrap().identity;
                         if tmp_id.is_nil() {
                             tmp_id = Uuid::new_v4();
+                        };
+                        if !generate_pens {
+                            tmp_id = self.pens.get(0).unwrap().identity;
                         }
                         BAPGeometry {
                             pen_uuid: tmp_id,

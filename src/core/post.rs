@@ -1,5 +1,7 @@
 use std::usize;
 
+use crate::core::project::BAPGeometry;
+
 use super::project::PenDetail;
 use super::sender::PlotterCommand;
 
@@ -48,7 +50,8 @@ impl super::ApplicationCore {
     }
 
     pub fn handle_post(&mut self) {
-        match post(&self.project) {
+        let pconfig = self.config.post_options.clone();
+        match post(&self.project, pconfig.reorder_by_tool) {
             Ok(program) => {
                 self.handle_new_gcode(&program);
                 self.yolo_app_state_change(ApplicationStateChangeMsg::GCode(Some(
@@ -69,7 +72,7 @@ impl super::ApplicationCore {
     }
 }
 
-pub fn post(project: &Project) -> AnyResult<Vec<String>> {
+pub fn post(project: &Project, reorder_by_tool: bool) -> AnyResult<Vec<String>> {
     let machine = project.machine().ok_or(anyhow!("Invalid machine"))?;
     let post_template = &machine.post_template()?;
     let mut pen_up = false;
@@ -125,7 +128,20 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
     ));
 
     let mut last_tool: usize = usize::MAX;
-    for geometry in &project.plot_geometry {
+    let mut working_geo = project.plot_geometry.clone();
+    if reorder_by_tool {
+        working_geo.sort_by(|geo1, geo2| {
+            let pen1 = project
+                .pen_by_uuid(geo1.pen_uuid)
+                .unwrap_or(PenDetail::default());
+            let pen2 = project
+                .pen_by_uuid(geo2.pen_uuid)
+                .unwrap_or(PenDetail::default());
+            pen1.tool_id.cmp(&pen2.tool_id)
+        });
+    }
+    for geometry in &working_geo {
+        //&project.plot_geometry {
         let geo_lines = geometry
             .transformed(&tx_affine2)
             .geometry
@@ -143,7 +159,7 @@ pub fn post(project: &Project) -> AnyResult<Vec<String>> {
         let feedrate = pen.feed_rate.unwrap_or(machine.feedrate());
         let geo_lines = opt.optimize(&geo_lines);
         if pen.tool_id != last_tool {
-            println!("Emitting tool change.");
+            // println!("Emitting tool change.");
             last_tool = pen.tool_id;
             let mut context = Context::new();
             context.insert("tool_id", &pen.tool_id);

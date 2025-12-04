@@ -104,6 +104,8 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                             .map(|(k,v)| (k.clone(), v.clone())));
                     let mut update=false;
                     for (name, tpl) in templates.iter_mut(){
+                        ui.add_space(8.);
+                        ui.label(name.clone());
                         egui::ScrollArea::vertical()
                             .id_salt(name)
                             .auto_shrink(true)
@@ -112,7 +114,6 @@ pub fn machine_editor_window(model: &mut BAPViewModel, ctx: &egui::Context) {
                                 let te = TextEdit::multiline(tpl).desired_width(550.0).desired_rows(10);
                                 if ui.add(te).changed(){update=true}
                             });
-                        ui.label(name.clone());
 
                     }
 

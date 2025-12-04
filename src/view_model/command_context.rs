@@ -6,7 +6,10 @@ use eframe::egui;
 use egui::{Key, Pos2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
 
-use crate::{core::machine::MachineConfig, view_model::BAPViewModel};
+use crate::{
+    core::{config::AppConfig, machine::MachineConfig},
+    view_model::BAPViewModel,
+};
 // use crate::view_model::project_ops::project_ops;
 
 #[derive(PartialEq, Clone, Debug)]
@@ -27,6 +30,7 @@ pub enum CommandContext {
     Translate(Option<Pos2>),
     ScaleAround(Option<Pos2>, Option<Pos2>), // Center, reference
     EditGcode(Option<String>),               // Saves original gcode.
+    Configure(Option<AppConfig>),
     None,
 }
 
@@ -70,6 +74,7 @@ impl Display for CommandContext {
                 write!(f, "ScaleAround({:?})", xy)
             }
             CommandContext::EditGcode(_) => write!(f, "Edit GCode"),
+            CommandContext::Configure(_) => write!(f, "Configuration"),
         }
     }
 }
@@ -189,7 +194,22 @@ impl BAPViewModel {
             CommandContext::SelectTheme => CommandContext::None,
             CommandContext::Translate(_) => CommandContext::None,
             CommandContext::ScaleAround(_pos2, _opt_ref) => CommandContext::None,
-            CommandContext::EditGcode(_) => CommandContext::None,
+            CommandContext::EditGcode(opt_gcode) => {
+                if was_cancel {
+                    if let Some(gcode) = opt_gcode {
+                        self.gcode = gcode.clone();
+                    }
+                }
+                CommandContext::None
+            }
+            CommandContext::Configure(opt_app_config) => {
+                if was_cancel {
+                    if let Some(config) = opt_app_config {
+                        self.config = config.clone();
+                    }
+                };
+                CommandContext::None
+            }
         };
     }
 
@@ -211,6 +231,7 @@ impl BAPViewModel {
             CommandContext::Translate(_) => ctx,
             CommandContext::ScaleAround(_pos2, _opt_ref) => ctx,
             CommandContext::EditGcode(_) => ctx,
+            CommandContext::Configure(_app_config) => ctx,
         };
     }
 
