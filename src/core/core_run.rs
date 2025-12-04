@@ -284,6 +284,10 @@ impl ApplicationCore {
                             self.toggle_pick_at(x, y);
                             self.ctx.request_repaint();
                         }
+                        ViewCommand::PickByType(stype) => {
+                            self.select_by_type(stype);
+                            self.ctx.request_repaint();
+                        }
                         ViewCommand::SelectAll => {
                             self.select_all();
                             self.ctx.request_repaint();

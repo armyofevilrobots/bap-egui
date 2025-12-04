@@ -13,6 +13,13 @@ use crate::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default, Clone)]
+pub enum SelectionType {
+    Hatches,
+    #[default]
+    Strokes,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Default, Clone)]
 pub enum ViewCommand {
     #[default]
     Ping,
@@ -71,6 +78,7 @@ pub enum ViewCommand {
     AddPickAt(f64, f64),
     TogglePickAt(f64, f64),
     PickByColorAt(f64, f64),
+    PickByType(SelectionType),
     SelectAll,
     ClearPick,
     UnGroup,

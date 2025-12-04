@@ -1,5 +1,7 @@
 use aoer_plotty_rs::plotter::pen::PenDetail;
 
+use crate::core::commands::SelectionType;
+use crate::core::project::GeometryKind;
 use crate::view_model::view_model_patch::ViewModelPatch;
 
 use super::ApplicationCore;
@@ -67,6 +69,25 @@ impl ApplicationCore {
                     .collect::<Vec<usize>>(),
             )))
             .expect("OMFG ViewModel is borked sending pick id");
+    }
+
+    pub fn select_by_type(&mut self, stype: SelectionType) {
+        let mut new_picked: BTreeSet<u32> = BTreeSet::new();
+        for (idx, geo) in self.project.plot_geometry.iter().enumerate() {
+            if let GeometryKind::Hatch(_) = geo.geometry
+                && stype == SelectionType::Hatches
+            {
+                new_picked.insert(idx as u32);
+            } else if let GeometryKind::Stroke(_) = geo.geometry
+                && stype == SelectionType::Strokes
+            {
+                new_picked.insert(idx as u32);
+            }
+        }
+        if new_picked.len() > 0 {
+            self.picked = Some(new_picked);
+            self.send_pick_changed();
+        }
     }
 
     pub fn select_by_color_at(&mut self, x: f64, y: f64) {

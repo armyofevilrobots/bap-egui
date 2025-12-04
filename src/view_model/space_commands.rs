@@ -547,6 +547,34 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         ),
     );
 
+    let cmd_select_strokes = (
+        Key::S,
+        (
+            "Select All Strokes".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Select All Strokes".to_string(),
+                Box::new(|model| {
+                    model.pick_strokes();
+                }),
+                None,
+            ),
+        ),
+    );
+
+    let cmd_select_hatches = (
+        Key::H,
+        (
+            "Select All Hatches".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Select All Hatches".to_string(),
+                Box::new(|model| {
+                    model.pick_hatches();
+                }),
+                None,
+            ),
+        ),
+    );
+
     let cmd_select_by_color = (
         Key::C,
         (
@@ -566,7 +594,12 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         Key::S,
         (
             "Select".to_string(),
-            SpaceCommandBranch::Branch(IndexMap::from([cmd_select_all, cmd_select_by_color])),
+            SpaceCommandBranch::Branch(IndexMap::from([
+                cmd_select_all,
+                cmd_select_by_color,
+                cmd_select_hatches,
+                cmd_select_strokes,
+            ])),
         ),
     );
 

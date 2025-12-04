@@ -1,7 +1,5 @@
 use std::usize;
 
-use crate::core::project::BAPGeometry;
-
 use super::project::PenDetail;
 use super::sender::PlotterCommand;
 

@@ -932,6 +932,7 @@ pub mod test {
         project.import_svg(
             &PathBuf::from_str("resources/plotter_sign_better.svg").unwrap(),
             true,
+            true,
         );
     }
 
@@ -940,6 +941,7 @@ pub mod test {
         let mut project = Project::default();
         project.import_svg(
             &PathBuf::from_str("resources/test_groups_simple.svg").unwrap(),
+            true,
             true,
         );
     }
