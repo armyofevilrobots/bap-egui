@@ -1,6 +1,9 @@
 # Bot-a-Plot 
 ## This time in EGUI
 
+In a total reversal of software dev trend; this is a tool to do
+the drudgery, supporting a human doing the creative stuff.
+
 <img src="./resources/images/ui_preview_basic.png" width="400px" />
 
 Bot-a-Plot is a GCode generator/sender and post-processor that

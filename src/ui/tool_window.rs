@@ -2,8 +2,13 @@ use crate::core::config::DockPosition;
 use crate::core::config::RulerOrigin;
 use crate::core::project::Orientation;
 use crate::core::sender::PlotterState;
+use crate::ui::tool_button::toggle_button;
 use crate::view_model::{BAPDisplayMode, BAPViewModel, CommandContext};
 use eframe::egui;
+use egui::AtomExt;
+use egui::Button;
+use egui::CornerRadius;
+use egui::Stroke;
 use egui::{ComboBox, Pos2, Sense, Slider, TextEdit, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 
@@ -295,6 +300,70 @@ pub(crate) fn floating_tool_window(
                 ui.add_space(16.);
                 ui.label("Ruler Origin");
                 let mut ro = model.ruler_origin();
+                ui.horizontal(|ui| {
+                    ui.style_mut().spacing.item_spacing = vec2(0., 4.);
+                    ui.style_mut().spacing.button_padding = vec2(6., 2.);
+                    ui.style_mut().visuals.button_frame = true;
+                    ui.style_mut().visuals.menu_corner_radius = egui::CornerRadius::same(16);
+                    ui.style_mut().visuals.window_corner_radius = egui::CornerRadius::same(16);
+                    ui.style_mut().visuals.override_text_color = Some(match &ro {
+                        RulerOrigin::Origin => ui.style().visuals.strong_text_color(),
+                        RulerOrigin::Source => ui.style().visuals.weak_text_color(),
+                    });
+                    let origin_rulers_button = Button::new("Origin")
+                        .corner_radius(CornerRadius {
+                            nw: 8,
+                            ne: 0,
+                            sw: 8,
+                            se: 0,
+                        })
+                        .stroke(Stroke::new(
+                            0.,
+                            match &ro {
+                                RulerOrigin::Origin => ui.style().visuals.text_color(),
+                                RulerOrigin::Source => ui.style().visuals.weak_text_color(),
+                            },
+                        ))
+                        .fill(match &ro {
+                            RulerOrigin::Origin => ui.style().visuals.extreme_bg_color,
+                            RulerOrigin::Source => ui.style().visuals.faint_bg_color,
+                        })
+                        .frame(true);
+                    if ui.add(origin_rulers_button).clicked() {
+                        ro = RulerOrigin::Origin;
+                        model.set_ruler_origin(&ro);
+                    };
+
+                    ui.style_mut().visuals.override_text_color = Some(match &ro {
+                        RulerOrigin::Source => ui.style().visuals.strong_text_color(),
+                        RulerOrigin::Origin => ui.style().visuals.weak_text_color(),
+                    });
+                    let source_rulers_button = Button::new("Geometry")
+                        .corner_radius(CornerRadius {
+                            nw: 0,
+                            ne: 8,
+                            sw: 0,
+                            se: 8,
+                        })
+                        .stroke(Stroke::new(
+                            0.,
+                            match &ro {
+                                RulerOrigin::Source => ui.style().visuals.text_color(),
+                                RulerOrigin::Origin => ui.style().visuals.weak_text_color(),
+                            },
+                        ))
+                        .fill(match &ro {
+                            RulerOrigin::Source => ui.style().visuals.extreme_bg_color,
+                            RulerOrigin::Origin => ui.style().visuals.faint_bg_color,
+                        })
+                        .frame(true);
+                    if ui.add(source_rulers_button).clicked() {
+                        ro = RulerOrigin::Source;
+                        model.set_ruler_origin(&ro);
+                    };
+                });
+                /*
+                let mut ro = model.ruler_origin();
                 if ui
                     .radio_value(&mut ro, RulerOrigin::Origin, "Origin")
                     .clicked()
@@ -309,9 +378,78 @@ pub(crate) fn floating_tool_window(
                     model.set_ruler_origin(&ro);
                     model.update_core_config_from_changes();
                 };
+                */
                 ui.add_space(16.);
                 ui.label("Display...");
-                let mut show_paper = model.show_paper();
+                // egui::Grid::new("ShowHideToolz")
+                //     .spacing(vec2(0., 5.))
+                //     .max_col_width(24.)
+                //     .num_columns(4)
+                ui.horizontal(|ui| {
+                    // });
+                    // .show(ui, |ui| {
+                    ui.spacing_mut().item_spacing = vec2(4., 4.);
+                    let mut show_paper = model.show_paper();
+                    if toggle_button(
+                        ui,
+                        &mut show_paper,
+                        egui::include_image!("../../resources/images/paper_sheets.png"),
+                        Some("Show paper".to_string()),
+                        true,
+                    )
+                    .clicked()
+                    {
+                        model.set_show_paper(show_paper);
+                        model.update_core_config_from_changes();
+                    };
+
+                    // Limits
+                    let mut show_machine_limits = model.show_machine_limits();
+                    if toggle_button(
+                        ui,
+                        &mut show_machine_limits,
+                        egui::include_image!("../../resources/images/machine_outline.png"),
+                        Some("Show machine limits".to_string()),
+                        true,
+                    )
+                    .clicked()
+                    {
+                        model.set_show_machine_limits(show_machine_limits);
+                        model.update_core_config_from_changes();
+                    };
+
+                    // Extents
+                    let mut show_extents = model.show_extents();
+                    if toggle_button(
+                        ui,
+                        &mut show_extents,
+                        egui::include_image!("../../resources/images/extents_outline.png"),
+                        Some("Show extents".to_string()),
+                        true,
+                    )
+                    .clicked()
+                    {
+                        model.set_show_extents(show_extents);
+                        model.update_core_config_from_changes();
+                    };
+                    ui.end_row();
+
+                    let mut show_rulers = model.show_rulers();
+                    if toggle_button(
+                        ui,
+                        &mut show_rulers,
+                        egui::include_image!("../../resources/images/ruler.png"),
+                        Some("Show rulers".to_string()),
+                        true,
+                    )
+                    .clicked()
+                    {
+                        model.set_show_rulers(show_rulers);
+                        model.update_core_config_from_changes();
+                    };
+                });
+
+                /*
                 if ui.checkbox(&mut show_paper, "Show paper").clicked() {
                     model.set_show_paper(show_paper);
                     model.update_core_config_from_changes();
@@ -335,6 +473,7 @@ pub(crate) fn floating_tool_window(
                     model.set_show_rulers(show_rulers);
                     model.update_core_config_from_changes();
                 };
+                */
             } else
             /* if tool mode is plot mode */
             {
