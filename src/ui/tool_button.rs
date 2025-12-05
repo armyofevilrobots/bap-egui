@@ -1,5 +1,5 @@
 use eframe::egui;
-use egui::{Button, Color32, Image, ImageSource, Response, Ui, Vec2, vec2};
+use egui::{Button, Color32, Image, ImageSource, Response, Ui, Vec2};
 
 pub(crate) fn tool_button<'a>(
     ui: &mut Ui,

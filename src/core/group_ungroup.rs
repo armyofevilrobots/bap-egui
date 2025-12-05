@@ -36,6 +36,7 @@ impl ApplicationCore {
                     )),
                 };
                 self.project.plot_geometry.push(BAPGeometry {
+                    name: geo.name,
                     pen_uuid: geo.pen_uuid,
                     geometry: new_geokind,
                     keepdown_strategy: geo.keepdown_strategy,
@@ -103,6 +104,7 @@ impl ApplicationCore {
                 // }
             }
             self.project.plot_geometry.push(BAPGeometry {
+                name: tmp_geo.name,
                 pen_uuid: tmp_geo.pen_uuid,
                 geometry: GeometryKind::Stroke(Geometry::MultiLineString(new_mls)),
                 keepdown_strategy: tmp_geo.keepdown_strategy,

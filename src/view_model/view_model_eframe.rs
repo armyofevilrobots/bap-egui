@@ -181,7 +181,7 @@ impl eframe::App for BAPViewModel {
                     // self.paper_orientation = paper.orientation.clone();
                     self.set_paper_size(&paper.size, false);
                 }
-                ApplicationStateChangeMsg::PatchViewModel(patch) => self.patch(patch),
+                ApplicationStateChangeMsg::PatchViewModel(patch) => self.patch(ctx, patch),
                 ApplicationStateChangeMsg::Picked(pick_list) => {
                     // println!("Picked {:?}", pick_list);
                     self.set_picked(pick_list);

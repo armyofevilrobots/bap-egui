@@ -19,6 +19,8 @@ impl Default for BAPViewModel {
     fn default() -> Self {
         Self {
             toolbar_position: super::DockPosition::Left,
+            toolbar_width: 0.,
+            geo_layer_position: super::DockPosition::Right,
             display_mode: BAPDisplayMode::SVG,
             state_in: None,
             cmd_out: None,
@@ -88,6 +90,7 @@ impl Default for BAPViewModel {
             ),
             modifiers: Modifiers::NONE,
             gcode: "".to_string(),
+            geo_layers: Vec::new(),
         }
     }
 }

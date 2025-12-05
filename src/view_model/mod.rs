@@ -7,9 +7,13 @@ use std::thread::{JoinHandle, sleep};
 use std::time::{Duration, Instant};
 
 use eframe::egui;
-use egui::{Color32, Modifiers, Pos2, Rect, TextureHandle, Vec2, Visuals, pos2, vec2};
+use egui::load::SizedTexture;
+use egui::{
+    Color32, Modifiers, Pos2, Rect, TextureHandle, TextureOptions, Vec2, Visuals, pos2, vec2,
+};
 use egui_toast::{Toast, ToastKind, ToastOptions};
 use rfd::FileDialog;
+use uuid::Uuid;
 
 use crate::core::commands::{ApplicationStateChangeMsg, ViewCommand};
 use crate::core::config::{AppConfig, DockPosition, RulerOrigin};
@@ -51,9 +55,27 @@ pub enum FileSelector {
     //SaveProject,
 }
 
+#[derive(PartialEq, Clone)]
+pub struct BAPGeoLayer {
+    pub name: String,
+    pub preview: SizedTexture,
+    pub pen_uuid: Uuid,
+}
+
+impl std::fmt::Debug for BAPGeoLayer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BAPGeoLayer")
+            .field("name", &self.name)
+            .field("pen_uuid", &self.pen_uuid)
+            .finish()
+    }
+}
+
 pub struct BAPViewModel {
     config: AppConfig,
     toolbar_position: DockPosition,
+    toolbar_width: f32,
+    geo_layer_position: DockPosition,
     display_mode: BAPDisplayMode,
     state_in: Option<Receiver<ApplicationStateChangeMsg>>,
     cmd_out: Option<Sender<ViewCommand>>,
@@ -96,6 +118,7 @@ pub struct BAPViewModel {
     visuals: (String, Visuals),
     modifiers: Modifiers,
     gcode: String,
+    geo_layers: Vec<BAPGeoLayer>,
 }
 
 impl BAPViewModel {
@@ -177,9 +200,28 @@ impl BAPViewModel {
         };
     }
 
-    pub fn patch(&mut self, patch: ViewModelPatch) {
+    pub fn patch(&mut self, ctx: &egui::Context, patch: ViewModelPatch) {
         // println!("Got patch: {:?}", patch);
         // let mut redraw = false;
+        if let Some(mut geo_layers) = patch.geo_layers {
+            // self.geo_layers = geo_layers;
+            let mut new_layers = Vec::new();
+            for idx in 0..geo_layers.len() {
+                let (name, preview, pen_uuid) = geo_layers.remove(0);
+                let handle = ctx.load_texture(
+                    format!("layer-img-{}", idx),
+                    preview,
+                    TextureOptions::default(),
+                );
+                let texture = egui::load::SizedTexture::new(handle.id(), handle.size_vec2());
+                new_layers.push(BAPGeoLayer {
+                    name,
+                    preview: texture,
+                    pen_uuid,
+                });
+            }
+            self.geo_layers = new_layers;
+        }
         if let Some(pens) = patch.pens {
             self.pen_crib = pens
         }

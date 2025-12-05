@@ -5,9 +5,9 @@ use crate::core::sender::PlotterState;
 use crate::ui::tool_button::toggle_button;
 use crate::view_model::{BAPDisplayMode, BAPViewModel, CommandContext};
 use eframe::egui;
-use egui::AtomExt;
 use egui::Button;
 use egui::CornerRadius;
+use egui::Frame;
 use egui::Stroke;
 use egui::{ComboBox, Pos2, Sense, Slider, TextEdit, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
@@ -20,8 +20,22 @@ pub(crate) fn floating_tool_window(
     wtop: f32,
     toasts: &mut Toasts,
 ) {
+    let default_height = ctx.content_rect().height() - wtop - 22.; //23.;
     let win = egui::Window::new("")
         // .auto_sized()
+        .frame(
+            Frame::new()
+                .fill(
+                    ctx.style()
+                        .visuals
+                        .window_fill
+                        .to_opaque()
+                        .blend(ctx.style().visuals.faint_bg_color),
+                )
+                .inner_margin(8.)
+                .corner_radius(0)
+                .stroke(Stroke::NONE),
+        )
         .default_pos((32., 32.))
         .collapsible(false)
         .resizable([false, false]);
@@ -33,7 +47,6 @@ pub(crate) fn floating_tool_window(
             } else {
                 (2., wtop + 49.)
             };
-            let default_height = ctx.content_rect().height() - 23.;
             win.title_bar(false)
                 .anchor(egui::Align2::LEFT_TOP, ofs)
                 .default_height(default_height)
@@ -47,7 +60,6 @@ pub(crate) fn floating_tool_window(
                 (2., wtop + 49.)
             };
 
-            let default_height = ctx.content_rect().height() - 23.;
             win.title_bar(false)
                 .anchor(egui::Align2::RIGHT_TOP, ofs)
                 .default_height(default_height)
@@ -802,6 +814,7 @@ pub(crate) fn floating_tool_window(
         };
     });
     if let Some(response) = win_response {
+        model.set_toolbar_width(response.response.rect.width());
         if response.response.drag_stopped() {
             // println!("DRAG STOP.");
             if let DockPosition::Floating(_x, _y) = model.toolbar_position() {
@@ -810,5 +823,6 @@ pub(crate) fn floating_tool_window(
                 model.update_core_config_from_changes();
             }
         }
+    } else {
     }
 }

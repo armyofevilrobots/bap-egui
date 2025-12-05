@@ -4,11 +4,14 @@ use aoer_plotty_rs::plotter::pen::PenDetail;
 use egui::{Modifiers, Pos2, Rect, TextureHandle, Visuals};
 use egui_toast::Toast;
 
-use crate::core::{
-    commands::ViewCommand,
-    config::{AppConfig, DockPosition, RulerOrigin},
-    machine::MachineConfig,
-    sender::PlotterState,
+use crate::{
+    core::{
+        commands::ViewCommand,
+        config::{AppConfig, DockPosition, RulerOrigin},
+        machine::MachineConfig,
+        sender::PlotterState,
+    },
+    view_model::BAPGeoLayer,
 };
 
 use super::{BAPDisplayMode, BAPViewModel};
@@ -16,6 +19,18 @@ use super::{BAPDisplayMode, BAPViewModel};
 impl BAPViewModel {
     pub fn name() -> &'static str {
         "Bot-a-Plot"
+    }
+
+    pub fn geo_layers(&self) -> &Vec<BAPGeoLayer> {
+        &self.geo_layers
+    }
+
+    pub fn set_toolbar_width(&mut self, width: f32) {
+        self.toolbar_width = width;
+    }
+
+    pub fn toolbar_width(&self) -> f32 {
+        self.toolbar_width
     }
 
     pub fn config(&self) -> &AppConfig {
@@ -67,6 +82,14 @@ impl BAPViewModel {
 
     pub fn set_join_handle(&mut self, handle: JoinHandle<()>) {
         self.join_handle = Some(handle);
+    }
+
+    pub fn geo_layer_position(&self) -> DockPosition {
+        self.geo_layer_position.clone()
+    }
+
+    pub fn set_geo_layer_position(&mut self, geo_layer_position: &DockPosition) {
+        self.geo_layer_position = geo_layer_position.clone();
     }
 
     pub fn toolbar_position(&self) -> DockPosition {

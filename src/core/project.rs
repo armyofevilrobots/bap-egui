@@ -92,6 +92,8 @@ impl GeometryKind {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct BAPGeometry {
     pub pen_uuid: Uuid,
+    #[serde(default)]
+    pub name: String,
     pub geometry: GeometryKind,
     pub keepdown_strategy: KeepdownStrategy,
 }
@@ -102,6 +104,7 @@ impl BAPGeometry {
             pen_uuid: self.pen_uuid,
             geometry: self.geometry.transformed(tx),
             keepdown_strategy: self.keepdown_strategy,
+            name: self.name.clone(),
         }
     }
 
@@ -452,7 +455,7 @@ impl Project {
                 }
             }
 
-            for old_geo in &self.old_geometry {
+            for (idx, old_geo) in self.old_geometry.clone().iter().enumerate() {
                 // println!("Found pen in geo: {:#?}", old_geo.stroke);
                 let mut found_pen = if let Some(stroke) = old_geo.stroke.clone() {
                     if let Some(found_pen) = self.find_matching_pen(&stroke) {
@@ -477,6 +480,7 @@ impl Project {
                 self.plot_geometry.push({
                     BAPGeometry {
                         pen_uuid: found_pen.identity,
+                        name: format!("geometry {}", idx).to_string(),
                         geometry: GeometryKind::Stroke(old_geo.geometry.clone()),
                         keepdown_strategy: old_geo.keepdown_strategy,
                     }
@@ -575,6 +579,7 @@ impl Project {
                     pg.geometry.rotate_around_point(angle, Point::new(xc, yc))
                 };
                 BAPGeometry {
+                    name: format!("geometry {}", idx).to_string(),
                     geometry: new_geo,
                     pen_uuid: pg.pen_uuid,
                     keepdown_strategy: pg.keepdown_strategy,
@@ -777,7 +782,7 @@ impl Project {
                     self.pens.push(dpen.clone());
                 }
             }
-            for geometry in &mut pgf.geometries().clone() {
+            for (idx, geometry) in &mut pgf.geometries().clone().iter_mut().enumerate() {
                 if import_pens {
                     if let Some(stroke) = &mut geometry.stroke {
                         if stroke.identity.is_nil() {
@@ -791,6 +796,7 @@ impl Project {
                     geometry.stroke = Some(self.pens.first().unwrap().clone())
                 };
                 self.plot_geometry.push(BAPGeometry {
+                    name: format!("geometry {}", idx).to_string(),
                     geometry: GeometryKind::Stroke(geometry.geometry.clone()),
                     pen_uuid: match &geometry.stroke {
                         Some(pen) => pen.identity,
@@ -820,7 +826,8 @@ impl Project {
                 }
                 self.plot_geometry = tmp_geometry
                     .iter()
-                    .map(|geo| {
+                    .enumerate()
+                    .map(|(idx, geo)| {
                         let mut tmp_id = geo.stroke.clone().unwrap().identity;
                         if tmp_id.is_nil() {
                             tmp_id = Uuid::new_v4();
@@ -829,6 +836,7 @@ impl Project {
                             tmp_id = self.pens.get(0).unwrap().identity;
                         }
                         BAPGeometry {
+                            name: format!("geometry {}", idx).to_string(),
                             pen_uuid: tmp_id,
                             geometry: GeometryKind::Stroke(geo.geometry.clone()),
                             keepdown_strategy: geo.keepdown_strategy,

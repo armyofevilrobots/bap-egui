@@ -1,5 +1,8 @@
 use std::path::PathBuf;
 
+use egui::{Color32, ColorImage};
+use uuid::Uuid;
+
 use crate::core::{
     machine::MachineConfig,
     project::{Paper, PenDetail, Project},
@@ -14,6 +17,7 @@ pub(crate) struct ViewModelPatch {
     pub machine_config: Option<Option<MachineConfig>>,
     pub program: Option<Option<Box<Vec<String>>>>,
     pub file_path: Option<Option<PathBuf>>,
+    pub geo_layers: Option<Vec<(String, ColorImage, Uuid)>>, //Option<Vec<(String, Box<ColorImage>, Uuid)>>,
 }
 
 impl From<Project> for ViewModelPatch {
@@ -33,6 +37,20 @@ impl From<Project> for ViewModelPatch {
             machine_config: Some(project.machine()),
             program: Some(project.program()),
             file_path: Some(project.file_path),
+            geo_layers: Some(
+                project
+                    .plot_geometry
+                    .iter()
+                    .enumerate()
+                    .map(|(_idx, item)| {
+                        (
+                            item.name.clone(),
+                            ColorImage::filled([32, 32], Color32::LIGHT_GRAY),
+                            item.pen_uuid.clone(),
+                        )
+                    })
+                    .collect(),
+            ),
         }
     }
 }

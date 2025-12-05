@@ -1,6 +1,6 @@
 use crate::view_model::{BAPDisplayMode, BAPViewModel};
 use eframe::egui;
-use egui::{Align, Button, Color32, CornerRadius, FontId, Layout, Stroke, Ui, vec2};
+use egui::{Align, Button, CornerRadius, FontId, Layout, Stroke, Ui, vec2};
 
 pub(crate) fn scene_toggle_inner(model: &mut BAPViewModel, _ctx: &egui::Context, ui: &mut Ui) {
     ui.style_mut().override_font_id = Some(FontId {
