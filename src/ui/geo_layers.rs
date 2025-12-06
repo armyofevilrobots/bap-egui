@@ -3,7 +3,7 @@ use crate::view_model::BAPViewModel;
 use eframe::egui;
 #[allow(unused)]
 use egui::Stroke;
-use egui::{CornerRadius, Frame, Grid, ImageSource, Pos2};
+use egui::{Button, CornerRadius, Frame, Grid, Image, Pos2, vec2};
 #[allow(unused)]
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 
@@ -103,8 +103,8 @@ pub(crate) fn floating_geo_layer_window(
         // ui.shrink_width_to_current();
         // super::scene_toggle::scene_toggle_toolbox(model, ctx, ui);
         egui::ScrollArea::vertical()
-            .max_height(default_height - 110.)
-            .min_scrolled_height(default_height - 110.)
+            .max_height(default_height - 111.)
+            .min_scrolled_height(default_height - 111.)
             .auto_shrink(match model.geo_layer_position() {
                 DockPosition::Floating(_, _) => true,
                 _ => false,
@@ -112,8 +112,23 @@ pub(crate) fn floating_geo_layer_window(
             .show(ui, |ui| {
                 // This is the actual window content.
                 Grid::new("GeoLayersGrid").striped(true).show(ui, |ui| {
-                    for (_idx, layer) in model.geo_layers().iter().enumerate() {
-                        ui.image(ImageSource::Texture(layer.preview));
+                    for (idx, layer) in model.geo_layers().iter().enumerate() {
+                        // println!("Found texture:{:?} for layer {}", layer.preview, _idx);
+                        let img = Image::new((layer.preview.id(), layer.preview.size_vec2()))
+                            .bg_fill(model.paper_color())
+                            .corner_radius(0);
+                        let mut toggle_pick_button = Button::new(img).min_size(vec2(32., 40.));
+                        if let Some(picked) = model.picked() {
+                            if picked.contains(&idx) {
+                                toggle_pick_button = toggle_pick_button.selected(true).stroke(
+                                    Stroke::new(1., ctx.style().visuals.strong_text_color()),
+                                )
+                            }
+                        }
+
+                        if ui.add(toggle_pick_button).clicked() {
+                            model.toggle_pick_by_id(idx);
+                        }
                         ui.label(&layer.name);
                         ui.label(layer.pen_uuid.as_urn().to_string());
                         ui.end_row();

@@ -78,6 +78,7 @@ pub enum ViewCommand {
     AddPickAt(f64, f64),
     TogglePickAt(f64, f64),
     PickByColorAt(f64, f64),
+    TogglePickByIndex(usize),
     PickByType(SelectionType),
     SelectAll,
     ClearPick,

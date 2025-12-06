@@ -84,6 +84,8 @@ pub struct UIConfig {
     #[serde(default)]
     pub show_rulers: bool,
     #[serde(default)]
+    pub show_layers: bool,
+    #[serde(default)]
     pub theme: String,
 }
 
@@ -96,6 +98,7 @@ impl Default for UIConfig {
             show_limits: true,
             show_extents: true,
             show_rulers: true,
+            show_layers: true,
             theme: default_theme(),
         }
     }

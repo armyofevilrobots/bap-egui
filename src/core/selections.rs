@@ -196,6 +196,20 @@ impl ApplicationCore {
         self.picked = None
     }
 
+    pub fn toggle_pick_by_index(&mut self, idx: u32) {
+        if idx < self.project.plot_geometry.len() as u32 {
+            if let Some(map) = &mut self.picked {
+                if map.contains(&idx) {
+                    map.remove(&idx);
+                } else {
+                    map.insert(idx);
+                }
+            } else {
+                self.picked = Some(BTreeSet::from([idx]));
+            }
+        }
+    }
+
     pub fn toggle_pick_at(&mut self, x: f64, y: f64) {
         let picked = self.try_pick(x, y);
         if let Some(id) = picked {

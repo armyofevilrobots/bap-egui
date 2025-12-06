@@ -46,7 +46,9 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
 
     let wtop = tbp.top();
     floating_tool_window(model, ctx, wtop, &mut toasts);
-    geo_layers::floating_geo_layer_window(model, ctx, wtop, &mut toasts);
+    if model.show_layers() {
+        geo_layers::floating_geo_layer_window(model, ctx, wtop, &mut toasts);
+    }
 
     match &model.command_context() {
         CommandContext::PaperChooser => paper_chooser_window(model, ctx),

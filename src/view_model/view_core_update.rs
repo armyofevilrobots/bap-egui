@@ -30,6 +30,7 @@ impl BAPViewModel {
         self.config.ui_config.show_extents = self.show_extents;
         self.config.ui_config.show_rulers = self.show_rulers;
         self.config.ui_config.show_paper = self.show_paper;
+        self.config.ui_config.show_layers = self.show_layers;
         self.config.ui_config.show_limits = self.show_machine_limits;
         self.config.ui_config.theme = self.visuals().0.clone();
         self.yolo_view_command(ViewCommand::UpdateConfig(self.config.clone()));

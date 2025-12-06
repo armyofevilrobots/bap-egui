@@ -440,10 +440,21 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Swap Paper Orientation".to_string(),
                 Box::new(|model| {
-                    model.paper_orientation = match model.paper_orientation {
-                        Orientation::Landscape => Orientation::Portrait,
-                        Orientation::Portrait => Orientation::Landscape,
-                    }
+                    model.set_paper_orientation(&model.paper_orientation().toggle(), true);
+                }),
+                None,
+            ),
+        ),
+    );
+
+    let cmd_media_merge_duplicate_colors = (
+        Key::D,
+        (
+            "Merge Duplicate Colored Pens".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Merge Duplicate Colored Pens".to_string(),
+                Box::new(|model| {
+                    model.yolo_view_command(ViewCommand::MergePens);
                 }),
                 None,
             ),
@@ -625,6 +636,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Branch(IndexMap::from([
                 cmd_media_edit_paper,
                 cmd_media_swap_orientation,
+                cmd_media_merge_duplicate_colors,
                 scb_separator(),
                 cmd_media_edit_machine,
                 cmd_load_machine,

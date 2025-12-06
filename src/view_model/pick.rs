@@ -5,6 +5,10 @@ use crate::core::commands::{SelectionType, ViewCommand};
 use super::BAPViewModel;
 
 impl BAPViewModel {
+    pub fn toggle_pick_by_id(&self, idx: usize) {
+        self.yolo_view_command(ViewCommand::TogglePickByIndex(idx));
+    }
+
     pub fn set_picked(&mut self, picked: Option<Vec<usize>>) {
         self.picked = picked;
     }

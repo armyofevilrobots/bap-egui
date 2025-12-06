@@ -444,7 +444,6 @@ pub(crate) fn floating_tool_window(
                         model.set_show_extents(show_extents);
                         model.update_core_config_from_changes();
                     };
-                    ui.end_row();
 
                     let mut show_rulers = model.show_rulers();
                     if toggle_button(
@@ -457,6 +456,22 @@ pub(crate) fn floating_tool_window(
                     .clicked()
                     {
                         model.set_show_rulers(show_rulers);
+                        model.update_core_config_from_changes();
+                    };
+                });
+
+                ui.horizontal(|ui| {
+                    let mut show_layers = model.show_layers();
+                    if toggle_button(
+                        ui,
+                        &mut show_layers,
+                        egui::include_image!("../../resources/images/layers.png"),
+                        Some("Show layers".to_string()),
+                        true,
+                    )
+                    .clicked()
+                    {
+                        model.set_show_layers(show_layers);
                         model.update_core_config_from_changes();
                     };
                 });

@@ -21,6 +21,14 @@ impl BAPViewModel {
         "Bot-a-Plot"
     }
 
+    pub fn show_layers(&self) -> bool {
+        self.show_layers
+    }
+
+    pub fn set_show_layers(&mut self, show: bool) {
+        self.show_layers = show
+    }
+
     pub fn geo_layers(&self) -> &Vec<BAPGeoLayer> {
         &self.geo_layers
     }

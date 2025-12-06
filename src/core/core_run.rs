@@ -280,6 +280,10 @@ impl ApplicationCore {
                         ViewCommand::ClearPick => {
                             self.clear_pick();
                         }
+                        ViewCommand::TogglePickByIndex(idx) => {
+                            self.toggle_pick_by_index(idx as u32);
+                            self.ctx.request_repaint();
+                        }
                         ViewCommand::TogglePickAt(x, y) => {
                             self.toggle_pick_at(x, y);
                             self.ctx.request_repaint();

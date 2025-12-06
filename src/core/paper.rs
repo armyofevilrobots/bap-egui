@@ -6,6 +6,16 @@ pub enum Orientation {
     Landscape,
     Portrait,
 }
+
+impl Orientation {
+    pub fn toggle(&self) -> Self {
+        match self {
+            Orientation::Landscape => Orientation::Portrait,
+            Orientation::Portrait => Orientation::Landscape,
+        }
+    }
+}
+
 impl Display for Orientation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

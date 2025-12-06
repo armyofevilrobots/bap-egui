@@ -7,7 +7,6 @@ use std::thread::{JoinHandle, sleep};
 use std::time::{Duration, Instant};
 
 use eframe::egui;
-use egui::load::SizedTexture;
 use egui::{
     Color32, Modifiers, Pos2, Rect, TextureHandle, TextureOptions, Vec2, Visuals, pos2, vec2,
 };
@@ -58,7 +57,7 @@ pub enum FileSelector {
 #[derive(PartialEq, Clone)]
 pub struct BAPGeoLayer {
     pub name: String,
-    pub preview: SizedTexture,
+    pub preview: TextureHandle,
     pub pen_uuid: Uuid,
 }
 
@@ -100,6 +99,7 @@ pub struct BAPViewModel {
     show_paper: bool,
     show_rulers: bool,
     show_extents: bool,
+    show_layers: bool,
     edit_cmd: String,
     container_rect: Option<Rect>,
     serial_ports: Vec<String>,
@@ -210,13 +210,13 @@ impl BAPViewModel {
                 let (name, preview, pen_uuid) = geo_layers.remove(0);
                 let handle = ctx.load_texture(
                     format!("layer-img-{}", idx),
-                    preview,
+                    *preview,
                     TextureOptions::default(),
                 );
-                let texture = egui::load::SizedTexture::new(handle.id(), handle.size_vec2());
+                // let texture = egui::load::SizedTexture::new(handle.id(), handle.size_vec2());
                 new_layers.push(BAPGeoLayer {
                     name,
-                    preview: texture,
+                    preview: handle,
                     pen_uuid,
                 });
             }
