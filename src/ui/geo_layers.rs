@@ -153,6 +153,7 @@ pub(crate) fn floating_geo_layer_window(
                             println!("UNFOCUSED");
                             model.set_inhibit_space_command(false);
                         }
+
                         // ui.label(model.geo_layers()[idx].pen_uuid.as_urn().to_string());
                         ui.end_row();
                     }

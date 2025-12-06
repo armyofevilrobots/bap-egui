@@ -6,9 +6,12 @@ use crate::ui::tool_button::toggle_button;
 use crate::view_model::{BAPDisplayMode, BAPViewModel, CommandContext};
 use eframe::egui;
 use egui::Button;
+use egui::Color32;
 use egui::CornerRadius;
 use egui::Frame;
+use egui::RichText;
 use egui::Stroke;
+use egui::Vec2b;
 use egui::{ComboBox, Pos2, Sense, Slider, TextEdit, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 
@@ -200,7 +203,6 @@ pub(crate) fn floating_tool_window(
                         };
                         ui.end_row();
                         // ui.add_space(0.);
-                        ui.end_row();
 
                         if tool_button(
                             ui,
@@ -308,6 +310,7 @@ pub(crate) fn floating_tool_window(
                         {
                             model.set_command_context(CommandContext::Scale(1.));
                         }
+                        ui.end_row();
                     });
                 ui.add_space(16.);
                 ui.label("Ruler Origin");
@@ -477,31 +480,34 @@ pub(crate) fn floating_tool_window(
                     };
                 });
 
-                /*
-                if ui.checkbox(&mut show_paper, "Show paper").clicked() {
-                    model.set_show_paper(show_paper);
-                    model.update_core_config_from_changes();
-                };
-                let mut show_machine_limits = model.show_machine_limits();
-                if ui
-                    .checkbox(&mut show_machine_limits, "Show limits")
-                    .clicked()
-                {
-                    model.set_show_machine_limits(show_machine_limits);
-                    model.update_core_config_from_changes();
-                };
-
-                let mut show_extents = model.show_extents();
-                if ui.checkbox(&mut show_extents, "Show extents").clicked() {
-                    model.set_show_extents(show_extents);
-                    model.update_core_config_from_changes();
-                };
-                let mut show_rulers = model.show_rulers();
-                if ui.checkbox(&mut show_rulers, "Show rulers").clicked() {
-                    model.set_show_rulers(show_rulers);
-                    model.update_core_config_from_changes();
-                };
-                */
+                ui.add_space(16.);
+                ui.label("Pen Palette");
+                /* */
+                // egui::ScrollArea::vertical()
+                //     .auto_shrink(Vec2b::new(false, true))
+                //     .max_width(150.)
+                //     .show(ui, |ui| {
+                for chunk in model.pen_crib().chunks(4) {
+                    ui.horizontal(|ui| {
+                        for pen in chunk {
+                            let color_code = pen.color.clone();
+                            let [r, g, b, a] = color_code.to_rgba8();
+                            let color = Color32::from_rgba_premultiplied(r, g, b, a);
+                            let color_selection_n = egui::Button::new(
+                                RichText::new(format!("{}", pen.tool_id)).size(8.),
+                            )
+                            .fill(color)
+                            .min_size(vec2(20., 16.));
+                            if ui.add(color_selection_n).clicked() {
+                                // model.c
+                                model.apply_color_to_selection(pen.identity);
+                            }
+                        }
+                    });
+                }
+                // });
+                //
+                // });
             } else
             /* if tool mode is plot mode */
             {

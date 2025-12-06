@@ -123,6 +123,20 @@ pub struct BAPViewModel {
 }
 
 impl BAPViewModel {
+    pub fn apply_color_to_selection(&self, pen_uuid: Uuid) {
+        let mut pen = None;
+        for maybepen in &self.pen_crib {
+            if maybepen.identity == pen_uuid {
+                pen = Some(maybepen.clone())
+            }
+        }
+        if let Some(pen) = pen {
+            self.yolo_view_command(crate::core::commands::ViewCommand::ApplyPenToSelection(
+                pen.tool_id.clone(),
+            ));
+        }
+    }
+
     pub fn with_appstate_recv(mut self, state: Receiver<ApplicationStateChangeMsg>) -> Self {
         self.state_in = Some(state);
         self

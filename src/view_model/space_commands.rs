@@ -4,7 +4,7 @@ use egui::{Key, mutex::Mutex};
 use indexmap::IndexMap;
 
 use crate::{
-    core::{commands::ViewCommand, project::Orientation},
+    core::commands::ViewCommand,
     view_model::{BAPViewModel, CommandContext},
 };
 
