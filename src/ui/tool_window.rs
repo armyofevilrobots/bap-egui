@@ -11,7 +11,6 @@ use egui::CornerRadius;
 use egui::Frame;
 use egui::RichText;
 use egui::Stroke;
-use egui::Vec2b;
 use egui::{ComboBox, Pos2, Sense, Slider, TextEdit, vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 
