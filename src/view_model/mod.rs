@@ -100,6 +100,7 @@ pub struct BAPViewModel {
     show_rulers: bool,
     show_extents: bool,
     show_layers: bool,
+    inhibit_space_command: bool,
     edit_cmd: String,
     container_rect: Option<Rect>,
     serial_ports: Vec<String>,

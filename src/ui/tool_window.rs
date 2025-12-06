@@ -472,6 +472,7 @@ pub(crate) fn floating_tool_window(
                     .clicked()
                     {
                         model.set_show_layers(show_layers);
+                        model.set_inhibit_space_command(false); // Weird this isn't triggered magically, but... /shrug?
                         model.update_core_config_from_changes();
                     };
                 });

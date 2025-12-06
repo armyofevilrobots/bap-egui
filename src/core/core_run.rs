@@ -326,6 +326,11 @@ impl ApplicationCore {
                                 ))
                             });
                         }
+                        ViewCommand::RenameLayer { id, name } => {
+                            if id < self.project.plot_geometry.len() {
+                                self.project.plot_geometry[id].name = name;
+                            }
+                        }
                         ViewCommand::Translate(x, y) => {
                             self.checkpoint();
                             self.project.translate_geometry_mut((x, y), &self.picked);

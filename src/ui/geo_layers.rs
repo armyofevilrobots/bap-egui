@@ -3,7 +3,7 @@ use crate::view_model::BAPViewModel;
 use eframe::egui;
 #[allow(unused)]
 use egui::Stroke;
-use egui::{Button, CornerRadius, Frame, Grid, Image, Pos2, vec2};
+use egui::{Button, CornerRadius, Frame, Grid, Image, Pos2, TextEdit, vec2};
 #[allow(unused)]
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 
@@ -100,7 +100,7 @@ pub(crate) fn floating_geo_layer_window(
             };
         });
         // ui.separator();
-        // ui.shrink_width_to_current();
+        ui.shrink_width_to_current();
         // super::scene_toggle::scene_toggle_toolbox(model, ctx, ui);
         egui::ScrollArea::vertical()
             .max_height(default_height - 111.)
@@ -112,11 +112,15 @@ pub(crate) fn floating_geo_layer_window(
             .show(ui, |ui| {
                 // This is the actual window content.
                 Grid::new("GeoLayersGrid").striped(true).show(ui, |ui| {
-                    for (idx, layer) in model.geo_layers().iter().enumerate() {
+                    for idx in 0..model.geo_layers().len() {
+                        // for (idx, layer) in model.geo_layers().iter().enumerate() {
                         // println!("Found texture:{:?} for layer {}", layer.preview, _idx);
-                        let img = Image::new((layer.preview.id(), layer.preview.size_vec2()))
-                            .bg_fill(model.paper_color())
-                            .corner_radius(0);
+                        let img = Image::new((
+                            model.geo_layers()[idx].preview.id(),
+                            model.geo_layers()[idx].preview.size_vec2(),
+                        ))
+                        .bg_fill(model.paper_color())
+                        .corner_radius(0);
                         let mut toggle_pick_button = Button::new(img).min_size(vec2(32., 40.));
                         if let Some(picked) = model.picked() {
                             if picked.contains(&idx) {
@@ -129,8 +133,27 @@ pub(crate) fn floating_geo_layer_window(
                         if ui.add(toggle_pick_button).clicked() {
                             model.toggle_pick_by_id(idx);
                         }
-                        ui.label(&layer.name);
-                        ui.label(layer.pen_uuid.as_urn().to_string());
+
+                        // let mut name_tmp = model.geo_layers().name.clone();
+                        let name_edit = TextEdit::singleline(&mut model.geo_layers_mut()[idx].name)
+                            .desired_width(128.)
+                            .min_size(vec2(128., 8.));
+                        let name_edit_resp = ui.add(name_edit);
+                        if name_edit_resp.lost_focus()
+                            && ctx.input(|i| i.key_pressed(egui::Key::Enter))
+                        {
+                            //Rename would go here for core.
+                            model.update_layer_name(idx, model.geo_layers()[idx].name.clone());
+                        };
+                        if name_edit_resp.gained_focus() {
+                            println!("FOCUSED");
+                            model.set_inhibit_space_command(true);
+                        }
+                        if name_edit_resp.lost_focus() {
+                            println!("UNFOCUSED");
+                            model.set_inhibit_space_command(false);
+                        }
+                        // ui.label(model.geo_layers()[idx].pen_uuid.as_urn().to_string());
                         ui.end_row();
                     }
                 });

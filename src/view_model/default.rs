@@ -48,6 +48,7 @@ impl Default for BAPViewModel {
             show_rulers: true,
             show_extents: true,
             show_layers: true,
+            inhibit_space_command: false,
             ppp: 1.5,
             dirty: false,
             container_rect: None,

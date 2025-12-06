@@ -21,12 +21,28 @@ impl BAPViewModel {
         "Bot-a-Plot"
     }
 
+    pub fn inhibit_space_command(&self) -> bool {
+        self.inhibit_space_command
+    }
+
+    pub fn set_inhibit_space_command(&mut self, inhibit: bool) {
+        self.inhibit_space_command = inhibit
+    }
+
     pub fn show_layers(&self) -> bool {
         self.show_layers
     }
 
     pub fn set_show_layers(&mut self, show: bool) {
         self.show_layers = show
+    }
+
+    pub fn update_layer_name(&mut self, idx: usize, name: String) {
+        self.yolo_view_command(ViewCommand::RenameLayer { id: idx, name });
+    }
+
+    pub fn geo_layers_mut(&mut self) -> &mut Vec<BAPGeoLayer> {
+        &mut self.geo_layers
     }
 
     pub fn geo_layers(&self) -> &Vec<BAPGeoLayer> {
