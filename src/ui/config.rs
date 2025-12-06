@@ -36,8 +36,8 @@ pub(crate) fn config_editor_window(model: &mut BAPViewModel, ctx: &egui::Context
                             "Import pens from PGF files",
                         );
                         ui.label(
-                            "PGF files have their own pens defined. Turning this off\
-                            results in setting them all to the default pen (in the future we'll\
+                            "PGF files have their own pens defined. Turning this off \
+                            results in setting them all to the default pen (in the future we'll \
                             map to the closest pen in the crib).",
                         );
                         ui.checkbox(
@@ -45,8 +45,8 @@ pub(crate) fn config_editor_window(model: &mut BAPViewModel, ctx: &egui::Context
                             "Generate pens for SVG imports",
                         );
                         ui.label(
-                            "Generate new pens for SVG imports automatically. Turning this off\
-                            results in setting them all to the default pen (in the future we'll\
+                            "Generate new pens for SVG imports automatically. Turning this off \
+                            results in setting them all to the default pen (in the future we'll \
                             map to the closest pen in the crib).",
                         );
                     });

@@ -142,15 +142,12 @@ pub(crate) fn floating_geo_layer_window(
                         if name_edit_resp.lost_focus()
                             && ctx.input(|i| i.key_pressed(egui::Key::Enter))
                         {
-                            //Rename would go here for core.
                             model.update_layer_name(idx, model.geo_layers()[idx].name.clone());
                         };
                         if name_edit_resp.gained_focus() {
-                            println!("FOCUSED");
                             model.set_inhibit_space_command(true);
                         }
                         if name_edit_resp.lost_focus() {
-                            println!("UNFOCUSED");
                             model.set_inhibit_space_command(false);
                         }
 

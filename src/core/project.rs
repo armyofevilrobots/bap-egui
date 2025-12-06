@@ -805,6 +805,12 @@ impl Project {
                     keepdown_strategy: geometry.keepdown_strategy,
                 });
             }
+            if import_pens {
+                // for idx in 0..self.pens.len() {
+                //     self.pens[idx].tool_id = idx + 1;
+                // }
+                self.merge_matching_pens();
+            }
             self.regenerate_extents();
         }
         Ok(())
