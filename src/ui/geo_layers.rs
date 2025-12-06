@@ -3,7 +3,7 @@ use crate::view_model::BAPViewModel;
 use eframe::egui;
 #[allow(unused)]
 use egui::Stroke;
-use egui::{Button, CornerRadius, Frame, Grid, Image, Pos2, TextEdit, vec2};
+use egui::{Button, CornerRadius, Frame, Grid, Image, Pos2, TextEdit, include_image, vec2};
 #[allow(unused)]
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 
@@ -100,11 +100,48 @@ pub(crate) fn floating_geo_layer_window(
             };
         });
         // ui.separator();
+        //
+        ui.add_space(4.);
+        ui.horizontal(|ui| {
+            let mut toggle_pick_button =
+                Button::new(include_image!("../../resources/images/invert_select.png"));
+            if model.picked().is_some() {
+                toggle_pick_button = toggle_pick_button
+                    .selected(true)
+                    .stroke(Stroke::new(1., ctx.style().visuals.strong_text_color()))
+            }
+            if ui.add(toggle_pick_button).clicked() {
+                model.invert_pick();
+            }
+
+            if model.picked().is_some() {
+                if ui
+                    .add(
+                        Button::new(include_image!("../../resources/images/select_none.png"))
+                            .stroke(Stroke::new(1., ctx.style().visuals.strong_text_color())),
+                    )
+                    .clicked()
+                {
+                    model.pick_clear();
+                }
+            } else {
+                if ui
+                    .add(
+                        Button::new(include_image!("../../resources/images/select_all.png"))
+                            .stroke(Stroke::new(1., ctx.style().visuals.strong_text_color())),
+                    )
+                    .clicked()
+                {
+                    model.pick_all();
+                }
+            }
+        });
         ui.shrink_width_to_current();
+        ui.add_space(8.);
         // super::scene_toggle::scene_toggle_toolbox(model, ctx, ui);
         egui::ScrollArea::vertical()
-            .max_height(default_height - 111.)
-            .min_scrolled_height(default_height - 111.)
+            .max_height(default_height - ui.cursor().top() - 8.)
+            .min_scrolled_height(default_height - ui.cursor().top() - 8.)
             .auto_shrink(match model.geo_layer_position() {
                 DockPosition::Floating(_, _) => true,
                 _ => false,
@@ -130,7 +167,28 @@ pub(crate) fn floating_geo_layer_window(
                             }
                         }
 
-                        if ui.add(toggle_pick_button).clicked() {
+                        let tp_resp = ui.add(toggle_pick_button);
+                        if tp_resp.clicked() && model.modifiers().shift {
+                            if let Some(picked) = model.picked() {
+                                if picked.len() == 1 {
+                                    let first = picked.first().unwrap();
+                                    if idx < *first {
+                                        for add_idx in idx..*first {
+                                            model.toggle_pick_by_id(add_idx);
+                                        }
+                                    } else if idx > *first {
+                                        for add_idx in (*first + 1)..=idx {
+                                            model.toggle_pick_by_id(add_idx);
+                                        }
+                                    } else {
+                                        // SHift clicked the same one again.
+                                        model.toggle_pick_by_id(idx);
+                                    }
+                                } else if picked.is_empty() {
+                                    model.toggle_pick_by_id(idx);
+                                }
+                            }
+                        } else if tp_resp.clicked() && model.modifiers().is_none() {
                             model.toggle_pick_by_id(idx);
                         }
 

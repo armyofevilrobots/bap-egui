@@ -90,6 +90,22 @@ impl ApplicationCore {
         }
     }
 
+    pub fn invert_pick(&mut self) {
+        let all_geo: BTreeSet<u32> =
+            BTreeSet::from_iter(0..self.project.plot_geometry.len() as u32);
+        let new_picked = match &self.picked {
+            Some(picked) => {
+                BTreeSet::from_iter(all_geo.difference(&picked).into_iter().map(|i| *i))
+            }
+            None => all_geo,
+        };
+        if new_picked.is_empty() {
+            self.picked = None;
+        } else {
+            self.picked = Some(new_picked);
+        };
+    }
+
     pub fn select_by_color_at(&mut self, x: f64, y: f64) {
         // println!("!PICK COLOR @{},{}", x, y);
         if let Some(pick) = self.try_pick(x, y) {

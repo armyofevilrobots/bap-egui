@@ -17,10 +17,7 @@ impl ApplicationCore {
             .expect("Failed to send config to viewmodel at start. Bailing.");
 
         while !self.shutdown {
-            match self
-                .view_command_in
-                .recv_timeout(Duration::from_millis(100))
-            {
+            match self.view_command_in.recv_timeout(Duration::from_millis(10)) {
                 Err(_err) => (),
                 Ok(msg) => {
                     match msg {
@@ -300,6 +297,10 @@ impl ApplicationCore {
                             self.select_by_color_at(x, y);
                             self.ctx.request_repaint();
                         }
+                        ViewCommand::InvertPick => {
+                            self.invert_pick();
+                            self.ctx.request_repaint();
+                        }
                         ViewCommand::ApplyPenToSelection(tool_id) => {
                             self.checkpoint();
                             self.apply_pen_to_selection(tool_id);
@@ -415,7 +416,7 @@ impl ApplicationCore {
                     // println!("Breaking plotter service loop to service UI requests.");
                     break;
                 }; // Don't sit here forever reading responses.
-                if let Ok(response) = self.plot_receiver.recv_timeout(Duration::from_millis(100)) {
+                if let Ok(response) = self.plot_receiver.recv_timeout(Duration::from_millis(10)) {
                     // println!("Sending response: {:?}", &response);
                     self.handle_plotter_response(response, &mut last_sent_plotter_running_progress);
                 } else {

@@ -9,6 +9,10 @@ impl BAPViewModel {
         self.yolo_view_command(ViewCommand::TogglePickByIndex(idx));
     }
 
+    pub fn invert_pick(&self) {
+        self.yolo_view_command(ViewCommand::InvertPick);
+    }
+
     pub fn set_picked(&mut self, picked: Option<Vec<usize>>) {
         self.picked = picked;
     }
