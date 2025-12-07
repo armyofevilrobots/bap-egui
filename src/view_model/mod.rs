@@ -151,6 +151,12 @@ pub struct BAPViewModel {
 }
 
 impl BAPViewModel {
+    pub fn reorder_selected_geometry_to(&self, destination: usize) {
+        self.yolo_view_command(crate::core::commands::ViewCommand::ReorderToDestination(
+            destination,
+        ));
+    }
+
     pub fn misc_textures(&self) -> &Option<MiscTextures> {
         &self.misc_textures
     }

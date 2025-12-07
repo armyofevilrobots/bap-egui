@@ -21,6 +21,19 @@ impl ApplicationCore {
                 Err(_err) => (),
                 Ok(msg) => {
                     match msg {
+                        ViewCommand::ReorderToDestination(dest) => {
+                            if let Some(picked) = self.picked.clone() {
+                                self.checkpoint();
+                                self.project.reorder_selected_to(&picked, dest);
+                                self.rebuild_after_content_change();
+                                self.clear_pick();
+                                self.yolo_app_state_change(
+                                    ApplicationStateChangeMsg::PatchViewModel(
+                                        ViewModelPatch::from(self.project.clone()),
+                                    ),
+                                );
+                            }
+                        }
                         ViewCommand::OrderByPenId => {
                             self.checkpoint();
                             self.project.reorder_geometry_by_tool_id();

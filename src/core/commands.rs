@@ -24,6 +24,7 @@ pub enum ViewCommand {
     #[default]
     Ping,
     MergePens,
+    ReorderToDestination(usize),
     OrderByPenId,
     SetGCode(String),
     RequestSourceImage {
