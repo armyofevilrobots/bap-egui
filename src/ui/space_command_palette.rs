@@ -87,7 +87,7 @@ pub fn space_command_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
             .collapsible(false)
             .min_width(600.)
             .default_size([600., 300.])
-            .title_bar(true)
+            .title_bar(false)
             .min_size(vec2(600., 300.))
             .show(ctx, |ui| {
                 ui.vertical(|ui| {
