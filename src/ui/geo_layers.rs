@@ -152,8 +152,8 @@ pub(crate) fn floating_geo_layer_window(
                 let frame = Frame::default().inner_margin(4.0);
                 let (_, _dropped_payload) = ui.dnd_drop_zone::<usize, ()>(frame, |ui| {
                     // This is the actual window content.
-                    let mut drag_from: Option<Arc<usize>> = None;
-                    let mut drag_to: Option<Arc<usize>> = None;
+                    let _drag_from: Option<Arc<usize>> = None;
+                    let _drag_to: Option<Arc<usize>> = None;
 
                     // Grid::new("GeoLayersGrid").striped(true).show(ui, |ui| {
                     for idx in 0..model.geo_layers().len() {

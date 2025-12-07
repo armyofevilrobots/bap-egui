@@ -6,7 +6,6 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::thread::{JoinHandle, sleep};
 use std::time::{Duration, Instant};
 
-use csscolorparser::Color;
 use eframe::egui;
 use egui::load::TexturePoll;
 use egui::{
