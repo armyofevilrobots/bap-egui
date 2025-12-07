@@ -367,6 +367,33 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         ),
     );
 
+    let cmd_arrange_bring_forward = (
+        Key::F,
+        (
+            "Bring fwd ctl-]".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Bring fwd ctl-]".to_string(),
+                Box::new(|model| {
+                    model.reorder_selected_geometry_fwd();
+                }),
+                Some(Box::new(|model| model.picked().is_some())),
+            ),
+        ),
+    );
+    let cmd_arrange_send_backward = (
+        Key::B,
+        (
+            "Push back ctl-[".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Push back ctl-[".to_string(),
+                Box::new(|model| {
+                    model.reorder_selected_geometry_back();
+                }),
+                Some(Box::new(|model| model.picked().is_some())),
+            ),
+        ),
+    );
+
     let cmd_arrange = (
         Key::A,
         (
@@ -378,6 +405,8 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 scb_separator(),
                 cmd_set_origin,
                 scb_separator(),
+                cmd_arrange_bring_forward,
+                cmd_arrange_send_backward,
             ])),
         ),
     );

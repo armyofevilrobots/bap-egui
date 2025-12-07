@@ -79,6 +79,7 @@ pub enum ViewCommand {
     PickByColorAt(f64, f64),
     TogglePickByIndex(usize),
     PickByType(SelectionType),
+    ForcePick(Vec<usize>),
     InvertPick,
     SelectAll,
     ClearPick,

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use crate::core::config::DockPosition;
 use crate::view_model::BAPViewModel;
+use crate::{core::config::DockPosition, view_model::CommandContext};
 use eframe::egui;
 #[allow(unused)]
 use egui::Stroke;
@@ -214,7 +214,15 @@ pub(crate) fn floating_geo_layer_window(
                                     }
                                 }
                             } else if tp_resp.clicked() && model.modifiers().is_none() {
-                                model.toggle_pick_by_id(idx);
+                                if let CommandContext::SelectColorAt(_foo) = model.command_context()
+                                {
+                                    model.select_layers_matching_color(
+                                        model.geo_layers()[idx].pen_uuid,
+                                    );
+                                    model.cancel_command_context(false);
+                                } else {
+                                    model.toggle_pick_by_id(idx);
+                                }
                             }
 
                             // let mut name_tmp = model.geo_layers().name.clone();
@@ -270,17 +278,23 @@ pub(crate) fn floating_geo_layer_window(
                                 layer_drag_inner.response.dnd_release_payload()
                             {
                                 // The user dropped onto this item.
-                                drag_from = Some(dragged_payload);
-                                drag_to = Some(Arc::new(insert_idx));
+                                // drag_from = Some(dragged_payload);
+                                // drag_to = Some(Arc::new(insert_idx));
                                 // println!("Reordering to: {}", insert_idx);
-                                if model.picked().is_none() {
+                                if let Some(picked) = model.picked()
+                                    && picked.contains(&*dragged_payload)
+                                {
                                     // println!(
                                     //     "Nothing picked. Selecting myself ({})",
                                     //     drag_from.clone().unwrap()
                                     // );
-                                    model.toggle_pick_by_id(*drag_from.clone().unwrap());
+                                    // model.toggle_pick_by_id(*drag_from.clone().unwrap());
+                                    model.reorder_selected_geometry_to(insert_idx);
+                                } else {
+                                    model.toggle_pick_by_id(*dragged_payload);
+                                    model.reorder_selected_geometry_to(insert_idx);
+                                    model.pick_clear();
                                 }
-                                model.reorder_selected_geometry_to(insert_idx);
                             }
                         }
                     }

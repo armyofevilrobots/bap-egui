@@ -9,9 +9,7 @@ use crate::view_model::command_context::SpaceCommandStatus;
 use crate::view_model::{BAPViewModel, CommandContext};
 use eframe::egui;
 use egui::Direction::BottomUp;
-use egui::{
-    Align2, Color32, FontId, Frame, Key, Rect, Stroke, StrokeKind, pos2, vec2,
-};
+use egui::{Align2, Color32, FontId, Frame, Key, Rect, Stroke, StrokeKind, pos2, vec2};
 use egui_toast::Toasts;
 
 pub(crate) mod bottom_panel;
@@ -657,6 +655,10 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                             }
                         } else if *pressed && *pkey == Key::Delete {
                             model.delete_selection();
+                        } else if *pressed && *pkey == Key::OpenBracket && mods.ctrl{
+                            model.reorder_selected_geometry_back();
+                        } else if *pressed && *pkey == Key::CloseBracket && mods.ctrl{
+                            model.reorder_selected_geometry_fwd();
                         }
                     };
                     // None

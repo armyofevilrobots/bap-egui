@@ -6,6 +6,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::thread::{JoinHandle, sleep};
 use std::time::{Duration, Instant};
 
+use csscolorparser::Color;
 use eframe::egui;
 use egui::load::TexturePoll;
 use egui::{
@@ -151,6 +152,33 @@ pub struct BAPViewModel {
 }
 
 impl BAPViewModel {
+    pub fn select_layers_matching_color(&mut self, color: Uuid) {
+        let matching: Vec<usize> = self
+            .geo_layers()
+            .into_iter()
+            .enumerate()
+            .filter(|(_idx, layer)| layer.pen_uuid == color)
+            .map(|(idx, _layer)| idx)
+            .collect();
+        self.yolo_view_command(ViewCommand::ForcePick(matching));
+    }
+
+    pub fn reorder_selected_geometry_fwd(&self) {
+        if let Some(picked) = self.picked() {
+            if let Some(picked) = picked.last() {
+                self.reorder_selected_geometry_to((*picked + 1).min(self.geo_layers().len()));
+            }
+        }
+    }
+
+    pub fn reorder_selected_geometry_back(&self) {
+        if let Some(picked) = self.picked() {
+            if let Some(picked) = picked.first() {
+                self.reorder_selected_geometry_to((picked - 1).max(0));
+            }
+        }
+    }
+
     pub fn reorder_selected_geometry_to(&self, destination: usize) {
         self.yolo_view_command(crate::core::commands::ViewCommand::ReorderToDestination(
             destination,

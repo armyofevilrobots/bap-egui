@@ -208,6 +208,7 @@ impl ApplicationCore {
             Some(project) => project,
             None => Project::new(),
         };
+        self.clear_pick();
         self.send_project_origin();
         self.project.regenerate_extents();
         self.rebuild_after_content_change();

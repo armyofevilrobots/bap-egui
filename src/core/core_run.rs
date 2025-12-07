@@ -1,4 +1,5 @@
 use super::commands::{ApplicationStateChangeMsg, ViewCommand};
+use std::collections::BTreeSet;
 use std::time::{Duration, Instant};
 
 use super::ApplicationCore;
@@ -24,14 +25,14 @@ impl ApplicationCore {
                         ViewCommand::ReorderToDestination(dest) => {
                             if let Some(picked) = self.picked.clone() {
                                 self.checkpoint();
-                                self.project.reorder_selected_to(&picked, dest);
+                                self.picked = Some(self.project.reorder_selected_to(&picked, dest));
                                 self.rebuild_after_content_change();
-                                self.clear_pick();
                                 self.yolo_app_state_change(
                                     ApplicationStateChangeMsg::PatchViewModel(
                                         ViewModelPatch::from(self.project.clone()),
                                     ),
                                 );
+                                self.ctx.request_repaint();
                             }
                         }
                         ViewCommand::OrderByPenId => {
@@ -298,6 +299,7 @@ impl ApplicationCore {
                         }
                         ViewCommand::ClearPick => {
                             self.clear_pick();
+                            self.ctx.request_repaint();
                         }
                         ViewCommand::TogglePickByIndex(idx) => {
                             self.toggle_pick_by_index(idx as u32);
@@ -321,6 +323,26 @@ impl ApplicationCore {
                         }
                         ViewCommand::InvertPick => {
                             self.invert_pick();
+                            self.ctx.request_repaint();
+                        }
+                        ViewCommand::ForcePick(picks) => {
+                            let mut new_picked: BTreeSet<u32> = BTreeSet::new();
+                            for pick in picks {
+                                if pick < self.project.plot_geometry.len() {
+                                    new_picked.insert(pick as u32);
+                                }
+                            }
+                            self.picked = Some(new_picked);
+                            self.state_change_out
+                                .send(ApplicationStateChangeMsg::Picked(Some(
+                                    self.picked
+                                        .as_ref()
+                                        .unwrap()
+                                        .iter()
+                                        .map(|i| *i as usize)
+                                        .collect::<Vec<usize>>(),
+                                )))
+                                .expect("OMFG ViewModel is borked sending pick id");
                             self.ctx.request_repaint();
                         }
                         ViewCommand::ApplyPenToSelection(tool_id) => {

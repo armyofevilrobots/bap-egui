@@ -498,8 +498,13 @@ pub(crate) fn floating_tool_window(
                             .fill(color)
                             .min_size(vec2(20., 16.));
                             if ui.add(color_selection_n).clicked() {
-                                // model.c
-                                model.apply_color_to_selection(pen.identity);
+                                if let CommandContext::SelectColorAt(_foo) = model.command_context()
+                                {
+                                    model.select_layers_matching_color(pen.identity);
+                                    model.cancel_command_context(false);
+                                } else {
+                                    model.apply_color_to_selection(pen.identity);
+                                }
                             }
                         }
                     });
