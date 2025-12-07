@@ -9,7 +9,9 @@ use crate::view_model::command_context::SpaceCommandStatus;
 use crate::view_model::{BAPViewModel, CommandContext};
 use eframe::egui;
 use egui::Direction::BottomUp;
-use egui::{Align2, Color32, FontId, Frame, Key, Rect, Stroke, StrokeKind, pos2, vec2};
+use egui::{
+    Align2, Color32, FontId, Frame, Key, Rect, Stroke, StrokeKind, include_image, pos2, vec2,
+};
 use egui_toast::Toasts;
 
 pub(crate) mod bottom_panel;
@@ -242,6 +244,25 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
                     );
                 }
             }
+        }
+
+        if let CommandContext::SelectColorAt(_optpos) = model.command_context(){
+            if let Some(pos) = ctx.pointer_latest_pos() {
+                let p1 = painter_resp.rect.min.clone();
+                let p2 = painter_resp.rect.max.clone();
+                painter.circle(pos,4.,Color32::TRANSPARENT, Stroke::new(1., Color32::RED));
+                if let Some(misc_textures) = model.misc_textures(){
+                    if misc_textures.dropper_icon.is_ready(){
+                        painter.image(
+                            misc_textures.dropper_icon.texture_id().unwrap(),
+                            Rect::from_two_pos(pos, pos+vec2(16., -16.)),
+                            Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+                            ui.style().visuals.text_color()
+                        );
+                    }
+                }
+            }
+
         }
 
         // Draw these lines _last_ so they overlap the drawing itself.

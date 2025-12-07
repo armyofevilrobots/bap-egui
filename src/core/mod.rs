@@ -72,8 +72,6 @@ impl ApplicationCore {
         let (vm_to_app, app_from_vm) = mpsc::channel::<ViewCommand>();
         let (app_to_vm, vm_from_app) = mpsc::channel::<ApplicationStateChangeMsg>();
         let (cancel_render_sender, cancel_render_receiver) = mpsc::channel::<()>();
-        // let (app_to_plotter, plotter_from_app) = mpsc::channel::<PlotterCommand>();
-        // let (plotter_to_app, app_from_plotter) = mpsc::channel::<PlotterResponse>();
         let (app_to_plotter, plotter_to_app) =
             PlotterConnection::spawn().expect("Failed to create PlotterConnection worker.");
         app_to_vm
@@ -151,17 +149,17 @@ impl ApplicationCore {
 
     fn send_project_origin(&mut self) {
         if let Some(origin) = self.project.origin {
-            // println!("Sending project origin: {:?}", self.project.origin);
             self.state_change_out
                 .send(ApplicationStateChangeMsg::OriginChanged(origin.0, origin.1))
                 .expect("Cannot send error message. Dead?");
         } else {
-            eprintln!("Project has no origin to send!");
-        };
+            self.state_change_out
+                .send(ApplicationStateChangeMsg::OriginChanged(0., 0.))
+                .expect("Cannot send error message. Dead?");
+        }
     }
 
     fn rebuild_after_content_change(&mut self) {
-        // self.project.reindex_geometry();
         self.project.regenerate_extents();
         let (pick_image, tmp_extents) =
             pick_map::render_pick_map(&self.project, &self.state_change_out)
@@ -170,9 +168,6 @@ impl ApplicationCore {
         for pixel in &pick_image {
             found.insert(*pixel);
         }
-        // println!("FOUND: {:?}", found);
-
-        // println!("Updating pick image.");
         self.pick_image = Some((
             pick_image,
             (
@@ -182,26 +177,11 @@ impl ApplicationCore {
                 tmp_extents.height(),
             ),
         ));
-        // let app_extents = ApplicationStateChangeMsg::SourceChanged {
-        //     extents: (
-        //         self.project.extents().min().x,
-        //         self.project.extents().min().y,
-        //         self.project.extents().width(),
-        //         self.project.extents().height(),
-        //     ),
-        // };
         self.state_change_out
             .send(ApplicationStateChangeMsg::PatchViewModel(
                 ViewModelPatch::from(self.project.clone()),
             ))
             .expect("Failed to send error to viewmodel.");
-        // println!("Going to send AppSCMSG: {:?}", app_extents);
-        // self.state_change_out
-        //     .send(app_extents)
-        //     .unwrap_or_else(|_err| {
-        //         self.shutdown = true;
-        //         eprintln!("Failed to send message from bap core. Shutting down.");
-        //     });
 
         self.ctx.request_repaint();
     }

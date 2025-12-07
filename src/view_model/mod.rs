@@ -7,8 +7,10 @@ use std::thread::{JoinHandle, sleep};
 use std::time::{Duration, Instant};
 
 use eframe::egui;
+use egui::load::TexturePoll;
 use egui::{
-    Color32, Modifiers, Pos2, Rect, TextureHandle, TextureOptions, Vec2, Visuals, pos2, vec2,
+    Color32, Context, Modifiers, Pos2, Rect, TextureHandle, TextureOptions, Vec2, Visuals,
+    include_image, pos2, vec2,
 };
 use egui_toast::{Toast, ToastKind, ToastOptions};
 use rfd::FileDialog;
@@ -70,6 +72,31 @@ impl std::fmt::Debug for BAPGeoLayer {
     }
 }
 
+pub struct MiscTextures {
+    pub dropper_icon: TexturePoll,
+}
+
+impl MiscTextures {
+    pub fn load(ctx: &Context) -> Self {
+        let di = match include_image!("../../resources/images/eyedropper.png").load(
+            ctx,
+            TextureOptions::default(),
+            egui::SizeHint::Size {
+                width: 32,
+                height: 32,
+                maintain_aspect_ratio: true,
+            },
+        ) {
+            Ok(di) => di,
+            Err(err) => {
+                eprintln!("ERR: {:?}", err);
+                panic!("ERR:{}", err)
+            }
+        };
+        Self { dropper_icon: di }
+    }
+}
+
 pub struct BAPViewModel {
     config: AppConfig,
     toolbar_position: DockPosition,
@@ -120,9 +147,18 @@ pub struct BAPViewModel {
     modifiers: Modifiers,
     gcode: String,
     geo_layers: Vec<BAPGeoLayer>,
+    misc_textures: Option<MiscTextures>,
 }
 
 impl BAPViewModel {
+    pub fn misc_textures(&self) -> &Option<MiscTextures> {
+        &self.misc_textures
+    }
+
+    pub fn reorder_geometry_by_tool_id(&mut self) {
+        self.yolo_view_command(crate::core::commands::ViewCommand::OrderByPenId);
+    }
+
     pub fn apply_color_to_selection(&self, pen_uuid: Uuid) {
         let mut pen = None;
         for maybepen in &self.pen_crib {
@@ -135,6 +171,11 @@ impl BAPViewModel {
                 pen.tool_id.clone(),
             ));
         }
+    }
+
+    pub fn with_misc_textures(mut self, textures: MiscTextures) -> Self {
+        self.misc_textures = Some(textures);
+        self
     }
 
     pub fn with_appstate_recv(mut self, state: Receiver<ApplicationStateChangeMsg>) -> Self {

@@ -6,6 +6,7 @@ use egui::{Pos2, Vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
 
 use crate::core::commands::ApplicationStateChangeMsg;
+use crate::view_model::{CommandContext, MiscTextures};
 
 use super::BAPDisplayMode;
 use super::BAPViewModel;
@@ -32,6 +33,17 @@ impl eframe::App for BAPViewModel {
         self.handle_file_selector();
 
         loop {
+            // TODO: Monitor https://github.com/emilk/egui/issues/5804
+            // match &self.command_context {
+            //     CommandContext::SelectColorAt(_) => {
+            //         ctx.set_cursor_icon(egui::CursorIcon::Copy);
+            //     }
+            //     _ => ctx.set_cursor_icon(egui::CursorIcon::Default),
+            // }
+            if self.misc_textures().is_none() {
+                self.misc_textures = Some(MiscTextures::load(&ctx));
+            }
+
             let received = if let Some(msg_in) = &self.state_in {
                 match msg_in.try_recv() {
                     Ok(msg) => msg,

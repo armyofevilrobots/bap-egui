@@ -377,7 +377,7 @@ impl GeometryToMultiLineString for Geometry<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::project::{PenDetail, svg_to_geometries};
+    use crate::core::project::{PenDetail, import::svg_to_geometries};
     use std::include_bytes;
     // use usvg::{Options, Tree};
 

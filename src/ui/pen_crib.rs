@@ -146,6 +146,11 @@ pub(crate) fn pen_crib_window(model: &mut BAPViewModel, ctx: &egui::Context) {
         };
 
         ui.with_layout(Layout::right_to_left(egui::Align::Max), |ui| {
+            if ui.button("Cancel").clicked() {
+                // model.update_pen_details();
+                //model.set_command_context(crate::view_model::CommandContext::None)
+                model.cancel_command_context(true);
+            }
             if ui.button("Ok").clicked() {
                 model.update_pen_details();
                 //model.set_command_context(crate::view_model::CommandContext::None)

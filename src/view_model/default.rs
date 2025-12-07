@@ -93,6 +93,7 @@ impl Default for BAPViewModel {
             modifiers: Modifiers::NONE,
             gcode: "".to_string(),
             geo_layers: Vec::new(),
+            misc_textures: None,
         }
     }
 }

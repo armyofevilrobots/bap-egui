@@ -10,6 +10,7 @@ use crate::core::project::{PenDetail, Project};
 // The number of pick points per mm, so our image size will be mm * PICKS_PER_MM
 pub const PICKS_PER_MM: usize = 4;
 
+// TODO: This should really be generated dynamically, and be a bit broader.
 pub const PICK_EXPANSION_MAP: [(i32, i32); 25] = [
     (0, 0),
     (1, 0),

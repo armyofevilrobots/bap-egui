@@ -21,6 +21,15 @@ impl ApplicationCore {
                 Err(_err) => (),
                 Ok(msg) => {
                     match msg {
+                        ViewCommand::OrderByPenId => {
+                            self.checkpoint();
+                            self.project.reorder_geometry_by_tool_id();
+                            self.rebuild_after_content_change();
+                            self.clear_pick();
+                            self.yolo_app_state_change(ApplicationStateChangeMsg::PatchViewModel(
+                                ViewModelPatch::from(self.project.clone()),
+                            ));
+                        }
                         ViewCommand::MergePens => {
                             self.project.merge_matching_pens();
                             self.yolo_app_state_change(ApplicationStateChangeMsg::PatchViewModel(

@@ -24,12 +24,10 @@ pub enum ViewCommand {
     #[default]
     Ping,
     MergePens,
+    OrderByPenId,
     SetGCode(String),
-    // ZoomView(f64), // Measured in pixels per mm. The view will calculate exactly how big.
     RequestSourceImage {
-        //     extents: (f64, f64, f64, f64),
         zoom: f64,
-        // resolution: (usize, usize),
         rotation: Option<((f64, f64), f64)>,
         translation: Option<(f64, f64)>,
         scale_around: Option<((f64, f64), f64)>,
@@ -92,7 +90,6 @@ pub enum ViewCommand {
         id: usize,
         name: String,
     },
-    // ReNumberGeometry(Vec<(usize, usize)>), // Change geometry foreach(from toolid-> to toolid)
     None,
 }
 

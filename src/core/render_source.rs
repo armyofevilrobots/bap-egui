@@ -36,18 +36,13 @@ impl ApplicationCore {
             &self.state_change_out,
             &self.cancel_render,
         ) {
-            Ok((cimg, xo)) => {
-                // eprintln!("Rendered CIMG of {:?}", cimg.size);
-                (
-                    Some(cimg),
-                    (xo.min().x, xo.min().y, xo.width(), xo.height()),
-                )
-            }
+            Ok((cimg, xo)) => (
+                Some(cimg),
+                (xo.min().x, xo.min().y, xo.width(), xo.height()),
+            ),
             Err(_err) => {
-                // eprintln!("Error rendering source image: {:?}", err);
                 let min_x = self.project.extents().min().x;
                 let min_y = self.project.extents().min().y;
-
                 (
                     None,
                     (
@@ -80,8 +75,6 @@ impl ApplicationCore {
 
 pub(crate) fn render_source_preview(
     project: &Project,
-    // extents: (f64, f64, f64, f64),
-    // resolution: (usize, usize),
     zoom: f64,
     rotate: Option<((f64, f64), f64)>,
     translate: Option<(f64, f64)>,
@@ -138,7 +131,6 @@ pub(crate) fn render_source_preview(
     let (xofs, yofs) = extents.min().x_y();
 
     let _stroke_width = (resolution.0 as f32 / extents.width() as f32) * 2.5;
-    // TODO: This resolution needs to be scaled if we have rotated.
     let sx = resolution.0 as f32 / extents.width() as f32;
     let sy = resolution.1 as f32 / extents.height() as f32;
     let mut surface =
@@ -147,7 +139,6 @@ pub(crate) fn render_source_preview(
     paint.set_color(Color::BLUE);
     paint.set_style(Style::Stroke);
     paint.set_anti_alias(true);
-    // paint.set_stroke_width(0.1);
     paint.set_shader(None);
     let canvas = surface.canvas();
     // canvas.draw_circle((0., 0.), 25., &paint);
@@ -166,23 +157,18 @@ pub(crate) fn render_source_preview(
             // let id = pg.id as u32;
             if pickset.contains(&(id as u32)) {
                 let dash = 16.0 / sx;
-                let phase = phase.rem((dash * 4.) as f64) as f32;
-                // println!("Matched pick with phase {}", phase);
-                // println!("Dash is {} sx is {}", dash, sx);
+                let phase = 4. * phase.rem((dash * 2.) as f64) as f32;
                 paint.set_path_effect(PathEffect::dash(&[dash, dash, dash, dash], phase));
                 paint.set_stroke_cap(skia_safe::PaintCap::Square);
                 paint.set_stroke_width(1. / sx as f32);
             }
         }
         paint.set_alpha_f(pen.stroke_density as f32);
-        // let color_code = pen.color.clone(); //csscolorparser::parse(pen.color.as_str()).unwrap_or_default();
         let [r, g, b, a] = pen.color.to_rgba8();
 
         paint.set_color(Color::from_argb(a, r, g, b));
-        // paint.set_path_effect(None);
 
         let mls = &pg.lines();
-        //&pg.geometry {
         let _line_count = mls.0.len();
         for (_idx, line) in mls.0.clone().iter().enumerate() {
             let mut path = Path::new();

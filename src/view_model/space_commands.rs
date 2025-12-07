@@ -142,18 +142,6 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         ),
     );
 
-    let _cmd_file_project = (
-        Key::P,
-        (
-            "Project".to_string(),
-            SpaceCommandBranch::Branch(IndexMap::from([
-                //cmd_project_open,
-                //cmd_project_save,
-                //cmd_project_saveas,
-            ])),
-        ),
-    );
-
     let cmd_file = (
         Key::F,
         (
@@ -180,7 +168,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Zoom Fit".to_string(),
                 Box::new(|model| model.zoom_fit()),
-                None,
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
             ),
         ),
     );
@@ -282,7 +270,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Smart Arrange".to_string(),
                 Box::new(|model| model.center_smart()),
-                None,
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
             ),
         ),
     );
@@ -294,7 +282,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Align to paper".to_string(),
                 Box::new(|model| model.center_paper()),
-                None,
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
             ),
         ),
     );
@@ -306,7 +294,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Align to machine".to_string(),
                 Box::new(|model| model.center_machine()),
-                None,
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
             ),
         ),
     );
@@ -342,7 +330,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Scale by factor".to_string(),
                 Box::new(|model| model.command_context = CommandContext::Scale(1.)),
-                None,
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
             ),
         ),
     );
@@ -354,7 +342,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Scale around point".to_string(),
                 Box::new(|model| model.command_context = CommandContext::ScaleAround(None, None)),
-                None,
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
             ),
         ),
     );
@@ -366,7 +354,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Rotate".to_string(),
                 Box::new(|model| model.command_context = CommandContext::Rotate(None, None, None)),
-                None,
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
             ),
         ),
     );
@@ -413,7 +401,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Leaf(
                 "Pen (C)rib".to_string(),
                 Box::new(|model| model.command_context = CommandContext::PenCrib),
-                None,
+                Some(Box::new(|model| model.pen_crib().len() > 0)),
             ),
         ),
     );
@@ -456,7 +444,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 Box::new(|model| {
                     model.yolo_view_command(ViewCommand::MergePens);
                 }),
-                None,
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
             ),
         ),
     );
@@ -470,7 +458,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 Box::new(|model| {
                     model.request_post();
                 }),
-                None,
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
             ),
         ),
     );
@@ -524,7 +512,21 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 Box::new(|model| {
                     model.set_command_context(CommandContext::Translate(None));
                 }),
-                None,
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
+            ),
+        ),
+    );
+
+    let cmd_geometry_reorder_by_tool_id = (
+        Key::O,
+        (
+            "Reorder GEO by tool id".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Reorder GEO by tool id".to_string(),
+                Box::new(|model| {
+                    model.reorder_geometry_by_tool_id();
+                }),
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
             ),
         ),
     );
@@ -536,10 +538,11 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Branch(IndexMap::from([
                 cmd_geometry_ungroup,
                 cmd_geometry_group,
+                cmd_geometry_reorder_by_tool_id,
                 scb_separator(),
                 cmd_geometry_rotate,
-                cmd_geometry_scale,
                 cmd_geometry_translate,
+                cmd_geometry_scale,
             ])),
         ),
     );
@@ -567,7 +570,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 Box::new(|model| {
                     model.pick_strokes();
                 }),
-                None,
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
             ),
         ),
     );
@@ -581,7 +584,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 Box::new(|model| {
                     model.pick_hatches();
                 }),
-                None,
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
             ),
         ),
     );
@@ -596,7 +599,37 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                     // model.select_by_color_pick();
                     model.set_command_context(CommandContext::SelectColorAt(None))
                 }),
-                None,
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
+            ),
+        ),
+    );
+
+    let cmd_select_invert = (
+        Key::I,
+        (
+            "Invert Selection".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Invert Selection".to_string(),
+                Box::new(|model| {
+                    // model.select_by_color_pick();
+                    model.invert_pick();
+                }),
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
+            ),
+        ),
+    );
+
+    let cmd_select_clear = (
+        Key::X,
+        (
+            "E(x)it Selection".to_string(),
+            SpaceCommandBranch::Leaf(
+                "E(x)it selection".to_string(),
+                Box::new(|model| {
+                    // model.select_by_color_pick();
+                    model.pick_clear();
+                }),
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
             ),
         ),
     );
@@ -610,6 +643,8 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 cmd_select_by_color,
                 cmd_select_hatches,
                 cmd_select_strokes,
+                cmd_select_invert,
+                cmd_select_clear,
             ])),
         ),
     );
@@ -659,10 +694,10 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
     Mutex::new(SpaceCommandBranch::Branch(IndexMap::from([
         cmd_file,
         cmd_edit,
-        cmd_project,
         cmd_geometry,
-        cmd_media,
         cmd_arrange,
+        cmd_project,
+        cmd_media,
         cmd_view,
     ])))
 });

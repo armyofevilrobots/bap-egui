@@ -11,7 +11,7 @@ pub(crate) mod view_model;
 
 use crate::{
     core::project::{Orientation, PaperSize},
-    view_model::BAPViewModel,
+    view_model::{BAPViewModel, MiscTextures},
 };
 
 use core::ApplicationCore;
@@ -36,27 +36,22 @@ fn main() -> eframe::Result<()> {
         BAPViewModel::name(),
         native_options,
         Box::new(|ctx| {
-            let ctx_app = ctx.egui_ctx.clone();
-            let (mut application, cmd_out, state_in, cancel_render_sender) =
-                ApplicationCore::new(ctx_app);
-
-            // let config = AppConfig::default();
-
-            let mut model = BAPViewModel::default()
-                .with_appstate_recv(state_in)
-                .with_viewcommand_send(cmd_out);
-            // model.state_in = Some(state_in);
-            // model.cmd_out = Some(cmd_out);
-            model.set_origin(pos2(0., 279.), false);
-            model.set_cancel_render(cancel_render_sender);
-
-            // We need some kind of placeholder due to the API. How bout a secret pixel?
+            egui_extras::install_image_loaders(&ctx.egui_ctx);
             let tmp_svg_image = ColorImage::filled([3, 3], Color32::TRANSPARENT);
             let tex = ctx.egui_ctx.load_texture(
                 format!("{}", Uuid::new_v4().as_u128()),
                 tmp_svg_image,
                 egui::TextureOptions::NEAREST,
             );
+            let (mut application, cmd_out, state_in, cancel_render_sender) =
+                ApplicationCore::new(ctx.egui_ctx.clone());
+            let mut model = BAPViewModel::default()
+                .with_appstate_recv(state_in)
+                .with_viewcommand_send(cmd_out);
+            model.set_origin(pos2(0., 279.), false);
+            model.set_cancel_render(cancel_render_sender);
+
+            // We need some kind of placeholder due to the API. How bout a secret pixel?
             model.set_source_image_handle(Box::new(tex));
             model.set_origin(pos2(0., 0.), false);
             model.update_pen_details();
@@ -66,7 +61,6 @@ fn main() -> eframe::Result<()> {
 
             let handle = thread::spawn(move || application.run());
             model.set_join_handle(handle);
-            egui_extras::install_image_loaders(&ctx.egui_ctx);
             Ok(Box::new(model))
         }),
     )
