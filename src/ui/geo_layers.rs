@@ -138,6 +138,18 @@ pub(crate) fn floating_geo_layer_window(
                     model.pick_all();
                 }
             }
+
+            // The color picker icon
+            let color_pick_button = Button::new(include_image!(
+                "../../resources/images/eyedropper.png"
+            ))
+            .selected(match model.command_context() {
+                CommandContext::SelectColorAt(_) => true,
+                _ => false,
+            });
+            if ui.add(color_pick_button).clicked() {
+                model.set_command_context(CommandContext::SelectColorAt(None));
+            }
         });
         ui.shrink_width_to_current();
         ui.add_space(8.);

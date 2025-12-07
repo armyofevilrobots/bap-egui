@@ -585,7 +585,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 Box::new(|model| {
                     model.pick_all();
                 }),
-                None,
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
             ),
         ),
     );

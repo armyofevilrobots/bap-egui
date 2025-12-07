@@ -248,17 +248,19 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
             if let Some(pos) = ctx.pointer_latest_pos() {
                 let _p1 = painter_resp.rect.min.clone();
                 let _p2 = painter_resp.rect.max.clone();
-                painter.circle(pos,4.,Color32::TRANSPARENT, Stroke::new(1., Color32::RED));
-                if let Some(misc_textures) = model.misc_textures(){
-                    if misc_textures.dropper_icon.is_ready(){
-                        painter.image(
-                            misc_textures.dropper_icon.texture_id().unwrap(),
-                            Rect::from_two_pos(pos, pos+vec2(16., -16.)),
-                            Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
-                            ui.style().visuals.text_color()
-                        );
-                    }
-                }
+                // painter.circle(pos,4.,Color32::TRANSPARENT, Stroke::new(1., Color32::RED));
+                // if let Some(misc_textures) = model.misc_textures(){
+                //     if misc_textures.dropper_icon.is_ready(){
+                //         painter.image(
+                //             misc_textures.dropper_icon.texture_id().unwrap(),
+                //             Rect::from_two_pos(pos, pos+vec2(16., -16.)),
+                //             Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+                //             ui.style().visuals.text_color()
+                //         );
+                //     }
+                // }
+                painter.text(pos.clone(), Align2::LEFT_BOTTOM, "✒", FontId::default(), Color32::RED);
+
             }
 
         }

@@ -22,6 +22,7 @@ pub(crate) fn floating_tool_window(
     wtop: f32,
     toasts: &mut Toasts,
 ) {
+    //let corner_radius_save = ctx.style().visuals.window_corner_radius.clone();
     let default_height = ctx.content_rect().height() - wtop - 22.; //23.;
     let win = egui::Window::new("")
         // .auto_sized()
