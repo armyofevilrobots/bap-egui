@@ -11,7 +11,7 @@ pub(crate) mod view_model;
 
 use crate::{
     core::project::{Orientation, PaperSize},
-    view_model::{BAPViewModel, MiscTextures},
+    view_model::BAPViewModel,
 };
 
 use core::ApplicationCore;

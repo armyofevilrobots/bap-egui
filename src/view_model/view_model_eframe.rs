@@ -6,7 +6,7 @@ use egui::{Pos2, Vec2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
 
 use crate::core::commands::ApplicationStateChangeMsg;
-use crate::view_model::{CommandContext, MiscTextures};
+use crate::view_model::MiscTextures;
 
 use super::BAPDisplayMode;
 use super::BAPViewModel;

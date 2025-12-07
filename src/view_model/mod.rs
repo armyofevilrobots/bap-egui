@@ -173,6 +173,7 @@ impl BAPViewModel {
         }
     }
 
+    #[allow(unused)]
     pub fn with_misc_textures(mut self, textures: MiscTextures) -> Self {
         self.misc_textures = Some(textures);
         self

@@ -1,6 +1,5 @@
 use super::BAPGeometry;
 // use aoer_plotty_rs::geo_types::hatch::Hatches;
-pub use super::super::paper::*;
 use geo::Point;
 use nalgebra::{Affine2, Matrix3};
 use std::collections::BTreeSet;

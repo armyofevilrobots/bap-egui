@@ -10,7 +10,7 @@ use crate::view_model::{BAPViewModel, CommandContext};
 use eframe::egui;
 use egui::Direction::BottomUp;
 use egui::{
-    Align2, Color32, FontId, Frame, Key, Rect, Stroke, StrokeKind, include_image, pos2, vec2,
+    Align2, Color32, FontId, Frame, Key, Rect, Stroke, StrokeKind, pos2, vec2,
 };
 use egui_toast::Toasts;
 
@@ -248,8 +248,8 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
 
         if let CommandContext::SelectColorAt(_optpos) = model.command_context(){
             if let Some(pos) = ctx.pointer_latest_pos() {
-                let p1 = painter_resp.rect.min.clone();
-                let p2 = painter_resp.rect.max.clone();
+                let _p1 = painter_resp.rect.min.clone();
+                let _p2 = painter_resp.rect.max.clone();
                 painter.circle(pos,4.,Color32::TRANSPARENT, Stroke::new(1., Color32::RED));
                 if let Some(misc_textures) = model.misc_textures(){
                     if misc_textures.dropper_icon.is_ready(){
