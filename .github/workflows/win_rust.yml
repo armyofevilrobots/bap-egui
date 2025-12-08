@@ -1,0 +1,72 @@
+name: Rust
+
+on:
+  push:
+    branches: ["main", "testing", "winbuild"]
+    tags:
+      - "v*"
+  # pull_request:
+  #   branches: ["release"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      # pull-requests: write
+      # repository-projects: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
+      - name: "get MSYS"
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: mingw64
+          install: mingw-w64-x86_64-geos mingw-w64-x86_64-pkg-config
+      # - shell: msys2 {0}
+      #   run: |
+      #     pacman -Syu mingw-w64-x86_64-geos
+      - name: Clone Repository
+        run: git clone https://github.com/armyofevilrobots/aoer-plotty-rs.git deps/aoer-plotty-rs
+      - name: Cache all the target build artifacts.
+        id: cache-target-rust-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            target
+          key: ${{ runner.os }}-windows-cache
+      - run: echo ("PKG_CONFIG=C:\mingw64\bin\pkg-config.exe") >> $env:GITHUB_ENV
+      - run: env
+      - name: Build
+        run: cargo build --release --verbose
+      - name: Cache all the target build artifacts.
+        id: cache-target-rust-save
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: |
+            target
+          key: ${{ steps.cache-target-rust-restore.outputs.cache-primary-key }}
+      - name: Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+      - name: move build
+        run: mv ./target/release/bap-egui.exe ./
+      - name: Zip
+        run: zip -r ${{ github.event.repository.name }}-${{ github.ref_name}}-${{ runner.os }}-${{ runner.arch }}.zip README.md bap-egui.exe
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ github.event.repository.name }}-${{ github.ref_name}}-${{ runner.os }}-${{ runner.arch }}.zip
+          asset_name: ${{ github.event.repository.name }}-${{ github.ref_name}}-${{ runner.os }}-${{ runner.arch }}.zip
+          asset_content_type: application/zip
