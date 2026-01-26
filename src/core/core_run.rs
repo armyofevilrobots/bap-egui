@@ -429,6 +429,7 @@ impl ApplicationCore {
                                 gcode.split("\n").map(|line| line.to_string()).collect();
                             self.handle_new_gcode(&program);
                         }
+                        ViewCommand::ScaleMatTo(mat_target) => todo!(),
                     }
                 }
             }

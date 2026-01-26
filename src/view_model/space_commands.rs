@@ -347,6 +347,18 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
         ),
     );
 
+    let cmd_scale_to_mat = (
+        Key::S,
+        (
+            "Scale and Mat Geometry".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Scale and Mat Geometry".to_string(),
+                Box::new(|model| model.command_context = CommandContext::MatToTarget(None)),
+                Some(Box::new(|model| model.geo_layers().len() > 0)),
+            ),
+        ),
+    );
+
     let cmd_geometry_rotate = (
         Key::R,
         (
@@ -402,6 +414,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                 cmd_smart_arrange,
                 cmd_arrange_machine,
                 cmd_arrange_paper,
+                cmd_scale_to_mat,
                 scb_separator(),
                 cmd_set_origin,
                 scb_separator(),

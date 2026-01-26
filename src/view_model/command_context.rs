@@ -7,7 +7,7 @@ use egui::{Key, Pos2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
 
 use crate::{
-    core::{config::AppConfig, machine::MachineConfig},
+    core::{commands::MatTarget, config::AppConfig, machine::MachineConfig},
     view_model::BAPViewModel,
 };
 // use crate::view_model::project_ops::project_ops;
@@ -31,6 +31,7 @@ pub enum CommandContext {
     ScaleAround(Option<Pos2>, Option<Pos2>), // Center, reference
     EditGcode(Option<String>),               // Saves original gcode.
     Configure(Option<AppConfig>),
+    MatToTarget(Option<MatTarget>),
     None,
 }
 
@@ -75,6 +76,17 @@ impl Display for CommandContext {
             }
             CommandContext::EditGcode(_) => write!(f, "Edit GCode"),
             CommandContext::Configure(_) => write!(f, "Configuration"),
+            CommandContext::Origin => todo!(),
+            CommandContext::PaperChooser => todo!(),
+            CommandContext::MachineEdit(machine_config) => todo!(),
+            CommandContext::PenCrib => todo!(),
+            CommandContext::PenEdit(_, pen_detail) => todo!(),
+            CommandContext::PenDelete(_) => todo!(),
+            CommandContext::Clip(pos2, pos3) => todo!(),
+            CommandContext::Rotate(pos2, pos3, pos4) => todo!(),
+            CommandContext::Scale(_) => todo!(),
+            CommandContext::Space(items) => todo!(),
+            CommandContext::MatToTarget(mat_target) => todo!(),
         }
     }
 }
@@ -210,6 +222,7 @@ impl BAPViewModel {
                 };
                 CommandContext::None
             }
+            CommandContext::MatToTarget(mat_target) => todo!(),
         };
     }
 
@@ -232,6 +245,7 @@ impl BAPViewModel {
             CommandContext::ScaleAround(_pos2, _opt_ref) => ctx,
             CommandContext::EditGcode(_) => ctx,
             CommandContext::Configure(_app_config) => ctx,
+            CommandContext::MatToTarget(mat_target) => todo!(),
         };
     }
 

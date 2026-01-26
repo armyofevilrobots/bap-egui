@@ -19,6 +19,19 @@ pub enum SelectionType {
     Strokes,
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub enum MatTarget {
+    // Order is top right bottom left
+    Machine(f64, f64, f64, f64),
+    Paper(f64, f64, f64, f64),
+}
+
+impl Default for MatTarget {
+    fn default() -> Self {
+        MatTarget::Paper(10., 10., 10., 10.)
+    }
+}
+
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default, Clone)]
 pub enum ViewCommand {
     #[default]
@@ -56,6 +69,8 @@ pub enum ViewCommand {
         factor: f64,
     },
     Scale(f64),
+    // Scale so the whole drawing fits with AT LEAST this margin on printable area/paper
+    ScaleMatTo(MatTarget),
     Post,
     StartPlot,
     PausePlot,
