@@ -429,7 +429,26 @@ impl ApplicationCore {
                                 gcode.split("\n").map(|line| line.to_string()).collect();
                             self.handle_new_gcode(&program);
                         }
-                        ViewCommand::ScaleMatTo(mat_target) => todo!(),
+                        ViewCommand::ScaleMatTo(mat_target) => {
+                            // println!("Received Mat To Target {}", &mat_target);
+                            self.checkpoint();
+                            self.project
+                                .mat_to_target(mat_target)
+                                .unwrap_or_else(|err| {
+                                    self.yolo_app_state_change(ApplicationStateChangeMsg::Error(
+                                        format!(
+                                            "Failed to apply mat/margin to the project: {}",
+                                            err
+                                        )
+                                        .to_string(),
+                                    ))
+                                });
+                            self.state_change_out
+                                .send(ApplicationStateChangeMsg::PatchViewModel(
+                                    ViewModelPatch::from(self.project.clone()),
+                                ))
+                                .expect("Failed to send patch to viewmodel.");
+                        }
                     }
                 }
             }

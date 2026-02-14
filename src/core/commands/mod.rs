@@ -1,5 +1,5 @@
 use egui::ColorImage;
-use std::path::PathBuf;
+use std::{fmt::Display, path::PathBuf};
 
 use crate::{
     core::{
@@ -12,24 +12,14 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 
+pub mod mat;
+pub use mat::*;
+
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default, Clone)]
 pub enum SelectionType {
     Hatches,
     #[default]
     Strokes,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub enum MatTarget {
-    // Order is top right bottom left
-    Machine(f64, f64, f64, f64),
-    Paper(f64, f64, f64, f64),
-}
-
-impl Default for MatTarget {
-    fn default() -> Self {
-        MatTarget::Paper(10., 10., 10., 10.)
-    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default, Clone)]

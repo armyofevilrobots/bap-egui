@@ -24,6 +24,7 @@ pub(crate) mod pen_delete;
 pub(crate) mod pen_editor;
 pub(crate) mod rulers;
 pub(crate) mod scale_window;
+pub(crate) mod arrange_mat;
 pub(crate) mod scene_toggle;
 pub(crate) mod space_command_palette;
 pub(crate) mod themes;
@@ -57,6 +58,7 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
             pen_editor::pen_editor_window(model, ctx, *pen_idx)
         }
         CommandContext::Scale(_factor) => scale_window::scale_window(model, ctx),
+        CommandContext::MatToTarget(_target) => arrange_mat::arrange_mat(model, ctx),
         CommandContext::PenDelete(pen_idx) => pen_delete_window(model, ctx, *pen_idx),
         CommandContext::MachineEdit(_opt_machine) => machine_editor_window(model, ctx),
         CommandContext::SelectTheme => theme_window(model, ctx),

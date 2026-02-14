@@ -1,10 +1,77 @@
+use crate::core::commands::MatTarget;
+
 use super::BAPGeometry;
 // use aoer_plotty_rs::geo_types::hatch::Hatches;
-use geo::Point;
+use anyhow::{Result, anyhow};
+use geo::{BooleanOps, BoundingRect, Point, coord};
 use nalgebra::{Affine2, Matrix3};
 use std::collections::BTreeSet;
 
 impl super::Project {
+    pub fn calc_smart_limits(&self) -> Result<(f64, f64)> {
+        let (mx, my) = self
+            .machine
+            .as_ref()
+            .ok_or(anyhow!("Machine is not set."))?
+            .limits();
+        let (px, py) = self.paper.oriented_dimensions();
+        let mrect = geo::Rect::new(coord! {x: 0., y: 0.}, coord! { x: mx, y: my }).to_polygon();
+        let prect = geo::Rect::new(coord! {x: 0., y: 0.}, coord! { x: px, y: py }).to_polygon();
+        let urect = mrect.intersection(&prect).bounding_rect().unwrap();
+        Ok((urect.width(), urect.height()))
+    }
+
+    pub fn mat_to_target(&mut self, target: MatTarget) -> Result<()> {
+        // println!("Project: Matting to target: {}", target);
+        let (t, r, b, l) = target.get_trbl();
+        let machine_dims = self
+            .machine
+            .as_ref()
+            .ok_or(anyhow!("Machine is not set."))?
+            .limits();
+        let destination_dims: (f64, f64) = match target {
+            MatTarget::Machine(_mat_values) => machine_dims.clone(),
+            MatTarget::Paper(_mat_values) => self.paper.oriented_dimensions(),
+            MatTarget::Smart(_mat_values) => self.calc_smart_limits()?,
+        };
+        let width = destination_dims.0 - (r + l);
+        let height = destination_dims.1 - (t + b);
+        let destination_aspect_ratio = width / height;
+        let extents = self.extents();
+        let geo_aspect_ratio = extents.width() / extents.height();
+        let scale_factor = if geo_aspect_ratio >= destination_aspect_ratio {
+            // println!(
+            //     "\tGeometry ratio larger than source ratio (proportionally wider than destination)"
+            // );
+            width / extents.width()
+        } else {
+            // println!(
+            //     "\tGeometry ratio smaller than source ratio (proportionally taller than destination)"
+            // );
+            height / extents.height()
+        };
+        // println!("\tScale factor is {:4.2}", scale_factor);
+        self.scale_by_factor(scale_factor);
+        // println!("\tDone scaling, now translating.");
+        let dest_center = (destination_dims.0 / 2., destination_dims.1 / 2.);
+        let geo_center = self.calc_extents();
+        let geo_center = geo_center.center().x_y();
+        // println!("\tGEO center is {:3.1},{:3.1}", geo_center.0, geo_center.1);
+        // println!(
+        //     "\tDestination center is {:3.1},{:3.1}",
+        //     dest_center.0, dest_center.1
+        // );
+        let delta = (dest_center.0 - geo_center.0, dest_center.1 - geo_center.1);
+        // println!("\tTranslation delta is {:3.1},{:3.1}", delta.0, delta.1);
+        self.translate_geometry_mut(delta, &None);
+
+        // println!("\tLast, moving origin to bottom left of paper.");
+        self.set_origin(&Some((0., destination_dims.1)));
+        // println!("Done.");
+
+        Result::Ok(())
+    }
+
     pub fn rotate_geometry_around_point(
         &self,
         around: (f64, f64),

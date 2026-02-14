@@ -4,7 +4,7 @@ use egui::{Key, mutex::Mutex};
 use indexmap::IndexMap;
 
 use crate::{
-    core::commands::ViewCommand,
+    core::commands::{MatTarget, ViewCommand},
     view_model::{BAPViewModel, CommandContext},
 };
 
@@ -353,7 +353,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             "Scale and Mat Geometry".to_string(),
             SpaceCommandBranch::Leaf(
                 "Scale and Mat Geometry".to_string(),
-                Box::new(|model| model.command_context = CommandContext::MatToTarget(None)),
+                Box::new(|model| model.command_context = CommandContext::MatToTarget(MatTarget::default())),
                 Some(Box::new(|model| model.geo_layers().len() > 0)),
             ),
         ),

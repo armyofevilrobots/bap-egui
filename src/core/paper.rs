@@ -146,6 +146,14 @@ impl PaperSize {
             PaperSize::Custom(x, y) => (*x, *y),
         }
     }
+
+    pub fn dimensions_oriented(&self, orientation: &Orientation) -> (f64, f64) {
+        let (px, py) = self.dimensions();
+        match orientation {
+            Orientation::Landscape => (py, px),
+            Orientation::Portrait => (px, py),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -154,4 +162,14 @@ pub struct Paper {
     pub rgb: (f64, f64, f64), // For display purposes only.
     pub size: PaperSize,
     pub orientation: Orientation,
+}
+
+impl Paper {
+    pub fn oriented_dimensions(&self) -> (f64, f64) {
+        let (px, py) = self.size.dimensions();
+        match self.orientation {
+            Orientation::Landscape => (py, px),
+            Orientation::Portrait => (px, py),
+        }
+    }
 }

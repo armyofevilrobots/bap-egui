@@ -31,28 +31,32 @@ pub enum CommandContext {
     ScaleAround(Option<Pos2>, Option<Pos2>), // Center, reference
     EditGcode(Option<String>),               // Saves original gcode.
     Configure(Option<AppConfig>),
-    MatToTarget(Option<MatTarget>),
+    MatToTarget(MatTarget),
     None,
 }
 
 impl Display for CommandContext {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Origin => write!(f, "Origin"),
-            Self::PaperChooser => write!(f, "PaperChooser"),
-            Self::MachineEdit(arg0) => f.debug_tuple("MachineEdit").field(arg0).finish(),
-            Self::PenCrib => write!(f, "PenCrib"),
-            Self::PenEdit(arg0, arg1) => f.debug_tuple("PenEdit").field(arg0).field(arg1).finish(),
-            Self::PenDelete(arg0) => f.debug_tuple("PenDelete").field(arg0).finish(),
-            Self::Clip(arg0, arg1) => f.debug_tuple("Clip").field(arg0).field(arg1).finish(),
-            Self::Rotate(arg0, arg1, arg2) => f
+            CommandContext::Origin => write!(f, "Origin"),
+            CommandContext::PaperChooser => write!(f, "PaperChooser"),
+            CommandContext::MachineEdit(arg0) => f.debug_tuple("MachineEdit").field(arg0).finish(),
+            CommandContext::PenCrib => write!(f, "PenCrib"),
+            CommandContext::PenEdit(arg0, arg1) => {
+                f.debug_tuple("PenEdit").field(arg0).field(arg1).finish()
+            }
+            CommandContext::PenDelete(arg0) => f.debug_tuple("PenDelete").field(arg0).finish(),
+            CommandContext::Clip(arg0, arg1) => {
+                f.debug_tuple("Clip").field(arg0).field(arg1).finish()
+            }
+            CommandContext::Rotate(arg0, arg1, arg2) => f
                 .debug_tuple("Rotate")
                 .field(arg0)
                 .field(arg1)
                 .field(arg2)
                 .finish(),
-            Self::Scale(arg0) => f.debug_tuple("Scale").field(arg0).finish(),
-            Self::Space(keys) => write!(
+            CommandContext::Scale(arg0) => f.debug_tuple("Scale").field(arg0).finish(),
+            CommandContext::Space(keys) => write!(
                 f,
                 "{}",
                 keys.iter()
@@ -76,17 +80,7 @@ impl Display for CommandContext {
             }
             CommandContext::EditGcode(_) => write!(f, "Edit GCode"),
             CommandContext::Configure(_) => write!(f, "Configuration"),
-            CommandContext::Origin => todo!(),
-            CommandContext::PaperChooser => todo!(),
-            CommandContext::MachineEdit(machine_config) => todo!(),
-            CommandContext::PenCrib => todo!(),
-            CommandContext::PenEdit(_, pen_detail) => todo!(),
-            CommandContext::PenDelete(_) => todo!(),
-            CommandContext::Clip(pos2, pos3) => todo!(),
-            CommandContext::Rotate(pos2, pos3, pos4) => todo!(),
-            CommandContext::Scale(_) => todo!(),
-            CommandContext::Space(items) => todo!(),
-            CommandContext::MatToTarget(mat_target) => todo!(),
+            CommandContext::MatToTarget(mat_target) => write!(f, "Arrange matted: {}", mat_target),
         }
     }
 }
@@ -222,7 +216,7 @@ impl BAPViewModel {
                 };
                 CommandContext::None
             }
-            CommandContext::MatToTarget(mat_target) => todo!(),
+            CommandContext::MatToTarget(_mat_target) => CommandContext::None,
         };
     }
 
@@ -245,7 +239,7 @@ impl BAPViewModel {
             CommandContext::ScaleAround(_pos2, _opt_ref) => ctx,
             CommandContext::EditGcode(_) => ctx,
             CommandContext::Configure(_app_config) => ctx,
-            CommandContext::MatToTarget(mat_target) => todo!(),
+            CommandContext::MatToTarget(_mat_target) => ctx,
         };
     }
 

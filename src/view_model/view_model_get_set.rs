@@ -6,7 +6,7 @@ use egui_toast::Toast;
 
 use crate::{
     core::{
-        commands::ViewCommand,
+        commands::{MatTarget, ViewCommand},
         config::{AppConfig, DockPosition, RulerOrigin},
         machine::MachineConfig,
         sender::PlotterState,
@@ -19,6 +19,15 @@ use super::{BAPDisplayMode, BAPViewModel};
 impl BAPViewModel {
     pub fn name() -> &'static str {
         "Bot-a-Plot"
+    }
+
+    pub fn mat_to_target(&self, target: MatTarget) {
+        if let Some(cmd_out) = &self.cmd_out {
+            // println!("Sending mat to target: {}", &target);
+            cmd_out
+                .send(ViewCommand::ScaleMatTo(target.clone()))
+                .expect(format!("Failed to Scale Mat To {}", target).as_str());
+        }
     }
 
     pub fn inhibit_space_command(&self) -> bool {

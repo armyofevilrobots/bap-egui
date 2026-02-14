@@ -1,3 +1,4 @@
+use crate::core::commands::MatTarget;
 use crate::core::config::DockPosition;
 use crate::core::config::RulerOrigin;
 use crate::core::project::Orientation;
@@ -308,7 +309,7 @@ pub(crate) fn floating_tool_window(
                         )
                         .clicked()
                         {
-                            model.set_command_context(CommandContext::Scale(1.));
+                            model.set_command_context(CommandContext::MatToTarget(MatTarget::default()));
                         }
                         ui.end_row();
                     });
