@@ -12,6 +12,7 @@ use egui::Direction::BottomUp;
 use egui::{Align2, Color32, FontId, Frame, Key, Rect, Stroke, StrokeKind, pos2, vec2};
 use egui_toast::Toasts;
 
+pub(crate) mod arrange_mat;
 pub(crate) mod bottom_panel;
 pub(crate) mod config;
 pub(crate) mod editor;
@@ -24,7 +25,6 @@ pub(crate) mod pen_delete;
 pub(crate) mod pen_editor;
 pub(crate) mod rulers;
 pub(crate) mod scale_window;
-pub(crate) mod arrange_mat;
 pub(crate) mod scene_toggle;
 pub(crate) mod space_command_palette;
 pub(crate) mod themes;

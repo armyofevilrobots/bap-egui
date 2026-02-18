@@ -353,7 +353,9 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             "Scale and Mat Geometry".to_string(),
             SpaceCommandBranch::Leaf(
                 "Scale and Mat Geometry".to_string(),
-                Box::new(|model| model.command_context = CommandContext::MatToTarget(MatTarget::default())),
+                Box::new(|model| {
+                    model.command_context = CommandContext::MatToTarget(MatTarget::default())
+                }),
                 Some(Box::new(|model| model.geo_layers().len() > 0)),
             ),
         ),

@@ -309,7 +309,9 @@ pub(crate) fn floating_tool_window(
                         )
                         .clicked()
                         {
-                            model.set_command_context(CommandContext::MatToTarget(MatTarget::default()));
+                            model.set_command_context(CommandContext::MatToTarget(
+                                MatTarget::default(),
+                            ));
                         }
                         ui.end_row();
                     });
