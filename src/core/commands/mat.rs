@@ -67,7 +67,7 @@ impl MatTarget {
         ]
     }
     pub fn options_with_values(values: &MatValues) -> Vec<MatTarget> {
-        let (mut mtop, mut mright, mut mbottom, mut mleft) = match values.clone() {
+        let (mtop, mright, mbottom, mleft) = match values.clone() {
             MatValues::Equal(all) => (all, all, all, all),
             MatValues::VertHoriz(vert, horiz) => (vert, horiz, vert, horiz),
             MatValues::TopRightBottomLeft(t, r, b, l) => (t, r, b, l),

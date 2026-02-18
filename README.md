@@ -31,6 +31,7 @@ a bit more testing.
  * Undo stack
  * Matting to paper/machine limits, and smart matting to optimize
    use of space
+    * Now with a nice interface!
  * Spacemacs inspired command palette for quick triggering of
    menu commands
  * Basic machine control (shuttle/pen up/down/etc.)

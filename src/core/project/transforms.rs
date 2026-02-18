@@ -53,7 +53,11 @@ impl super::Project {
         // println!("\tScale factor is {:4.2}", scale_factor);
         self.scale_by_factor(scale_factor);
         // println!("\tDone scaling, now translating.");
-        let dest_center = (destination_dims.0 / 2., destination_dims.1 / 2.);
+        //let dest_center = (destination_dims.0 / 2., destination_dims.1 / 2.);
+        let dest_center = (
+            (destination_dims.0 + l - r) / 2.,
+            (destination_dims.1 + t - b) / 2.,
+        );
         let geo_center = self.calc_extents();
         let geo_center = geo_center.center().x_y();
         // println!("\tGEO center is {:3.1},{:3.1}", geo_center.0, geo_center.1);
