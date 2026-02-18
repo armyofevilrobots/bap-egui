@@ -186,12 +186,12 @@ pub(crate) fn arrange_mat(model: &mut BAPViewModel, ctx: &egui::Context) {
                     let values = mat_target.values();
                     let mut mat_values_changed = false;
                     let (vert_space_mm, horiz_space_mm) = match values {
-                        MatValues::Equal(xyval) => {
-                            let vspace_mm = (avail_height_mm as f64 / 2.);
-                            let hspace_mm = (avail_width_mm as f64 / 2.);
+                        MatValues::Equal(_xyval) => {
+                            let vspace_mm = avail_height_mm as f64 / 2.;
+                            let hspace_mm = avail_width_mm as f64 / 2.;
                             (vspace_mm.min(hspace_mm) - 1., hspace_mm.min(vspace_mm) - 1.)
                         }
-                        MatValues::VertHoriz(yval, xval) => (
+                        MatValues::VertHoriz(_yval, _xval) => (
                             (avail_height_mm as f64 / 2.) - 1.,
                             (avail_width_mm as f64 / 2.) - 1.,
                         ),
