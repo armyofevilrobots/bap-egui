@@ -28,6 +28,7 @@ a bit more testing.
     * Translation
     * Scaling
     * Pen selection
+    * Select inside existing geometry
  * Undo stack
  * Matting to paper/machine limits, and smart matting to optimize
    use of space
