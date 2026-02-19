@@ -41,21 +41,6 @@ impl ApplicationCore {
                     geometry: new_geokind,
                     keepdown_strategy: geo.keepdown_strategy,
                 })
-                // let geo = geo.clone();
-                // match geo.geometry() {
-                // Geometry::MultiLineString(mls) => {
-                //     for linestring in mls.0 {
-                //         self.project.plot_geometry.push(BAPGeometry { pen_uuid: (), geometry: () } {
-                //             geometry: Geometry::MultiLineString(MultiLineString::new(vec![
-                //                 linestring,
-                //             ])),
-                //             // id: u32::MAX as u64,
-                //             stroke: geo.stroke.clone(),
-                //             keepdown_strategy: geo.keepdown_strategy.clone(),
-                //         });
-                // }
-                // }
-                // _ => (),
             }
             self.state_change_out
                 .send(ApplicationStateChangeMsg::Picked(None))
@@ -96,12 +81,6 @@ impl ApplicationCore {
             for geo in picked_items {
                 let geo = geo.clone();
                 new_mls.0.extend(geo.geometry().to_multi_line_strings());
-                // match geo.geometry() {
-                //     Geometry::MultiLineString(mls) => {
-                //         new_mls.0.extend(mls.0);
-                //     }
-                //     _ => (),
-                // }
             }
             self.project.plot_geometry.push(BAPGeometry {
                 name: tmp_geo.name,
@@ -109,12 +88,6 @@ impl ApplicationCore {
                 geometry: GeometryKind::Stroke(Geometry::MultiLineString(new_mls)),
                 keepdown_strategy: tmp_geo.keepdown_strategy,
             });
-            // {
-            //     geometry: geometry::multilinestring(new_mls),
-            //     // id: u32::max as u64,
-            //     stroke: tmp_geo.stroke.clone(),
-            //     keepdown_strategy: tmp_geo.keepdown_strategy.clone(),
-            // });
 
             self.state_change_out
                 .send(ApplicationStateChangeMsg::Picked(None))

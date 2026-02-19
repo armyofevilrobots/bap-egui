@@ -313,6 +313,17 @@ pub(crate) fn floating_tool_window(
                                 MatTarget::default(),
                             ));
                         }
+
+                        if tool_button(
+                            ui,
+                            egui::include_image!("../../resources/images/merge_pens.png"),
+                            Some("Merge all geometry together by pen/tool".into()),
+                            model.source_image_extents().is_some(),
+                        )
+                        .clicked()
+                        {
+                            model.merge_all_geo_by_pen();
+                        }
                         ui.end_row();
                     });
                 ui.add_space(16.);

@@ -90,6 +90,7 @@ pub enum ViewCommand {
     ClearPick,
     UnGroup,
     Group,
+    GroupAllByTool,
     DeleteSelection,
     UpdateConfig(AppConfig),
     Translate(f64, f64),

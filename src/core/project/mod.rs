@@ -5,7 +5,7 @@ use aoer_plotty_rs::context::operation::OPLayer;
 pub use super::paper::*;
 pub use aoer_plotty_rs::context::pgf_file::*;
 pub use aoer_plotty_rs::plotter::pen::PenDetail;
-use geo::{Rect, coord};
+use geo::{Geometry, Rect, coord};
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -155,6 +155,16 @@ impl Project {
         }
         None
     }
+
+    // pub fn merge_geometry_by_pen(&mut self) {
+    //     self.merge_matching_pens();
+    //     let mut orig_geo = self.plot_geometry.clone();
+    //     let mut merged_geo: Vec<BAPGeometry> = Vec::new();
+    //     for pen in self.pens {
+    //         let mut geo_holding: Vec<Geometry> = Vec::new();
+    //         for src_geo in orig_geo {}
+    //     }
+    // }
 
     pub fn merge_matching_pens(&mut self) {
         let mut remove_pens: Vec<(Uuid, Uuid)> = vec![]; //old_uuid, one_we_keep

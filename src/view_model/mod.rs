@@ -151,6 +151,10 @@ pub struct BAPViewModel {
 }
 
 impl BAPViewModel {
+    pub fn merge_all_geo_by_pen(&mut self) {
+        self.yolo_view_command(ViewCommand::GroupAllByTool);
+    }
+
     pub fn select_layers_matching_color(&mut self, color: Uuid) {
         let matching: Vec<usize> = self
             .geo_layers()

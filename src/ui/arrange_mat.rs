@@ -103,10 +103,6 @@ pub(crate) fn arrange_mat(model: &mut BAPViewModel, ctx: &egui::Context) {
                     machine_height_mm,
                     mat_target,
                 );
-                // println!(
-                //     "\n\nAvailable space:\n\tX: {:3.2} Y:{:3.2}",
-                //     avail_width_mm, avail_height_mm
-                // );
 
                 // Now, calculate the size of the _displayed_ rect.
                 let (ui_avail_width_px, ui_avail_height_px) =
@@ -133,12 +129,6 @@ pub(crate) fn arrange_mat(model: &mut BAPViewModel, ctx: &egui::Context) {
                     ),
                     vec2(ui_avail_width_px as f32, ui_avail_height_px as f32),
                 );
-                // println!(
-                //     "Available area rect:\n\t{}: {:3.2},{:3.2}",
-                //     available_area_rect_px,
-                //     available_area_rect_px.width(),
-                //     available_area_rect_px.height()
-                // );
 
                 // Actually draw the paper rect.
                 painter.rect(
@@ -165,12 +155,6 @@ pub(crate) fn arrange_mat(model: &mut BAPViewModel, ctx: &egui::Context) {
                     available_area_rect_px.max
                         - vec2(mat_right as f32 * mat_scale, mat_bottom as f32 * mat_scale),
                 );
-                // println!(
-                //     "MAT RECT:\n\t{}: {:3.2},{:3.2}",
-                //     mat_rect,
-                //     mat_rect.width(),
-                //     mat_rect.height()
-                // );
 
                 // Finally, paint it.
                 painter.rect_stroke(
@@ -202,14 +186,6 @@ pub(crate) fn arrange_mat(model: &mut BAPViewModel, ctx: &egui::Context) {
                             )
                         }
                     };
-
-                    // println!("Current mat values:");
-                    // println!(
-                    //     "\tTOP: {:3.1}, RIGHT: {:3.1}, BOTTOM: {:3.1}, LEFT: {:3.1}",
-                    //     mat_top, mat_right, mat_bottom, mat_left
-                    // );
-                    // println!("Current available space:");
-                    // println!("\tV: {:3.1} H: {:3.1}", vert_space_mm, horiz_space_mm);
 
                     // Finally, draw the temporary sized art in the area we have.
                     if let Some(imghandle) = model.source_image_handle() {

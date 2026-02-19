@@ -449,6 +449,27 @@ impl ApplicationCore {
                                 ))
                                 .expect("Failed to send patch to viewmodel.");
                         }
+                        ViewCommand::GroupAllByTool => {
+                            self.checkpoint();
+                            for tool in self.project.pens.clone() {
+                                let id = tool.identity;
+                                let mut picked: BTreeSet<u32> = BTreeSet::new();
+                                for geo_id in 0..self.project.plot_geometry.len() {
+                                    if let Some(geo) = self.project.plot_geometry.get(geo_id) {
+                                        if geo.pen_uuid == id {
+                                            picked.insert(geo_id as u32);
+                                        }
+                                    }
+                                }
+                                self.picked = Some(picked);
+                                self.apply_group();
+                            }
+                            self.state_change_out
+                                .send(ApplicationStateChangeMsg::PatchViewModel(
+                                    ViewModelPatch::from(self.project.clone()),
+                                ))
+                                .expect("Failed to send patch to viewmodel.");
+                        }
                     }
                 }
             }
