@@ -673,11 +673,28 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
                     // model.select_by_color_pick();
                     model.pick_clear();
                 }),
-                Some(Box::new(|model| model.geo_layers().len() > 0)),
+                Some(Box::new(|model| model.picked().is_some())),
             ),
         ),
     );
 
+    let cmd_select_inside = (
+        Key::N,
+        (
+            "Select inside entity".to_string(),
+            SpaceCommandBranch::Leaf(
+                "Select inside entity".to_string(),
+                Box::new(|model| {
+                    // model.select_by_color_pick();
+                    // model.pick_clear();
+                    model.yolo_view_command(ViewCommand::PickInsidePick);
+                }),
+                Some(Box::new(|model| {
+                    model.picked().is_some() && model.picked().unwrap().len() == 1
+                })),
+            ),
+        ),
+    );
     let cmd_select = (
         Key::S,
         (
@@ -685,6 +702,7 @@ pub static SPACE_CMDS: LazyLock<Mutex<SpaceCommandBranch>> = LazyLock::new(|| {
             SpaceCommandBranch::Branch(IndexMap::from([
                 cmd_select_all,
                 cmd_select_by_color,
+                cmd_select_inside,
                 cmd_select_hatches,
                 cmd_select_strokes,
                 cmd_select_invert,

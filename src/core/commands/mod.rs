@@ -86,6 +86,7 @@ pub enum ViewCommand {
     PickByType(SelectionType),
     ForcePick(Vec<usize>),
     InvertPick,
+    PickInsidePick, // Weird. Drop current pick and replace by anything INSIDE it.
     SelectAll,
     ClearPick,
     UnGroup,

@@ -443,6 +443,7 @@ impl ApplicationCore {
                                         .to_string(),
                                     ))
                                 });
+                            self.rebuild_after_content_change();
                             self.state_change_out
                                 .send(ApplicationStateChangeMsg::PatchViewModel(
                                     ViewModelPatch::from(self.project.clone()),
@@ -469,6 +470,34 @@ impl ApplicationCore {
                                     ViewModelPatch::from(self.project.clone()),
                                 ))
                                 .expect("Failed to send patch to viewmodel.");
+                        }
+                        ViewCommand::PickInsidePick => {
+                            let mut new_pick: BTreeSet<u32> = BTreeSet::new();
+                            if let Some(picked) = &self.picked {
+                                for idx in picked {
+                                    if let Some(pgeo) =
+                                        self.project.plot_geometry.get(*idx as usize)
+                                    {
+                                        for pick_result in
+                                            self.project.query_geo_inside(pgeo.geometry())
+                                        {
+                                            new_pick.insert(pick_result);
+                                        }
+                                    }
+                                }
+                            }
+                            self.picked = Some(new_pick);
+                            self.state_change_out
+                                .send(ApplicationStateChangeMsg::Picked(Some(
+                                    self.picked
+                                        .as_ref()
+                                        .unwrap()
+                                        .iter()
+                                        .map(|i| *i as usize)
+                                        .collect::<Vec<usize>>(),
+                                )))
+                                .expect("OMFG ViewModel is borked sending pick id");
+                            self.ctx.request_repaint();
                         }
                     }
                 }

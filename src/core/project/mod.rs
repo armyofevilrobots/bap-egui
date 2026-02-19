@@ -5,7 +5,8 @@ use aoer_plotty_rs::context::operation::OPLayer;
 pub use super::paper::*;
 pub use aoer_plotty_rs::context::pgf_file::*;
 pub use aoer_plotty_rs::plotter::pen::PenDetail;
-use geo::{Geometry, Rect, coord};
+use geo::Contains;
+use geo::{Geometry, Polygon, Rect, coord};
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -92,6 +93,61 @@ impl Project {
             program: None,
             do_keepdown: true,
             file_path: None,
+        }
+    }
+
+    /// Returns a list of IDs for PlotGeometry that lives inside the given Geometry.
+    /// Smart enough to convert MLS to Polygons, etc.
+    pub fn query_geo_inside(&self, geo: &Geometry) -> BTreeSet<u32> {
+        match geo {
+            Geometry::Point(_point) => BTreeSet::new(),
+            Geometry::Line(_line) => BTreeSet::new(),
+            Geometry::MultiPoint(_multi_point) => BTreeSet::new(),
+            Geometry::LineString(line_string) => {
+                self.query_geo_inside(&Polygon::new(line_string.clone(), vec![]).into())
+            }
+            Geometry::Polygon(polygon) => {
+                let mut matches: BTreeSet<u32> = BTreeSet::new();
+                for idx in 0..self.plot_geometry.len() {
+                    if let Some(geo) = self.plot_geometry.get(idx) {
+                        if polygon.contains(geo.geometry().into()) {
+                            matches.insert(idx as u32);
+                        }
+                    }
+                }
+                matches
+            }
+            Geometry::MultiLineString(multi_line_string) => {
+                let mut matches: BTreeSet<u32> = BTreeSet::new();
+                for ls in &multi_line_string.0 {
+                    let gls = Geometry::LineString(ls.clone());
+                    let mut tmp_matches = self.query_geo_inside(&gls);
+                    matches.append(&mut tmp_matches);
+                }
+                matches
+            }
+            Geometry::MultiPolygon(multi_polygon) => {
+                let mut matches: BTreeSet<u32> = BTreeSet::new();
+                for poly in &multi_polygon.0 {
+                    let gmp = Geometry::Polygon(poly.clone());
+                    let mut tmp_matches = self.query_geo_inside(&gmp);
+                    matches.append(&mut tmp_matches);
+                }
+                matches
+            }
+            Geometry::GeometryCollection(geometry_collection) => {
+                let mut matches: BTreeSet<u32> = BTreeSet::new();
+                for geo in &geometry_collection.0 {
+                    let geo = geo.clone();
+                    let mut tmp_matches = self.query_geo_inside(&geo);
+                    matches.append(&mut tmp_matches);
+                }
+                matches
+            }
+            Geometry::Rect(rect) => self.query_geo_inside(&Geometry::Polygon(rect.to_polygon())),
+            Geometry::Triangle(triangle) => {
+                self.query_geo_inside(&Geometry::Polygon(triangle.to_polygon()))
+            }
         }
     }
 
