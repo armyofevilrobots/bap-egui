@@ -59,6 +59,7 @@ impl MatTarget {
         }
     }
 
+    #[allow(unused)]
     pub fn options() -> Vec<MatTarget> {
         vec![
             MatTarget::Machine(MatValues::Equal(10.)),

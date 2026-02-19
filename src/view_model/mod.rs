@@ -72,6 +72,7 @@ impl std::fmt::Debug for BAPGeoLayer {
     }
 }
 
+#[allow(unused)]
 pub struct MiscTextures {
     pub dropper_icon: TexturePoll,
 }
