@@ -27,20 +27,31 @@ impl ApplicationCore {
             }
 
             for geo in geo_items {
-                let new_geokind = match geo.geometry {
-                    GeometryKind::Stroke(geoms) => GeometryKind::Stroke(Geometry::MultiLineString(
-                        geoms.to_multi_line_strings(),
-                    )),
-                    GeometryKind::Hatch(geoms) => GeometryKind::Hatch(Geometry::MultiLineString(
-                        geoms.to_multi_line_strings(),
-                    )),
+                let new_geokind = match &geo.geometry {
+                    GeometryKind::Stroke(geoms) => geoms.to_multi_line_strings(),
+                    GeometryKind::Hatch(geoms) => geoms.to_multi_line_strings(),
                 };
-                self.project.plot_geometry.push(BAPGeometry {
-                    name: geo.name,
-                    pen_uuid: geo.pen_uuid,
-                    geometry: new_geokind,
-                    keepdown_strategy: geo.keepdown_strategy,
-                })
+
+                if new_geokind.0.len() > 1 {
+                    for (idx, linestring) in new_geokind.0.clone().into_iter().enumerate() {
+                        self.project.plot_geometry.push(BAPGeometry {
+                            name: format!("{}-{}", geo.name, idx),
+                            pen_uuid: geo.pen_uuid,
+                            geometry: match geo.geometry {
+                                GeometryKind::Stroke(_) => {
+                                    GeometryKind::Stroke(Geometry::LineString(linestring))
+                                }
+                                GeometryKind::Hatch(_) => {
+                                    GeometryKind::Hatch(Geometry::LineString(linestring))
+                                }
+                            },
+                            keepdown_strategy: geo.keepdown_strategy,
+                        })
+                    }
+                } else {
+                    // Cannot ungroup any further.
+                    self.project.plot_geometry.push(geo);
+                }
             }
             self.state_change_out
                 .send(ApplicationStateChangeMsg::Picked(None))

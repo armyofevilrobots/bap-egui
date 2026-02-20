@@ -327,7 +327,7 @@ impl GeometryToMultiLineString for Geometry<f64> {
     fn to_multi_line_strings(&self) -> MultiLineString<f64> {
         let mut out = MultiLineString::new(vec![]);
         match self {
-            Geometry::Point(_) => todo!(),
+            Geometry::Point(_) => (), // We ignore points.
             Geometry::Line(line) => out.0.push(LineString::from(line.clone())),
             Geometry::LineString(linestring) => out.0.push(linestring.clone()),
             Geometry::Polygon(poly) => {
@@ -336,7 +336,7 @@ impl GeometryToMultiLineString for Geometry<f64> {
                     out.0.push(interior.clone())
                 }
             }
-            Geometry::MultiPoint(_) => todo!(),
+            Geometry::MultiPoint(_) => (), // Samesies. Ignore points.
             Geometry::MultiLineString(mls) => {
                 let mut mls = mls.clone();
                 out.0.append(&mut mls.0);
