@@ -1,3 +1,4 @@
+use crate::core::commands::HatchConfig;
 use crate::core::commands::MatTarget;
 use crate::core::config::DockPosition;
 use crate::core::config::RulerOrigin;
@@ -326,6 +327,26 @@ pub(crate) fn floating_tool_window(
                         }
                         ui.end_row();
                     });
+                ui.add_space(16.);
+                // Label::new("Alignment");
+                egui::Grid::new("CreationToolz")
+                    .spacing(vec2(0., 5.))
+                    .show(ui, |ui| {
+                        if tool_button(
+                            ui,
+                            egui::include_image!("../../resources/images/hatch_geometry.png"),
+                            Some("Fill geometry with hatch".into()),
+                            model.picked().is_some(),
+                        )
+                        .clicked()
+                        {
+                            model.set_command_context(CommandContext::HatchGeometry(
+                                HatchConfig::default(),
+                            ));
+                        }
+                        ui.end_row();
+                    });
+
                 ui.add_space(16.);
                 ui.label("Ruler Origin");
                 let mut ro = model.ruler_origin();

@@ -12,7 +12,9 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 
+pub mod hatch;
 pub mod mat;
+pub use hatch::*;
 pub use mat::*;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default, Clone)]
@@ -22,7 +24,7 @@ pub enum SelectionType {
     Strokes,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Default, Clone)]
+#[derive(Debug, PartialEq, /*Serialize, Deserialize,*/ Default, Clone)]
 pub enum ViewCommand {
     #[default]
     Ping,
@@ -99,6 +101,7 @@ pub enum ViewCommand {
         id: usize,
         name: String,
     },
+    PrepHatch(Option<HatchConfig>),
     None,
 }
 

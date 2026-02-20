@@ -1,3 +1,4 @@
+use aoer_plotty_rs::context::pgf_file::PlotGeometry;
 use egui::ColorImage;
 use geo::Rect;
 use skia_safe::paint::Style;
@@ -6,6 +7,8 @@ use std::collections::BTreeSet;
 use std::ops::Rem;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::{Instant, SystemTime};
+
+use crate::core::project::BAPGeometry;
 
 use super::ApplicationCore;
 use super::commands::ApplicationStateChangeMsg;
@@ -145,6 +148,7 @@ pub(crate) fn render_source_preview(
     canvas.translate((-xofs as f32 * sx, -yofs as f32 * sy));
     canvas.scale((sx, sy));
     let _mid = extents.center();
+    let mut picked_geo: Vec<(usize, BAPGeometry)> = Vec::new();
     for (id, pg) in geo.clone().iter().enumerate() {
         // let pen = pg.stroke.clone().unwrap_or(PenDetail::default());
         let pen = project
@@ -156,11 +160,15 @@ pub(crate) fn render_source_preview(
         if let Some(pickset) = &picked {
             // let id = pg.id as u32;
             if pickset.contains(&(id as u32)) {
+                /*
                 let dash = 16.0 / sx;
                 let phase = 4. * phase.rem((dash * 2.) as f64) as f32;
                 paint.set_path_effect(PathEffect::dash(&[dash, dash, dash, dash], phase));
                 paint.set_stroke_cap(skia_safe::PaintCap::Square);
                 paint.set_stroke_width(1. / sx as f32);
+                */
+                picked_geo.push((id.clone(), pg.clone()));
+                continue; // Don't draw picked items.
             }
         }
         paint.set_alpha_f(pen.stroke_density as f32);
@@ -184,6 +192,49 @@ pub(crate) fn render_source_preview(
             surface.canvas().draw_path(&path, &paint);
         }
     }
+    for (id, pg) in picked_geo {
+        // let pen = pg.stroke.clone().unwrap_or(PenDetail::default());
+        let pen = project
+            .pen_by_uuid(pg.pen_uuid)
+            .unwrap_or(PenDetail::default());
+        paint.set_path_effect(None);
+        paint.set_stroke_cap(skia_safe::PaintCap::Round);
+        paint.set_stroke_width(pen.stroke_width as f32);
+        // let id = pg.id as u32;
+        let dash = 16.0 / sx;
+        let phase = 4. * phase.rem((dash * 2.) as f64) as f32;
+        paint.set_path_effect(PathEffect::dash(&[dash, dash, dash, dash], phase));
+        paint.set_stroke_cap(skia_safe::PaintCap::Square);
+        paint.set_stroke_width(1. / sx as f32);
+        paint.set_alpha_f(pen.stroke_density as f32);
+        let [r, g, b, a] = pen.color.to_rgba8();
+
+        paint.set_color(Color::from_argb(a, r, g, b));
+
+        let mls = &pg.lines();
+        let _line_count = mls.0.len();
+        for (_idx, line) in mls.0.clone().iter().enumerate() {
+            let mut path = Path::new();
+            if let Ok(_msg) = cancel.try_recv() {
+                return Err(anyhow::anyhow!("Got a cancel on render."));
+            }
+            if let Some(p0) = line.0.first() {
+                path.move_to((p0.x as f32, p0.y as f32));
+                for coord in line.0.iter().skip(1) {
+                    path.line_to((coord.x as f32, coord.y as f32));
+                }
+            }
+            paint.set_path_effect(PathEffect::dash(&[dash, dash, dash, dash], phase));
+            surface.canvas().draw_path(&path, &paint);
+            paint.set_color(Color::from_argb(255, 0, 0, 0));
+            paint.set_path_effect(PathEffect::dash(
+                &[dash / 2., dash / 2., dash / 2., dash / 2.],
+                phase,
+            ));
+            surface.canvas().draw_path(&path, &paint);
+        }
+    }
+
     let mut bmap = Bitmap::new();
     let _result = bmap.set_info(
         &ImageInfo::new(

@@ -17,6 +17,7 @@ pub(crate) mod bottom_panel;
 pub(crate) mod config;
 pub(crate) mod editor;
 pub(crate) mod geo_layers;
+pub(crate) mod hatch_tool_window;
 pub(crate) mod machine;
 pub(crate) mod menu;
 pub(crate) mod paper_chooser;
@@ -97,6 +98,9 @@ pub(crate) fn update_ui(model: &mut BAPViewModel, ctx: &egui::Context, _frame: &
         }
         CommandContext::Configure(_opt_cfg) => {
             config::config_editor_window(model, ctx);
+        }
+        CommandContext::HatchGeometry(_hatch_config) => {
+            hatch_tool_window::floating_hatch_tool_window(model, ctx, wtop, &mut toasts);
         }
 
         _ => (),

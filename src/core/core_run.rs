@@ -499,6 +499,7 @@ impl ApplicationCore {
                                 .expect("OMFG ViewModel is borked sending pick id");
                             self.ctx.request_repaint();
                         }
+                        ViewCommand::PrepHatch(_opt_hatch_config) => todo!(),
                     }
                 }
             }

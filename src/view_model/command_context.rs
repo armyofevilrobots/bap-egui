@@ -1,13 +1,18 @@
-use std::fmt::{Debug, Display};
-
 use super::space_commands::{SPACE_CMDS, SpaceCommandBranch};
-use aoer_plotty_rs::plotter::pen::PenDetail;
+use aoer_plotty_rs::{
+    plotter::pen::PenDetail,
+    prelude::{HatchPattern, LineHatch},
+};
 use eframe::egui;
 use egui::{Key, Pos2};
 use egui_toast::{Toast, ToastKind, ToastOptions};
+use std::{
+    fmt::{Debug, Display},
+    sync::Arc,
+};
 
 use crate::{
-    core::{commands::MatTarget, config::AppConfig, machine::MachineConfig},
+    core::{commands::HatchConfig, commands::MatTarget, config::AppConfig, machine::MachineConfig},
     view_model::BAPViewModel,
 };
 // use crate::view_model::project_ops::project_ops;
@@ -32,6 +37,7 @@ pub enum CommandContext {
     EditGcode(Option<String>),               // Saves original gcode.
     Configure(Option<AppConfig>),
     MatToTarget(MatTarget),
+    HatchGeometry(HatchConfig),
     None,
 }
 
@@ -81,6 +87,7 @@ impl Display for CommandContext {
             CommandContext::EditGcode(_) => write!(f, "Edit GCode"),
             CommandContext::Configure(_) => write!(f, "Configuration"),
             CommandContext::MatToTarget(mat_target) => write!(f, "Arrange matted: {}", mat_target),
+            CommandContext::HatchGeometry(hatch_config) => todo!(),
         }
     }
 }
@@ -217,6 +224,7 @@ impl BAPViewModel {
                 CommandContext::None
             }
             CommandContext::MatToTarget(_mat_target) => CommandContext::None,
+            CommandContext::HatchGeometry(hatch_config) => todo!(),
         };
     }
 
@@ -240,6 +248,7 @@ impl BAPViewModel {
             CommandContext::EditGcode(_) => ctx,
             CommandContext::Configure(_app_config) => ctx,
             CommandContext::MatToTarget(_mat_target) => ctx,
+            CommandContext::HatchGeometry(hatch_config) => todo!(),
         };
     }
 
