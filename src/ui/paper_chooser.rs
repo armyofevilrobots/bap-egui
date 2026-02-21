@@ -43,8 +43,8 @@ pub(crate) fn paper_chooser_window(
         let pcol = model.paper_color().to_tuple();
         let tcol = (
             ((pcol.0 as u32 + 85) % 255) as u8,
-            ((pcol.0 as u32 + 85) % 255) as u8,
-            ((pcol.0 as u32 + 85) % 255) as u8,
+            ((pcol.1 as u32 + 85) % 255) as u8,
+            ((pcol.2 as u32 + 85) % 255) as u8,
         );
         let dimensions_text_color = Color32::from_rgb(tcol.0, tcol.1, tcol.2);
 

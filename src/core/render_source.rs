@@ -133,7 +133,6 @@ pub(crate) fn render_source_preview(
 
     let (xofs, yofs) = extents.min().x_y();
 
-    let _stroke_width = (resolution.0 as f32 / extents.width() as f32) * 2.5;
     let sx = resolution.0 as f32 / extents.width() as f32;
     let sy = resolution.1 as f32 / extents.height() as f32;
     let mut surface =
@@ -160,15 +159,13 @@ pub(crate) fn render_source_preview(
         if let Some(pickset) = &picked {
             // let id = pg.id as u32;
             if pickset.contains(&(id as u32)) {
-                /*
-                let dash = 16.0 / sx;
+                let dash = 32.0 / sx;
                 let phase = 4. * phase.rem((dash * 2.) as f64) as f32;
                 paint.set_path_effect(PathEffect::dash(&[dash, dash, dash, dash], phase));
                 paint.set_stroke_cap(skia_safe::PaintCap::Square);
                 paint.set_stroke_width(1. / sx as f32);
-                */
                 picked_geo.push((id.clone(), pg.clone()));
-                continue; // Don't draw picked items.
+                // continue; // Don't draw picked items.
             }
         }
         paint.set_alpha_f(pen.stroke_density as f32);
@@ -199,13 +196,12 @@ pub(crate) fn render_source_preview(
             .unwrap_or(PenDetail::default());
         paint.set_path_effect(None);
         paint.set_stroke_cap(skia_safe::PaintCap::Round);
-        paint.set_stroke_width(pen.stroke_width as f32);
+        paint.set_stroke_width(pen.stroke_width as f32 / 3.);
         // let id = pg.id as u32;
         let dash = 16.0 / sx;
         let phase = 4. * phase.rem((dash * 2.) as f64) as f32;
         paint.set_path_effect(PathEffect::dash(&[dash, dash, dash, dash], phase));
         paint.set_stroke_cap(skia_safe::PaintCap::Square);
-        paint.set_stroke_width(1. / sx as f32);
         paint.set_alpha_f(pen.stroke_density as f32);
         let [r, g, b, a] = pen.color.to_rgba8();
 
@@ -225,13 +221,18 @@ pub(crate) fn render_source_preview(
                 }
             }
             paint.set_path_effect(PathEffect::dash(&[dash, dash, dash, dash], phase));
-            surface.canvas().draw_path(&path, &paint);
-            paint.set_color(Color::from_argb(255, 0, 0, 0));
-            paint.set_path_effect(PathEffect::dash(
-                &[dash / 2., dash / 2., dash / 2., dash / 2.],
-                phase,
+            // paint.set_blend_mode(skia_safe::BlendMode::Xor);
+            // paint.set_color(Color::from_rgb(
+            //     (255. - project.paper.rgb.0) as u8 ^ (pen.color.r * 255.) as u8,
+            //     (255. - project.paper.rgb.1) as u8 ^ (pen.color.g * 255.) as u8,
+            //     (255. - project.paper.rgb.2) as u8 ^ (pen.color.b * 255.) as u8,
+            // ));
+            paint.set_color(Color::from_rgb(
+                ((pen.color.r * 255. + 85.) as u32 % 255) as u8,
+                ((pen.color.g * 255. + 85.) as u32 % 255) as u8,
+                ((pen.color.b * 255. + 85.) as u32 % 255) as u8,
             ));
-            surface.canvas().draw_path(&path, &paint);
+            surface.canvas().draw_path(&path.clone(), &paint);
         }
     }
 
