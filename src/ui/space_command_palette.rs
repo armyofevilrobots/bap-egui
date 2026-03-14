@@ -133,7 +133,10 @@ pub fn space_command_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
                                     );
                                     if response.clicked() {
                                         // println!("STACK: {:?}", stack);
-                                        CommandContext::Space(stack.clone());
+                                        model.set_command_context(CommandContext::Space(
+                                            stack.clone(),
+                                        ));
+                                        break;
                                     }
                                 }
                             });
@@ -142,4 +145,5 @@ pub fn space_command_panel(model: &mut BAPViewModel, ctx: &egui::Context) {
                 });
             });
     } //End of commandcontext is Space Command
+    // println!("END OF STACK: {:?}", model.command_context());
 }
